@@ -1,0 +1,12 @@
+numpy
+build
+coverage
+jupyterlab
+matplotlib
+nose2
+pandas
+pip>20
+pylint
+python-libsbml
+tellurium
+twine
