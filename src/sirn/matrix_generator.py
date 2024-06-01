@@ -1,11 +1,12 @@
 '''Analysis of a fixed matrix.'''
 import numpy as np
 import itertools
+from typing import Tuple
 
 
-class FixedMatrix(object):
+class MatrixGenerator(object):
 
-    def __init__(self, arr: np.array):
+    def __init__(self, arr: np.ndarray):
         """
         Args:
             arr (np.array): Stoichiometry matrix. Rows are reactions; columns are species.
@@ -59,7 +60,6 @@ class FixedMatrix(object):
                 return cls(matrix)
         raise RuntimeError('Cannot generate a trinary matrix.')
 
-    
     def randomize(self):  # type: ignore
         """
         Randomly permutes the rows and columns of the matrix.
@@ -69,4 +69,4 @@ class FixedMatrix(object):
         """
         row_perm = np.random.permutation(self.nrow)
         col_perm = np.random.permutation(self.ncol)
-        return self.arr[row_perm][:, col_perm]  # type: ignore
+        return MatrixGenerator(self.arr[row_perm][:, col_perm])  # type: ignore
