@@ -8,5 +8,6 @@ pandas
 pip>20
 pylint
 python-libsbml
+seaborn
 tellurium
 twine
