@@ -62,14 +62,14 @@ def heatmapCountComparisons(nrows:np.ndarray, ncols:np.ndarray)->None:
         nrow (list-int): Number of rows
         ncol (list-int): Number of columns
     """
+    MICROSECONDS_PER_COMPARISON = 12
     data = countComparisons(nrows, ncols)
     plot_df = pd.DataFrame({'nrows': nrows, 'ncols': ncols, 'data': data})
     plot_df = plot_df.pivot(index="nrows", columns="ncols", values="data")
     plot_df = plot_df.sort_index(ascending=False)
     # Translate to hours
-    adjust = np.log10(12*1e-6*60*60)
-    plot_df += adjust
-    import pdb; pdb.set_trace()
+    plot_df +=  np.log10(MICROSECONDS_PER_COMPARISON)
+    plot_df -=  np.log10(1e6*60*60)
     ax = sns.heatmap(plot_df, cmap="seismic", vmin=-18, vmax=18,
         cbar_kws={'label': 'log10(hours)'})
     ax.set_xlabel("Number of reactions")
@@ -77,13 +77,13 @@ def heatmapCountComparisons(nrows:np.ndarray, ncols:np.ndarray)->None:
     plt.show()
 
 if __name__ == '__main__':
-    #print(timeMatrixComparison(100000, 5, 10))
-    nrows =  0.2*np.array([5, 5, 5, 5, 5, 10, 10, 10, 10, 10, 20, 20, 20, 20, 20, 40, 40, 40, 40, 40, 80, 80, 80, 80, 80])
-    nrows = nrows.astype(int)
-    ncols =  0.2*np.array([5, 10, 20, 40, 80])
-    ncols = np.concatenate([ncols]*5)
+    size = 10
+    arr =  2.0*np.array(range(1, size + 1))
+    sub_nrows = arr.astype(int)
+    nrows = [np.repeat(n, size) for n in sub_nrows]
+    nrows = np.concatenate(nrows)
+    ncols = np.concatenate([sub_nrows]*size)
+    ncols = ncols.flatten()
     ncols = ncols.astype(int)
-    nrows = np.sort(nrows)
-    nrows = np.flip(nrows)
-    #print(countComparisons(nrows, ncols))
-    heatmapCountComparisons(nrows, ncols)
+    nrows = np.flip(nrows)   # type: ignore
+    heatmapCountComparisons(nrows, ncols)  # type: ignore
