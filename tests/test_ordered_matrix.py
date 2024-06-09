@@ -88,6 +88,28 @@ class TestMatrixClassifier(unittest.TestCase):
         #
         test()
         test(size=10, prob0=0.2)
+    
+    def testHashCollision(self):
+        # Evaluate the probability that two randomly chosen Ordered matrices have the same hash value
+        if IGNORE_TEST:
+            return
+        BOUNDS = {3: 2e-2, 4: 1e-2, 5: 1e-3}
+        def test(num_iteration, size):
+            hash_dct = {}
+            for _ in range(num_iteration):
+                ordered_matrix = OrderedMatrix(OrderedMatrix.makeTrinaryMatrix(size, size))
+                hash_val = ordered_matrix.hash_val
+                if hash_val not in hash_dct:
+                    hash_dct[hash_val] = []
+                hash_dct[hash_val].append(ordered_matrix)
+            lengths = np.array([len(v) for v in hash_dct.values()])
+            frac_collision = np.sum([(l/num_iteration)**2 for l in lengths])
+            self.assertLess(frac_collision, BOUNDS[size])
+        #
+        test(10000, 3)
+        test(10000, 4)
+        test(10000, 5)
+
 
         
 
