@@ -4,8 +4,7 @@ import numpy as np
 import itertools
 from typing import Tuple
 
-
-class BasicMatrix(object):
+class Matrix(object):
 
     def __init__(self, arr: np.ndarray):
         """
@@ -70,4 +69,4 @@ class BasicMatrix(object):
         """
         row_perm = np.random.permutation(self.nrow)
         col_perm = np.random.permutation(self.ncol)
-        return BasicMatrix(self.arr[row_perm][:, col_perm])  # type: ignore
+        return Matrix(self.arr[row_perm][:, col_perm])  # type: ignore

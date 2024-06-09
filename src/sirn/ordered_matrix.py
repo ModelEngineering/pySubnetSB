@@ -1,12 +1,12 @@
-'''Classifies the rows and columns of a matrix. Provides comparisons between matrices.'''
+'''Structures the rows and columns of a matrix based on order independent properties of the rows and columns.'''
 
 """
 Arrays are classified based on the number of values that are less than 0, equal to 0, and greater than 0.
 """
 
-from src.sirn.classify_array import ArrayClassifier # type: ignore
+from sirn.util import hashArray  # type: ignore
+from sirn.matrix import Matrix # type: ignore
 
-import collections
 import numpy as np
 
 
@@ -18,24 +18,25 @@ SEPARATOR = 1000 # Separates the counts in a single numbera
 
 class _DimensionClassification(object):
 
-    def __init__(self, vals: np.ndarray, idxs: np.ndarray):
-        self.vals = vals
+    def __init__(self, arr: np.ndarray, idxs: np.ndarray):
+        self.arr = arr
         self.idxs = idxs
 
     def __repr__(self)->str:
-        return str(self.vals[self.idxs])
+        return str(self.arr[self.idxs])
 
 
-class MatrixClassifier(object):
+class OrderedMatrix(Matrix):
         
     def __init__(self, arr: np.ndarray):
-        self.arr = arr
-        self.nrow, self.ncol = np.shape(arr)
-        if (10**self.nrow > SEPARATOR) or (10**self.ncol > SEPARATOR):
+        super().__init__(arr)
+        if (self.nrow > SEPARATOR) or (self.ncol > SEPARATOR):
             raise ValueError("Matrix is too large to classify. Maximum number of rows, columns is 1000.")
         # Outputs
         self.row_classification = self.classifyRows()
         self.col_classification = self.classifyColumns()
+        hash_arr = np.concatenate((self.row_classification.arr, self.col_classification.arr))
+        self.hash_val = hashArray(hash_arr)
 
     def __repr__(self)->str:
         return str(self.arr) + '\n' + str(self.row_classification) + '\n' + str(self.col_classification)
@@ -61,8 +62,7 @@ class MatrixClassifier(object):
         """
         classes = []
         for idx in range(self.ncol):
-            classifier = ArrayClassifier(self.arr[:, idx])
-            classes.append(ArrayClassifier(classifier.encoding))
+            classes.append(self.classifyArray(self.arr))
         sorted_classes = np.sort(classes)
         sorted_class_idxs = np.argsort(classes)
         return _DimensionClassification(sorted_classes, sorted_class_idxs)
@@ -77,6 +77,6 @@ class MatrixClassifier(object):
         Returns:
             bool: _description_
         """
-        is_true = np.allclose(self.row_classification.vals, other.row_classification.vals)
-        is_true = is_true and np.allclose(self.col_classification.vals, other.col_classification.vals)
+        is_true = np.allclose(self.row_classification.arr, other.row_classification.arr)
+        is_true = is_true and np.allclose(self.col_classification.arr, other.col_classification.arr)
         return is_true

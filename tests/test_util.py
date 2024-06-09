@@ -46,6 +46,8 @@ class TestFunctions(unittest.TestCase):
         frac_collision = sum(lengths > 1)/num_arr
         self.assertLess(frac_collision, 0.1)
 
+    # TODO: evaluate on MatrixClassifier for generated matrices
+
 
         
 
