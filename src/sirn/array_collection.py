@@ -10,6 +10,7 @@ Terminology:
 """
 
 import numpy as np
+from typing import Dict
 
 SEPARATOR = 1000 # Separates the counts in a single numbera
 
@@ -27,7 +28,10 @@ class ArrayCollection(object):
         if (self.length > SEPARATOR):
             raise ValueError("Matrix is too large to classify. Maximum number of rows, columns is 1000.")
         # Outputs
-        self.encoding = self.encode()
+        self.encoding_dct = self.encode()
+        encoding = list(self.encoding_dct.keys())
+        encoding.sort()
+        self.encoding = np.array(encoding)
 
     def __repr__(self)->str:
         return str(self.encoding)
@@ -45,23 +49,22 @@ class ArrayCollection(object):
         return np.allclose(self.encoding, other.encoding)
 
     # This method can be overridden to provide alternative encodings
-    def encode(self)->np.ndarray:
+    def encode(self)->Dict[int, np.ndarray]:
         """Constructs an encoding for an ArrayCollection.
 
         Args:
             arr (np.ndarray): _description_
 
         Returns:
-            np.ndarray: _description_
+            np.ndarray: key: encoding, values: indexes of arrays with the same encoding
         """
-        encoding = []
-        for arr in self.collection:
-            term = np.sum(arr < 0) + np.sum(arr == 0) * SEPARATOR + np.sum(arr > 0)*SEPARATOR**2
-            encoding.append(term)
-        encoding.sort()
-        result = np.array(encoding)
-        result = result.astype(int)
-        return result
+        dct: dict = {}
+        for idx, arr in enumerate(self.collection):
+            this_encoding = np.sum(arr < 0) + np.sum(arr == 0) * SEPARATOR + np.sum(arr > 0)*SEPARATOR**2
+            if not this_encoding in dct.keys():
+                dct[this_encoding] = []
+            dct[this_encoding].append(idx)
+        return dct
     
     def encodingConstrainedIterator(self)->np.ndarray:
         """

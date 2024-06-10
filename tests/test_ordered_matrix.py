@@ -42,8 +42,8 @@ class TestMatrixClassifier(unittest.TestCase):
 
     def testIdenticalClassifications(self):
         # Tests if permuted matrices have the same classification
-        if IGNORE_TEST:
-            return
+        #if IGNORE_TEST:
+        #    return
         def test(num_iteration=100, size=5, prob0=1/3):
             for _ in range(num_iteration):
                 arr = Matrix.makeTrinaryMatrix(size, size, prob0=prob0)

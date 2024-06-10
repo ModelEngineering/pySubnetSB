@@ -14,7 +14,8 @@ class OrderedMatrix(Matrix):
         super().__init__(arr)
         # Outputs
         self.row_collection = ArrayCollection(self.arr)
-        self.column_collection = ArrayCollection(np.transpose(self.arr))
+        column_arr = np.transpose(self.arr)
+        self.column_collection = ArrayCollection(column_arr)
         hash_arr = np.concatenate((self.row_collection.encoding, self.column_collection.encoding))
         self.hash_val = hashArray(hash_arr)
 

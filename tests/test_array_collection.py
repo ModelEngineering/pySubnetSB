@@ -7,7 +7,7 @@ import unittest
 
 IGNORE_TEST = False
 IS_PLOT = False
-MAT = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+MAT = np.array([[1, 0, 0], [0, 1, 0], [0, 1, 1]])
 
 
 #############################
@@ -23,11 +23,12 @@ class TestMatrixClassifier(unittest.TestCase):
             return
         self.assertTrue(np.all(self.collection.collection == MAT))
         self.assertTrue(isinstance(self.collection, ArrayCollection))
+        self.assertGreater(self.collection.encoding[-1], self.collection.encoding[0])
 
     def testClassifyArray(self):
         if IGNORE_TEST:
             return
-        self.assertTrue(np.allclose(self.collection.encoding, np.array([1002000, 1002000, 1002000])))
+        self.assertTrue(np.allclose(self.collection.encoding, np.array([1002000, 2001000])))
 
     def testEncode2(self):
         # Test random sequences
@@ -46,7 +47,7 @@ class TestMatrixClassifier(unittest.TestCase):
                 new_encoding = 0
                 for idx in range(3):
                     new_encoding += counts[idx]*1000**idx
-                self.assertTrue(any([e == new_encoding for e in collection.encode()]))
+                self.assertTrue(any([e == new_encoding for e in collection.encoding]))
         #
         test()
         test(prob0=2/3)
