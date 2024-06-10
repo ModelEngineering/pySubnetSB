@@ -22,7 +22,7 @@ class Matrix(object):
             return False
         return np.all(self.arr == other.matrix)  # type: ignore
     
-    def isPermutable(self, other):
+    def isPermutablyIdentical(self, other):
         """
         Check if the matrix is permutable with another matrix.
         Args:

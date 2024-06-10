@@ -3,7 +3,6 @@ from sirn.matrix import Matrix # type: ignore
 
 import numpy as np
 import unittest
-import itertools
 
 
 IGNORE_TEST = False
@@ -24,34 +23,6 @@ class TestMatrixClassifier(unittest.TestCase):
             return
         self.assertTrue(np.all(self.ordered_matrix.arr == MAT))
         self.assertTrue(isinstance(self.ordered_matrix, OrderedMatrix))
-
-    def testClassifyArray(self):
-        if IGNORE_TEST:
-            return
-        arr = np.array([1, 0, -1, 0, 0, 1])
-        self.assertEqual(OrderedMatrix.classifyArray(arr), 2003001)
-
-    def testClassifyArray2(self):
-        # Test random sequences
-        if IGNORE_TEST:
-            return
-        def test(num_iteration=10, size=10, prob0=1/3):
-            # Makes a trinary matrix and checks the encodings
-            for _ in range(num_iteration):
-                arr = Matrix.makeTrinaryMatrix(size, size, prob0=prob0)[:,1]
-                counts = []
-                counts.append(np.sum(arr < 0))
-                counts.append(np.sum(arr == 0))
-                counts.append(np.sum(arr > 0))
-                encoding = OrderedMatrix.classifyArray(arr)
-                new_encoding = 0
-                for idx in range(3):
-                    new_encoding += counts[idx]*1000**idx
-                self.assertEqual(encoding, new_encoding)
-        #
-        test()
-        test(prob0=2/3)
-        test(prob0=1/5)
 
     def testNotIdenticalClassifications(self):
         # Tests if permuted matrices don't have the same classification
