@@ -59,7 +59,7 @@ class PermutableMatrixSerialization(object):
         dct: Dict[str, list] = {n: [] for n in SERIALIZATION_NAMES}
         for serialization in ordered_marix_serializations:
             for name in SERIALIZATION_NAMES:
-                dct[name].append(str(getattr(serialization, name)))
+                dct[name].append(getattr(serialization, name))
         return pd.DataFrame(dct)
 
 
@@ -87,10 +87,32 @@ class PermutableMatrix(Matrix):
         hash_arr = np.concatenate((self.row_collection.encoding_arr, self.column_collection.encoding_arr))
         self.hash_val = hashArray(hash_arr)
 
+    def __eq__(self, other)->bool:
+        """Check if two PermutableMatrix have the same values
+
+        Returns:
+            bool: True if the matrix
+        """
+        if not super().__eq__(other):
+            return False
+        if not all([s == o] for s, o in zip(self.row_names, other.row_names)):
+            return False
+        if not all([s == o] for s, o in zip(self.column_names, other.column_names)):
+            return False
+        if not all([s == o] for s, o in zip(self.row_collection.encoding_arr,
+                other.row_collection.encoding_arr)):
+            return False
+        if not all([s == o] for s, o in zip(self.column_collection.encoding_arr,
+                other.column_collection.encoding_arr)):
+            return False
+        if not self.model_name == other.model_name:
+            return False
+        return True
+
     def __repr__(self)->str:
         return str(self.array) + '\n' + str(self.row_collection) + '\n' + str(self.column_collection)
     
-    def __eq__(self, other) -> bool:  # type: ignore
+    def isPermutablyIdentical(self, other) -> bool:  # type: ignore
         """
         Check if the matrices are permutably identical.
         Order other matrix
@@ -139,7 +161,7 @@ class PermutableMatrix(Matrix):
         is_true = is_true and self.column_collection.isCompatible(other.column_collection)
         return is_true
     
-    def serializeOne(self)->PermutableMatrixSerialization:
+    def _serializeOne(self)->PermutableMatrixSerialization:
         """Provides a list from which the ordered matrix can be constructed.
 
         Returns:
@@ -149,7 +171,8 @@ class PermutableMatrix(Matrix):
                row_names
                column_names
         """
-        return PermutableMatrixSerialization(self.model_name, self.array, self.row_names, self.column_names)
+        result = PermutableMatrixSerialization(self.model_name, self.array, self.row_names, self.column_names)
+        return result
 
     @classmethod 
     def serializeMany(cls, permutable_matrices:list)->pd.DataFrame:
@@ -162,22 +185,22 @@ class PermutableMatrix(Matrix):
                row_names
                column_names
         """
-        serializations = [m.serializeOne() for m in permutable_matrices]
-        return PermutableMatrixSerialization.makeDataFrame(serializations)
+        #serializations = [m.serializeOne() for m in permutable_matrices]
+        serializations = []
+        for permutable_matrix in permutable_matrices:
+            serializations.append(permutable_matrix._serializeOne())
+        df = PermutableMatrixSerialization.makeDataFrame(serializations)
+        return df
     
     @classmethod
-    def serializeAntimonyFile(cls, path:str)->PermutableMatrixSerialization:
+    def deserializeAntimonyFile(cls, path:str):
         """Provides a list from which the ordered matrix can be constructed.
 
         Args:
             path (str): Path to the antimony model file
 
         Returns:
-            SerializationString
-               model_name
-               str(self.array)
-               row_names
-               column_names
+            PermutableMatrix
         """
         rr = te.loada(path)
         model_name = os.path.split(path)[1]
@@ -190,15 +213,17 @@ class PermutableMatrix(Matrix):
         array =  np.array(named_array.tolist())
         #
         permutable_matrix = cls(array, row_names=row_names, column_names=column_names, model_name=model_name)
-        return permutable_matrix.serializeOne()
+        return permutable_matrix
 
     @classmethod
-    def serializeAntimonyDirectory(cls, indir_path:str, outfile_path:str)->None:
-        """Constructs a serialization file for all Antimony files in a directory
+    def deserializeAntimonyDirectory(cls, indir_path:str)->list:
+        """Deserializes a directory of antimony models to a DataFrame.
 
         Args:
             indir_path (str): Path to the antimony model directory
-            outfile_path (str): Path to the file to create
+
+        Returns:
+            list-PermutableMatrix
         """
         ffiles = os.listdir(indir_path)
         serialization_strs = []
@@ -206,9 +231,9 @@ class PermutableMatrix(Matrix):
             if not any([ffile.endswith(ext) for ext in ANTIMONY_EXTS]):
                 continue
             ffile = os.path.join(indir_path, ffile)
-            serialization_strs.append(cls.serializeAntimonyFile(ffile))
+            serialization_strs.append(cls.deserializeAntimonyFile(ffile))
         df = PermutableMatrixSerialization.makeDataFrame(serialization_strs)
-        df.to_csv(outfile_path, index=False)
+        return df
 
     @classmethod 
     def constructFromPermutableMatrixSerialization(cls, serialization:PermutableMatrixSerialization):  # type: ignore
@@ -227,27 +252,32 @@ class PermutableMatrix(Matrix):
                    )
     
     @classmethod 
-    def deserializeFromCSV(cls, path:str)->list:  # type: ignore
+    def deserializeCSV(cls, path:str)->list:  # type: ignore
         """Constructs a lit of PermutableMatrix from a CSV file.
 
         Args:
             path (str): Path to the CSV file of SerializationString
+        Returns:
+            list-PermutableMatrix
         """
         if not os.path.exists(path):
             raise FileNotFoundError(f'File not found: {path}')
         df = pd.read_csv(path)
-        return cls.deserializeFromDataFrame(df)
+        return cls.deserializeDataFrame(df)
     
     @classmethod 
-    def deserializeFromDataFrame(cls, df:pd.DataFrame)->list:  # type: ignore
+    def deserializeDataFrame(cls, df:pd.DataFrame)->list:  # type: ignore
         """Deserializes a DataFrame to a list of PermutableMatrix.
 
         Args:
             df: pd.DataFrame
+
+        Returns:
+            list-PermutableMatrix
         """
         permutable_matrices = []
         for _, row in df.iterrows():
-            array = util.string2Array(row[ARRAY])
+            array = row[ARRAY]
             permutable_matrix = PermutableMatrix(
                 array,
                 model_name=row[MODEL_NAME],

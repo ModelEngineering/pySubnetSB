@@ -18,9 +18,9 @@ class Matrix(object):
         return str(self.array)
 
     def __eq__(self, other)->bool:
-        if np.shape(self.array) != np.shape(other.matrix):
+        if np.shape(self.array) != np.shape(other.array):
             return False
-        return np.all(self.array == other.matrix)  # type: ignore
+        return np.all(self.array == other.array)  # type: ignore
     
     def isPermutablyIdentical(self, other):
         """

@@ -2,11 +2,12 @@ from sirn.permutable_matrix import PermutableMatrix, PermutableMatrixSerializati
 from sirn.matrix import Matrix # type: ignore
 from sirn import util # type: ignore
 
-import numpy as np
+import pandas as pd  # type: ignore
+import numpy as np # type: ignore
 import unittest
 
 
-IGNORE_TEST = True
+IGNORE_TEST = False
 IS_PLOT = False
 MAT = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 MODEL_NAME = 'model_name'
@@ -41,11 +42,12 @@ class TestPermutableMatrixSerialization(unittest.TestCase):
         if IGNORE_TEST:
             return
         df = PermutableMatrixSerialization.makeDataFrame(SERIALIZATIONS)
-        array = util.string2Array(df.loc[0, "array"])
+        TYPES = {'model_name': str, 'array': np.ndarray, 'row_names': list, 'column_names': list}
+        array = df.loc[0, "array"]
         self.assertTrue(isinstance(array, np.ndarray))
         #
         for column in df.columns:
-            self.assertTrue(isinstance(df.loc[0, column], str))
+            self.assertTrue(isinstance(df.loc[0, column], TYPES[column]))
 
 
 class TestMatrixClassifier(unittest.TestCase):
@@ -56,9 +58,9 @@ class TestMatrixClassifier(unittest.TestCase):
     def testConstructor(self):
         if IGNORE_TEST:
             return
-        self.permutable_matrix = PermutableMatrix(MAT)
-        self.assertTrue(np.all(self.permutable_matrix.array == MAT))
-        self.assertTrue(isinstance(self.permutable_matrix, PermutableMatrix))
+        permutable_matrix = PermutableMatrix(MAT)
+        self.assertTrue(np.all(permutable_matrix.array == MAT))
+        self.assertTrue(isinstance(permutable_matrix, PermutableMatrix))
 
     def testNotIdenticalClassifications(self):
         # Tests if permuted matrices don't have the same classification
@@ -117,7 +119,7 @@ class TestMatrixClassifier(unittest.TestCase):
         test(10000, 4)
         test(10000, 5)
 
-    def testEq1(self):
+    def testIsPermutablyIdentical1(self):
         if IGNORE_TEST:
             return
         size = 3
@@ -128,9 +130,9 @@ class TestMatrixClassifier(unittest.TestCase):
         arr2 = arr2[row_perm, :]
         permutable_matrix1 = PermutableMatrix(arr1)
         permutable_matrix2 = PermutableMatrix(arr2)
-        self.assertTrue(permutable_matrix1 == permutable_matrix2)
+        self.assertTrue(permutable_matrix1.isPermutablyIdentical(permutable_matrix2))
 
-    def testEq2(self):
+    def testIsPermutablyIdentical2(self):
         if IGNORE_TEST:
             return
         arr1 = np.array([[ 1, -1, -1],
@@ -141,10 +143,10 @@ class TestMatrixClassifier(unittest.TestCase):
             [ 0,  1,  0]])
         permutable_matrix1 = PermutableMatrix(arr1)
         permutable_matrix2 = PermutableMatrix(arr2)
-        if not permutable_matrix1 == permutable_matrix2:
+        if not permutable_matrix1.isPermutablyIdentical(permutable_matrix2):
             import pdb; pdb.set_trace()
 
-    def testEq3(self):
+    def testIsPermutablyIdentical3(self):
         # Test permutably identical matrices
         if IGNORE_TEST:
             return
@@ -160,14 +162,13 @@ class TestMatrixClassifier(unittest.TestCase):
                 arr2 = arr2[:, perm]
                 permutable_matrix1 = PermutableMatrix(arr1)
                 permutable_matrix2 = PermutableMatrix(arr2)
-                self.assertTrue(permutable_matrix1 == permutable_matrix2)
+                self.assertTrue(permutable_matrix1.isPermutablyIdentical(permutable_matrix2))
         #
         test(3)
         test(10)
         test(20)
-        test(30)
     
-    def testEq4(self):
+    def testIsPermutablyIdentical4(self):
         # Test not permutably identical matrices
         if IGNORE_TEST:
             return
@@ -184,12 +185,66 @@ class TestMatrixClassifier(unittest.TestCase):
                 # Construct the ordered matrices
                 permutable_matrix1 = PermutableMatrix(arr1)
                 permutable_matrix2 = PermutableMatrix(arr2)
-                self.assertFalse(permutable_matrix1 == permutable_matrix2)
+                self.assertFalse(permutable_matrix1.isPermutablyIdentical(permutable_matrix2))
         #
         test(3)
         test(10)
         test(20)
-        test(200)
+    
+    def testSerializeOne(self):
+        if IGNORE_TEST:
+            return
+        permutable_matrix = PermutableMatrix(MAT)
+        serialization = permutable_matrix._serializeOne()
+        self.assertTrue(isinstance(serialization, PermutableMatrixSerialization))
+        self.assertTrue(np.all(serialization.array == permutable_matrix.array))
+        self.assertTrue(isinstance(serialization.row_names, list))
+        self.assertTrue(isinstance(serialization.column_names, list))
+        self.assertTrue(isinstance(serialization.model_name, str))
+
+    def testSerializeManyAndDeserialize(self):
+        if IGNORE_TEST:
+           return
+        def test(size=3, num_mat=20, num_iteration=10):
+            for _ in range(num_iteration):
+                permutable_matrices = [PermutableMatrix(PermutableMatrix.makeTrinaryMatrix(size, size))
+                                       for _ in range(num_mat)]
+                df = PermutableMatrix.serializeMany(permutable_matrices)
+                self.assertTrue(isinstance(df, pd.DataFrame))
+                self.assertTrue(isinstance(df.loc[0, 'array'], np.ndarray))
+                self.assertEqual(len(df), num_mat)
+                #
+                permutable_matrices2 = PermutableMatrix.deserializeDataFrame(df)
+                trues = [pm1 == pm2 for pm1, pm2 in zip(permutable_matrices, permutable_matrices2)]
+                self.assertTrue(all(trues))
+        #
+        test()
+        test(size=20)
+
+    def testEq(self):
+        if IGNORE_TEST:
+            return
+        permutable_matrix = PermutableMatrix(MAT)
+        self.assertTrue(permutable_matrix == permutable_matrix)
+        # Test different matrices
+        permutable_matrix2 = PermutableMatrix(MAT)
+        permutable_matrix2.array[0, 0] = 2
+        self.assertFalse(permutable_matrix == permutable_matrix2)
+
+    def testDeserializeCSV(self):
+        if IGNORE_TEST:
+            return
+        raise NotImplementedError
+    
+    def testDeserializeAntimonyFile(self):
+        if IGNORE_TEST:
+            return
+        raise NotImplementedError
+    
+    def testDeserializeAntimonyDirectory(self):
+        if IGNORE_TEST:
+            return
+        raise NotImplementedError
 
 
 if __name__ == '__main__':
