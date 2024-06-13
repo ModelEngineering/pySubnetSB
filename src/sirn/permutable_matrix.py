@@ -13,9 +13,14 @@ import tellurium as te   # type: ignore
 from typing import List, Optional, Dict
 
 ANTIMONY_EXTS = [".ant", ".txt"]  # Antimony file extensions:95
+MODEL_NAME = 'model_name'
+ARRAY = 'array'
+ROW_NAMES = 'row_names'
+COLUMN_NAMES = 'column_names'
+SERIALIZATION_NAMES = [MODEL_NAME, ARRAY, ROW_NAMES, COLUMN_NAMES]
 
 
-class OrderedMatrixSerialization(object):
+class PermutableMatrixSerialization(object):
 
     def __init__(self,
                  model_name:str,
@@ -23,32 +28,36 @@ class OrderedMatrixSerialization(object):
                  row_names:List[str],
                  column_names:List[str],
                  ):
-        array_str =  str(np.array(array.tolist()))
-        array_str = array_str.replace('\n', ',')
-        self.array_str = array_str
+        self.array = np.array(array.tolist())
         self.row_names = row_names
         self.column_names = column_names
         self.model_name = model_name
 
+    def __repr__(self)->str:
+        array_str =  str(self.array)
+        array_str = array_str.replace('\n', ',')
+        row_str = str(self.row_names)
+        column_str = str(self.column_names)
+        return f'{self.model_name}, {array_str}, {row_str}, {column_str}'
+
     @classmethod
     def makeDataFrame(cls, ordered_marix_serializations: list):  # type: ignore
-        """Constructs a DataFrame from a list of OrderedMatrixSerialization.
+        """Constructs a DataFrame from a list of PermutableMatrixSerialization.
 
         Args:
-            ordered_marix_serializations (List[OrderedMatrixSerialization]): _description_
+            ordered_marix_serializations (List[PermutableMatrixSerialization]): _description_
 
         Returns:
             pd.DataFrame: _description_
         """
-        NAMES = ['model_name', 'array', 'row_names', 'column_names']
-        dct: Dict[str, list] = {n: [] for n in NAMES}
+        dct: Dict[str, list] = {n: [] for n in SERIALIZATION_NAMES}
         for serialization in ordered_marix_serializations:
-            for name in NAMES:
+            for name in SERIALIZATION_NAMES:
                 dct[name].append(getattr(serialization, name))
         return pd.DataFrame(dct)
 
 
-class OrderedMatrix(Matrix):
+class PermutableMatrix(Matrix):
         
     def __init__(self, array: np.ndarray,
                  row_names:Optional[List[str]]=None,
@@ -81,7 +90,7 @@ class OrderedMatrix(Matrix):
         Order other matrix
 
         Args:
-            other (OrderedMatrix)
+            other (PermutableMatrix)
         Returns:
             bool
         """
@@ -124,7 +133,7 @@ class OrderedMatrix(Matrix):
         is_true = is_true and self.column_collection.isCompatible(other.column_collection)
         return is_true
     
-    def serialize(self)->OrderedMatrixSerialization:
+    def toSerializationString(self)->PermutableMatrixSerialization:
         """Provides a list from which the ordered matrix can be constructed.
 
         Returns:
@@ -134,16 +143,24 @@ class OrderedMatrix(Matrix):
                row_names
                column_names
         """
-        serialization = OrderedMatrixSerialization(
-            model_name=self.model_name,
-            array=self.array,
-            row_names=self.row_names,
-            column_names=self.column_names,
-        )
-        return serialization
+        return PermutableMatrixSerialization(self.model_name, self.array, self.row_names, self.column_names)
+
+    @classmethod 
+    def serialize(cls, permutable_matrices:list)->pd.DataFrame:
+        """Provides a list from which the ordered matrix can be constructed.
+
+        Returns:
+            SerializationString
+               model_name
+               str(self.array)
+               row_names
+               column_names
+        """
+        serializations = [m.toSerializationString() for m in permutable_matrices]
+        return PermutableMatrixSerialization.makeDataFrame(serializations)
     
     @classmethod
-    def serializeAntimonyFile(cls, path:str)->OrderedMatrixSerialization:
+    def serializeAntimonyFile(cls, path:str)->PermutableMatrixSerialization:
         """Provides a list from which the ordered matrix can be constructed.
 
         Args:
@@ -166,8 +183,8 @@ class OrderedMatrix(Matrix):
         named_array = rr.getFullStoichiometryMatrix()
         array =  np.array(named_array.tolist())
         #
-        ordered_matrix = cls(array, row_names=row_names, column_names=column_names, model_name=model_name)
-        return ordered_matrix.serialize()
+        permutable_matrix = cls(array, row_names=row_names, column_names=column_names, model_name=model_name)
+        return permutable_matrix.toSerializationString()
 
     @classmethod
     def serializeAntimonyDirectory(cls, indir_path:str, outfile_path:str)->None:
@@ -184,21 +201,20 @@ class OrderedMatrix(Matrix):
                 continue
             ffile = os.path.join(indir_path, ffile)
             serialization_strs.append(cls.serializeAntimonyFile(ffile))
-        df = OrderedMatrixSerialization.makeDataFrame(serialization_strs)
+        df = PermutableMatrixSerialization.makeDataFrame(serialization_strs)
         df.to_csv(outfile_path, index=False)
 
     @classmethod 
-    def constructFromSerializationString(cls, serialization:OrderedMatrixSerialization):  # type: ignore
-        """Constructs an OrderedMatrix from a SerializationString.
+    def constructFromPermutableMatrixSerialization(cls, serialization:PermutableMatrixSerialization):  # type: ignore
+        """Constructs an PermutableMatrix from a SerializationString.
 
         Args:
             SerializationString
 
         Returns:
-            OrderedMatrix
+            PermutableMatrix
         """
-        arr = np.array(eval(serialization.array_str))
-        return cls(arr,
+        return cls(serialization.array,
                    row_names=serialization.row_names,
                    column_names=serialization.column_names,
                    model_name=serialization.model_name
@@ -206,7 +222,7 @@ class OrderedMatrix(Matrix):
     
     @classmethod 
     def deserialize(cls, path:str)->list:  # type: ignore
-        """Constructs a lit of OrderedMatrix from a CSV file.
+        """Constructs a lit of PermutableMatrix from a CSV file.
 
         Args:
             path (str): Path to the CSV file of SerializationString
@@ -215,13 +231,13 @@ class OrderedMatrix(Matrix):
             raise FileNotFoundError(f'File not found: {path}')
         df = pd.read_csv(path)
         #
-        ordered_matrices = []
+        permutable_matrices = []
         for _, row in df.iterrows():
-            serialization = OrderedMatrixSerialization(
-                eval(row['model_name']),
-                eval(row['array']),
-                eval(row['row_names']),
-                eval(row['column_names']),
+            serialization = PermutableMatrixSerialization(
+                eval(row[MODEL_NAME]),
+                eval(row[ARRAY]),
+                eval(row[ROW_NAMES]),
+                eval(row[COLUMN_NAMES]),
             )
-            ordered_matrices.append(cls.constructFromSerializationString(serialization))
-        return ordered_matrices
+            permutable_matrices.append(cls.constructFromPermutableMatrixSerialization(serialization))
+        return permutable_matrices

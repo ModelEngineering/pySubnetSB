@@ -1,4 +1,4 @@
-from sirn.ordered_matrix import OrderedMatrix # type: ignore
+from sirn.permutable_matrix import PermutableMatrix # type: ignore
 from sirn.matrix import Matrix # type: ignore
 
 import numpy as np
@@ -13,6 +13,18 @@ MAT = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 #############################
 # Tests
 #############################
+class TestPermutableMatrixSerialization(unittest.TestCase):
+
+    def setUp(self):
+        raise NotImplementedError
+
+    def testConstructor(self):
+        raise NotImplementedError
+
+    def testMakeDataFrame(self):
+        raise NotImplementedError
+
+
 class TestMatrixClassifier(unittest.TestCase):
 
     def setUp(self):
@@ -21,9 +33,9 @@ class TestMatrixClassifier(unittest.TestCase):
     def testConstructor(self):
         if IGNORE_TEST:
             return
-        self.ordered_matrix = OrderedMatrix(MAT)
-        self.assertTrue(np.all(self.ordered_matrix.array == MAT))
-        self.assertTrue(isinstance(self.ordered_matrix, OrderedMatrix))
+        self.permutable_matrix = PermutableMatrix(MAT)
+        self.assertTrue(np.all(self.permutable_matrix.array == MAT))
+        self.assertTrue(isinstance(self.permutable_matrix, PermutableMatrix))
 
     def testNotIdenticalClassifications(self):
         # Tests if permuted matrices don't have the same classification
@@ -34,9 +46,9 @@ class TestMatrixClassifier(unittest.TestCase):
             for _ in range(num_iteration):
                 arr = Matrix.makeTrinaryMatrix(size, size, prob0=prob0)
                 arr2 = Matrix.makeTrinaryMatrix(size, size, prob0=prob0)
-                ordered_matrix = OrderedMatrix(arr)
-                ordered_matrix2 = OrderedMatrix(arr2)
-                self.assertNotEqual(ordered_matrix.hash_val, ordered_matrix2.hash_val)
+                permutable_matrix = PermutableMatrix(arr)
+                permutable_matrix2 = PermutableMatrix(arr2)
+                self.assertNotEqual(permutable_matrix.hash_val, permutable_matrix2.hash_val)
         #
         test()
         test(size=10, prob0=0.2)
@@ -48,15 +60,15 @@ class TestMatrixClassifier(unittest.TestCase):
         def test(num_iteration=100, size=5, prob0=1/3):
             for _ in range(num_iteration):
                 arr = Matrix.makeTrinaryMatrix(size, size, prob0=prob0)
-                ordered_matrix = OrderedMatrix(arr)
+                permutable_matrix = PermutableMatrix(arr)
                 row_perm = np.random.permutation(range(size))
                 col_perm = np.random.permutation(range(size))
                 arr2 = arr.copy()
                 arr2 = arr2[row_perm, :]
                 arr2 = arr2[:, col_perm]
-                ordered_matrix2 = OrderedMatrix(arr2)
-                self.assertEqual(ordered_matrix.hash_val, ordered_matrix2.hash_val)
-                self.assertTrue(ordered_matrix.isCompatible(ordered_matrix2))
+                permutable_matrix2 = PermutableMatrix(arr2)
+                self.assertEqual(permutable_matrix.hash_val, permutable_matrix2.hash_val)
+                self.assertTrue(permutable_matrix.isCompatible(permutable_matrix2))
         #
         test()
         test(size=10, prob0=0.2)
@@ -69,11 +81,11 @@ class TestMatrixClassifier(unittest.TestCase):
         def test(num_iteration, size):
             hash_dct = {}
             for _ in range(num_iteration):
-                ordered_matrix = OrderedMatrix(OrderedMatrix.makeTrinaryMatrix(size, size))
-                hash_val = ordered_matrix.hash_val
+                permutable_matrix = PermutableMatrix(PermutableMatrix.makeTrinaryMatrix(size, size))
+                hash_val = permutable_matrix.hash_val
                 if hash_val not in hash_dct:
                     hash_dct[hash_val] = []
-                hash_dct[hash_val].append(ordered_matrix)
+                hash_dct[hash_val].append(permutable_matrix)
             lengths = np.array([len(v) for v in hash_dct.values()])
             frac_collision = np.sum([(l/num_iteration)**2 for l in lengths])
             self.assertLess(frac_collision, BOUNDS[size])
@@ -86,14 +98,14 @@ class TestMatrixClassifier(unittest.TestCase):
         if IGNORE_TEST:
             return
         size = 3
-        arr1 = OrderedMatrix.makeTrinaryMatrix(size, size, prob0=0.8)
+        arr1 = PermutableMatrix.makeTrinaryMatrix(size, size, prob0=0.8)
         arr1 = MAT.copy()
         arr2 = arr1.copy()
         row_perm =  np.array([1, 0, 2])
         arr2 = arr2[row_perm, :]
-        ordered_matrix1 = OrderedMatrix(arr1)
-        ordered_matrix2 = OrderedMatrix(arr2)
-        self.assertTrue(ordered_matrix1 == ordered_matrix2)
+        permutable_matrix1 = PermutableMatrix(arr1)
+        permutable_matrix2 = PermutableMatrix(arr2)
+        self.assertTrue(permutable_matrix1 == permutable_matrix2)
 
     def testEq2(self):
         if IGNORE_TEST:
@@ -104,9 +116,9 @@ class TestMatrixClassifier(unittest.TestCase):
         arr2 = np.array([[ 1, -1, -1],
             [ 1,  0,  1],
             [ 0,  1,  0]])
-        ordered_matrix1 = OrderedMatrix(arr1)
-        ordered_matrix2 = OrderedMatrix(arr2)
-        if not ordered_matrix1 == ordered_matrix2:
+        permutable_matrix1 = PermutableMatrix(arr1)
+        permutable_matrix2 = PermutableMatrix(arr2)
+        if not permutable_matrix1 == permutable_matrix2:
             import pdb; pdb.set_trace()
 
     def testEq3(self):
@@ -115,7 +127,7 @@ class TestMatrixClassifier(unittest.TestCase):
             return
         def test(size=3, num_iteration=20):
             for _ in range(num_iteration):
-                arr1 = OrderedMatrix.makeTrinaryMatrix(size, size)
+                arr1 = PermutableMatrix.makeTrinaryMatrix(size, size)
                 arr2 = arr1.copy()
                 for _ in range(10):
                     perm =  np.random.permutation(range(size))
@@ -123,9 +135,9 @@ class TestMatrixClassifier(unittest.TestCase):
                         break
                 arr2 = arr2[perm, :]
                 arr2 = arr2[:, perm]
-                ordered_matrix1 = OrderedMatrix(arr1)
-                ordered_matrix2 = OrderedMatrix(arr2)
-                self.assertTrue(ordered_matrix1 == ordered_matrix2)
+                permutable_matrix1 = PermutableMatrix(arr1)
+                permutable_matrix2 = PermutableMatrix(arr2)
+                self.assertTrue(permutable_matrix1 == permutable_matrix2)
         #
         test(3)
         test(10)
@@ -137,7 +149,7 @@ class TestMatrixClassifier(unittest.TestCase):
             return
         def test(size=3, num_iteration=20):
             for _ in range(num_iteration):
-                arr1 = OrderedMatrix.makeTrinaryMatrix(size, size)
+                arr1 = PermutableMatrix.makeTrinaryMatrix(size, size)
                 arr2 = arr1.copy()
                 # Randomly change a value
                 irow = np.random.randint(size)
@@ -146,9 +158,9 @@ class TestMatrixClassifier(unittest.TestCase):
                 if arr2[irow, icol] == 0:
                     arr2[irow, icol] = 1
                 # Construct the ordered matrices
-                ordered_matrix1 = OrderedMatrix(arr1)
-                ordered_matrix2 = OrderedMatrix(arr2)
-                self.assertFalse(ordered_matrix1 == ordered_matrix2)
+                permutable_matrix1 = PermutableMatrix(arr1)
+                permutable_matrix2 = PermutableMatrix(arr2)
+                self.assertFalse(permutable_matrix1 == permutable_matrix2)
         #
         test(3)
         test(10)
