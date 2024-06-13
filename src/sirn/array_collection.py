@@ -19,13 +19,16 @@ SEPARATOR = 1000 # Separates the counts in a single numbera
 
 class ArrayCollection(object):
 
-    def __init__(self, collection: np.ndarray)->None:
+    def __init__(self, collection: np.ndarray, is_weighted:bool=True)->None:
         """
         Args:
             arrays (np.array): A collection of arrays.
+            is_weighted (bool): Weight the value of the i-th element in an array by the sum of non-zero
+                elements in the i-th position.
         """
         self.collection = collection
         self.narr, self.length = np.shape(collection)
+        self.is_weighted = is_weighted
         #
         if (self.length > SEPARATOR):
             raise ValueError("Matrix is too large to classify. Maximum number of rows, columns is 1000.")
@@ -55,7 +58,7 @@ class ArrayCollection(object):
         return result
 
     # This method can be overridden to provide alternative encodings
-    def encode(self)->Dict[int, np.ndarray]:
+    def deprecatedEncode(self)->Dict[int, np.ndarray]:
         """Constructs an encoding for an ArrayCollection.
 
         Args:
@@ -67,6 +70,29 @@ class ArrayCollection(object):
         dct: dict = {}
         for idx, arr in enumerate(self.collection):
             this_encoding = np.sum(arr < 0) + np.sum(arr == 0) * SEPARATOR + np.sum(arr > 0)*SEPARATOR**2
+            if not this_encoding in dct.keys():
+                dct[this_encoding] = []
+            dct[this_encoding].append(idx)
+        return dct
+    
+    # This method can be overridden to provide alternative encodings
+    def encode(self)->Dict[int, np.ndarray]:
+        """Constructs an encoding for an ArrayCollection.
+
+        Args:
+            arr (np.ndarray): _description_
+
+        Returns:
+            np.ndarray: key: encoding, values: indexes of arrays with the same encoding
+        """
+        dct: dict = {}
+        if self.is_weighted:
+            weight_arr = np.abs(self.collection).sum(axis=0)
+        else:
+            weight_arr = np.ones(self.length)
+        for idx, arr in enumerate(self.collection):
+            new_arr = arr*weight_arr
+            this_encoding = np.sum(new_arr < 0) + np.sum(new_arr == 0)*SEPARATOR + np.sum(new_arr > 0)*SEPARATOR**2
             if not this_encoding in dct.keys():
                 dct[this_encoding] = []
             dct[this_encoding].append(idx)

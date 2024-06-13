@@ -38,7 +38,7 @@ class PermutableMatrixSerialization(object):
         array_str = array_str.replace('\n', ',')
         row_str = str(self.row_names)
         column_str = str(self.column_names)
-        return f'{self.model_name}, {array_str}, {row_str}, {column_str}'
+        return f'["{self.model_name}", "{array_str}", "{row_str}", "{column_str}"]'
 
     @classmethod
     def makeDataFrame(cls, ordered_marix_serializations: list):  # type: ignore

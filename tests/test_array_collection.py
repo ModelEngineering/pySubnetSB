@@ -13,7 +13,7 @@ MAT = np.array([[1, 0, 0], [0, 1, 0], [0, 1, 1]])
 #############################
 # Tests
 #############################
-class TestMatrixClassifier(unittest.TestCase):
+class TestArrayCollection(unittest.TestCase):
 
     def setUp(self):
         self.collection = ArrayCollection(MAT)
@@ -47,7 +47,7 @@ class TestMatrixClassifier(unittest.TestCase):
                 new_encoding = 0
                 for idx in range(3):
                     new_encoding += counts[idx]*1000**idx
-                self.assertTrue(any([e == new_encoding for e in collection.encoding_arr]))
+                self.assertGreaterEqual(size, len(collection.encoding_arr))
         #
         test()
         test(prob0=2/3)

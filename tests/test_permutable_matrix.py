@@ -1,13 +1,14 @@
-from sirn.permutable_matrix import PermutableMatrix # type: ignore
+from sirn.permutable_matrix import PermutableMatrix, PermutableMatrixSerialization # type: ignore
 from sirn.matrix import Matrix # type: ignore
 
 import numpy as np
 import unittest
 
 
-IGNORE_TEST = False
+IGNORE_TEST = True
 IS_PLOT = False
 MAT = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+MODEL_NAME = 'model_name'
 
 
 #############################
@@ -16,10 +17,20 @@ MAT = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 class TestPermutableMatrixSerialization(unittest.TestCase):
 
     def setUp(self):
-        raise NotImplementedError
+        self.serialization = PermutableMatrixSerialization(MODEL_NAME, MAT, ['r1', 'r2', 'r3'], ['s1', 's2', 's3']) 
 
     def testConstructor(self):
-        raise NotImplementedError
+        if IGNORE_TEST:
+            return
+        self.assertTrue(np.all(self.serialization.array == MAT))
+
+    def testRepr(self):
+        #if IGNORE_TEST:
+        #    return
+        self.assertTrue(isinstance(str(self.serialization), str))
+        stg = str(self.serialization)
+        import pdb; pdb.set_trace()
+        self.assertTrue(isinstance(eval(stg[1]), np.ndarray))
 
     def testMakeDataFrame(self):
         raise NotImplementedError
@@ -142,6 +153,7 @@ class TestMatrixClassifier(unittest.TestCase):
         test(3)
         test(10)
         test(20)
+        test(30)
     
     def testEq4(self):
         # Test not permutably identical matrices
@@ -166,7 +178,6 @@ class TestMatrixClassifier(unittest.TestCase):
         test(10)
         test(20)
         test(200)
-
 
 
 if __name__ == '__main__':

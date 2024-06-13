@@ -16,14 +16,14 @@ MAT = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 class TestMatrixClassifier(unittest.TestCase):
 
     def setUp(self):
-        self.arr = copy.copy(MAT)
-        self.matrix = Matrix(self.arr)
+        self.array = copy.copy(MAT)
+        self.matrix = Matrix(self.array)
 
     def testConstructor(self):
         if IGNORE_TEST:
             return
-        matrix = Matrix(self.arr)
-        self.assertTrue(np.all(matrix.arr == self.arr))
+        matrix = Matrix(self.array)
+        self.assertTrue(np.all(matrix.array == self.array))
 
     def testMakeTrinaryMatrix(self):
         if IGNORE_TEST:
@@ -44,10 +44,10 @@ class TestMatrixClassifier(unittest.TestCase):
         #    return
         matrix = Matrix(Matrix.makeTrinaryMatrix(4, 5, prob0=0.2))
         row_triples = []
-        for idx in range(matrix.nrow):
-            triple = (np.sum(matrix.arr[idx, :] < 0),
-                      np.sum(matrix.arr[idx, :] == 0),
-                      np.sum(matrix.arr[idx, :] > 0 ))
+        for idx in range(matrix.num_row):
+            triple = (np.sum(matrix.array[idx, :] < 0),
+                      np.sum(matrix.array[idx, :] == 0),
+                      np.sum(matrix.array[idx, :] > 0 ))
             row_triples.append(triple)
 
 
