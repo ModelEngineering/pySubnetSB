@@ -1,5 +1,6 @@
 from sirn.permutable_matrix import PermutableMatrix, PermutableMatrixSerialization # type: ignore
 from sirn.matrix import Matrix # type: ignore
+from sirn import util # type: ignore
 
 import numpy as np
 import unittest
@@ -9,6 +10,10 @@ IGNORE_TEST = True
 IS_PLOT = False
 MAT = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 MODEL_NAME = 'model_name'
+SERIALIZATIONS = [PermutableMatrixSerialization(MODEL_NAME,
+                                                np.random.randint(0, 2, (3, 3)),
+                                                ['r1', 'r2', 'r3'],
+                                                ['s1', 's2', 's3']) for _ in range(10)]
 
 
 #############################
@@ -25,15 +30,22 @@ class TestPermutableMatrixSerialization(unittest.TestCase):
         self.assertTrue(np.all(self.serialization.array == MAT))
 
     def testRepr(self):
-        #if IGNORE_TEST:
-        #    return
+        if IGNORE_TEST:
+            return
         self.assertTrue(isinstance(str(self.serialization), str))
         stg = str(self.serialization)
-        import pdb; pdb.set_trace()
-        self.assertTrue(isinstance(eval(stg[1]), np.ndarray))
+        stg_arr = eval(stg)
+        self.assertTrue(isinstance(eval(stg_arr[1]), list))
 
     def testMakeDataFrame(self):
-        raise NotImplementedError
+        if IGNORE_TEST:
+            return
+        df = PermutableMatrixSerialization.makeDataFrame(SERIALIZATIONS)
+        array = util.string2Array(df.loc[0, "array"])
+        self.assertTrue(isinstance(array, np.ndarray))
+        #
+        for column in df.columns:
+            self.assertTrue(isinstance(df.loc[0, column], str))
 
 
 class TestMatrixClassifier(unittest.TestCase):

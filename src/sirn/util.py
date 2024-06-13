@@ -20,3 +20,21 @@ def hashArray(arr: np.ndarray)->int:
     for val in hash_vals[1:]:
         hash_val = pd.util.hash_array(np.array([hash_val ^ val]))[0]
     return hash_val
+
+def string2Array(array_str: str)->np.ndarray:
+    """Converts a string to an array.
+
+    Args:
+        array_str (str): An string constructed by str(np.array).
+
+    Returns:
+        np.array: An array.
+    """
+    array_str = array_str.replace('\n', ',')
+    array_str = array_str.replace(' ', ', ')
+    array_str = array_str.replace('\n', '')
+    while True:
+        if ",," not in array_str:
+            break
+        array_str = array_str.replace(",,", ",")
+    return np.array(eval(array_str))

@@ -46,6 +46,18 @@ class TestFunctions(unittest.TestCase):
         frac_collision = sum(lengths > 1)/num_arr
         self.assertLess(frac_collision, 0.1)
 
+    def testString2Array(self):
+        if IGNORE_TEST:
+            return
+        def test(array):
+            array_str = str(array)
+            arr = util.string2Array(array_str)
+            self.assertTrue(np.all(arr == arr))
+        #
+        array = np.array(range(10))
+        test(array)
+        test(np.reshape(array, (2,5)))
+
 
 if __name__ == '__main__':
     unittest.main()
