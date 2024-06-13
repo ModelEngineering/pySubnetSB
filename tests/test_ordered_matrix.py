@@ -16,12 +16,13 @@ MAT = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 class TestMatrixClassifier(unittest.TestCase):
 
     def setUp(self):
-        self.ordered_matrix = OrderedMatrix(MAT)
+        pass
 
     def testConstructor(self):
         if IGNORE_TEST:
             return
-        self.assertTrue(np.all(self.ordered_matrix.arr == MAT))
+        self.ordered_matrix = OrderedMatrix(MAT)
+        self.assertTrue(np.all(self.ordered_matrix.array == MAT))
         self.assertTrue(isinstance(self.ordered_matrix, OrderedMatrix))
 
     def testNotIdenticalClassifications(self):
@@ -42,8 +43,8 @@ class TestMatrixClassifier(unittest.TestCase):
 
     def testIdenticalClassifications(self):
         # Tests if permuted matrices have the same classification
-        #if IGNORE_TEST:
-        #    return
+        if IGNORE_TEST:
+            return
         def test(num_iteration=100, size=5, prob0=1/3):
             for _ in range(num_iteration):
                 arr = Matrix.makeTrinaryMatrix(size, size, prob0=prob0)
@@ -81,8 +82,80 @@ class TestMatrixClassifier(unittest.TestCase):
         test(10000, 4)
         test(10000, 5)
 
+    def testEq1(self):
+        if IGNORE_TEST:
+            return
+        size = 3
+        arr1 = OrderedMatrix.makeTrinaryMatrix(size, size, prob0=0.8)
+        arr1 = MAT.copy()
+        arr2 = arr1.copy()
+        row_perm =  np.array([1, 0, 2])
+        arr2 = arr2[row_perm, :]
+        ordered_matrix1 = OrderedMatrix(arr1)
+        ordered_matrix2 = OrderedMatrix(arr2)
+        self.assertTrue(ordered_matrix1 == ordered_matrix2)
 
-        
+    def testEq2(self):
+        if IGNORE_TEST:
+            return
+        arr1 = np.array([[ 1, -1, -1],
+            [ 0,  0,  1],
+            [ 1,  1,  0]])
+        arr2 = np.array([[ 1, -1, -1],
+            [ 1,  0,  1],
+            [ 0,  1,  0]])
+        ordered_matrix1 = OrderedMatrix(arr1)
+        ordered_matrix2 = OrderedMatrix(arr2)
+        if not ordered_matrix1 == ordered_matrix2:
+            import pdb; pdb.set_trace()
+
+    def testEq3(self):
+        # Test permutably identical matrices
+        if IGNORE_TEST:
+            return
+        def test(size=3, num_iteration=20):
+            for _ in range(num_iteration):
+                arr1 = OrderedMatrix.makeTrinaryMatrix(size, size)
+                arr2 = arr1.copy()
+                for _ in range(10):
+                    perm =  np.random.permutation(range(size))
+                    if np.sum(np.diff(perm)) != size - 1:  # Avoid the identity permutation
+                        break
+                arr2 = arr2[perm, :]
+                arr2 = arr2[:, perm]
+                ordered_matrix1 = OrderedMatrix(arr1)
+                ordered_matrix2 = OrderedMatrix(arr2)
+                self.assertTrue(ordered_matrix1 == ordered_matrix2)
+        #
+        test(3)
+        test(10)
+        test(20)
+    
+    def testEq4(self):
+        # Test not permutably identical matrices
+        if IGNORE_TEST:
+            return
+        def test(size=3, num_iteration=20):
+            for _ in range(num_iteration):
+                arr1 = OrderedMatrix.makeTrinaryMatrix(size, size)
+                arr2 = arr1.copy()
+                # Randomly change a value
+                irow = np.random.randint(size)
+                icol = np.random.randint(size)
+                arr2[irow, icol] = -arr2[irow, icol]
+                if arr2[irow, icol] == 0:
+                    arr2[irow, icol] = 1
+                # Construct the ordered matrices
+                ordered_matrix1 = OrderedMatrix(arr1)
+                ordered_matrix2 = OrderedMatrix(arr2)
+                self.assertFalse(ordered_matrix1 == ordered_matrix2)
+        #
+        test(3)
+        test(10)
+        test(20)
+        test(200)
+
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -23,12 +23,12 @@ class TestMatrixClassifier(unittest.TestCase):
             return
         self.assertTrue(np.all(self.collection.collection == MAT))
         self.assertTrue(isinstance(self.collection, ArrayCollection))
-        self.assertGreater(self.collection.encoding[-1], self.collection.encoding[0])
+        self.assertGreater(self.collection.encoding_arr[-1], self.collection.encoding_arr[0])
 
     def testClassifyArray(self):
         if IGNORE_TEST:
             return
-        self.assertTrue(np.allclose(self.collection.encoding, np.array([1002000, 2001000])))
+        self.assertTrue(np.allclose(self.collection.encoding_arr, np.array([1002000, 2001000])))
 
     def testEncode2(self):
         # Test random sequences
@@ -47,12 +47,39 @@ class TestMatrixClassifier(unittest.TestCase):
                 new_encoding = 0
                 for idx in range(3):
                     new_encoding += counts[idx]*1000**idx
-                self.assertTrue(any([e == new_encoding for e in collection.encoding]))
+                self.assertTrue(any([e == new_encoding for e in collection.encoding_arr]))
         #
         test()
         test(prob0=2/3)
         test(prob0=1/5)
-        
+
+    def testPartitionPermutationIteratorSimple(self):
+        # Test random sequences
+        if IGNORE_TEST:
+            return
+        permutations = list(self.collection.partitionPermutationIterator())
+        for permutation in [ [0, 1, 2], [1, 0, 2]]:
+            self.assertTrue(any([ np.allclose(permutation, p) for p in permutations]))
+    
+    def testPartitionPermutationIteratorComplicated(self):
+        if IGNORE_TEST:
+            return
+        def test(size=3, num_iteration=10):
+            for _ in range(num_iteration):
+                mat = Matrix.makeTrinaryMatrix(size, size)
+                collection = ArrayCollection(mat)
+                #print(collection.num_partition/size)
+                permutations = list(collection.partitionPermutationIterator())
+                # Check that each permutation is unique
+                for idx, permutation in enumerate(permutations):
+                    checks = list(permutations)
+                    checks = checks[:idx] + checks[idx+1:]
+                    self.assertFalse(any([np.allclose(permutation, p) for p in checks]))
+        #
+        test(size=5)
+        test(size=15)
+        test(size=20)
+
 
 if __name__ == '__main__':
     unittest.main()

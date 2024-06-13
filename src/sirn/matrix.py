@@ -6,21 +6,21 @@ from typing import Tuple
 
 class Matrix(object):
 
-    def __init__(self, arr: np.ndarray):
+    def __init__(self, array: np.ndarray):
         """
         Args:
             arr (np.array): Stoichiometry matrix. Rows are reactions; columns are species.
         """
-        self.arr = arr
-        self.nrow, self.ncol = np.shape(arr)
+        self.array = array
+        self.num_row, self.num_column = np.shape(array)
 
     def __repr__(self)->str:
-        return str(self.arr)
+        return str(self.array)
 
     def __eq__(self, other)->bool:
-        if np.shape(self.arr) != np.shape(other.matrix):
+        if np.shape(self.array) != np.shape(other.matrix):
             return False
-        return np.all(self.arr == other.matrix)  # type: ignore
+        return np.all(self.array == other.matrix)  # type: ignore
     
     def isPermutablyIdentical(self, other):
         """
@@ -30,11 +30,11 @@ class Matrix(object):
         Returns:
             bool: True if the matrix is permutable; False otherwise.
         """
-        row_perm = itertools.permutations(range(self.nrow))
-        col_perm = itertools.permutations(range(self.ncol))
+        row_perm = itertools.permutations(range(self.num_row))
+        col_perm = itertools.permutations(range(self.num_column))
         for r in row_perm:
             for c in col_perm:
-                if np.all(self.arr[r][:, c] == other.matrix):
+                if np.all(self.array[r][:, c] == other.matrix):
                     return True
         return False
     
@@ -67,6 +67,6 @@ class Matrix(object):
         Returns:
             FixedMatrix
         """
-        row_perm = np.random.permutation(self.nrow)
-        col_perm = np.random.permutation(self.ncol)
-        return Matrix(self.arr[row_perm][:, col_perm])  # type: ignore
+        row_perm = np.random.permutation(self.num_row)
+        col_perm = np.random.permutation(self.num_column)
+        return Matrix(self.array[row_perm][:, col_perm])  # type: ignore

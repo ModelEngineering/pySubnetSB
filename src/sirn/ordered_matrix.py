@@ -5,22 +5,110 @@ from sirn.util import hashArray  # type: ignore
 from sirn.matrix import Matrix # type: ignore
 from sirn.array_collection import ArrayCollection # type: ignore
 
+import collections
 import numpy as np
+import os
+import pandas as pd # type: ignore
+import tellurium as te   # type: ignore
+from typing import List, Optional, Dict
+
+ANTIMONY_EXTS = [".ant", ".txt"]  # Antimony file extensions:95
+
+
+class OrderedMatrixSerialization(object):
+
+    def __init__(self,
+                 model_name:str,
+                 array: np.ndarray,
+                 row_names:List[str],
+                 column_names:List[str],
+                 ):
+        array_str =  str(np.array(array.tolist()))
+        array_str = array_str.replace('\n', ',')
+        self.array_str = array_str
+        self.row_names = row_names
+        self.column_names = column_names
+        self.model_name = model_name
+
+    @classmethod
+    def makeDataFrame(cls, ordered_marix_serializations: list):  # type: ignore
+        """Constructs a DataFrame from a list of OrderedMatrixSerialization.
+
+        Args:
+            ordered_marix_serializations (List[OrderedMatrixSerialization]): _description_
+
+        Returns:
+            pd.DataFrame: _description_
+        """
+        NAMES = ['model_name', 'array', 'row_names', 'column_names']
+        dct: Dict[str, list] = {n: [] for n in NAMES}
+        for serialization in ordered_marix_serializations:
+            for name in NAMES:
+                dct[name].append(getattr(serialization, name))
+        return pd.DataFrame(dct)
 
 
 class OrderedMatrix(Matrix):
         
-    def __init__(self, arr: np.ndarray):
-        super().__init__(arr)
+    def __init__(self, array: np.ndarray,
+                 row_names:Optional[List[str]]=None,
+                 column_names:Optional[List[str]]=None,
+                 model_name:Optional[str]=None): 
+        # Inputs
+        super().__init__(array)
+        if row_names is None:
+            row_names = [str(i) for i in range(self.num_row)]  # type: ignore
+        if column_names is None:
+            column_names = [str(i) for i in range(self.num_column)]  # type: ignore
+        if model_name is None:
+            model_name = str(np.random.randint(1000000))
+        self.row_names = row_names
+        self.column_names = column_names
+        self.model_name = model_name
         # Outputs
-        self.row_collection = ArrayCollection(self.arr)
-        column_arr = np.transpose(self.arr)
+        self.row_collection = ArrayCollection(self.array)
+        column_arr = np.transpose(self.array)
         self.column_collection = ArrayCollection(column_arr)
-        hash_arr = np.concatenate((self.row_collection.encoding, self.column_collection.encoding))
+        hash_arr = np.concatenate((self.row_collection.encoding_arr, self.column_collection.encoding_arr))
         self.hash_val = hashArray(hash_arr)
 
     def __repr__(self)->str:
-        return str(self.arr) + '\n' + str(self.row_collection) + '\n' + str(self.column_collection)
+        return str(self.array) + '\n' + str(self.row_collection) + '\n' + str(self.column_collection)
+    
+    def __eq__(self, other) -> bool:  # type: ignore
+        """
+        Check if the matrices are permutably identical.
+        Order other matrix
+
+        Args:
+            other (OrderedMatrix)
+        Returns:
+            bool
+        """
+        # Check compatibility
+        if not self.isCompatible(other):
+            return False
+        # The matrices have the same shape and partitions
+        #  Order the other matrix to align the partitions of the two matrices
+        other_row_itr = other.row_collection.partitionPermutationIterator()
+        other_column_itr = other.column_collection.partitionPermutationIterator()
+        other_row_perm = next(other_row_itr)
+        other_column_perm = next(other_column_itr)
+        other_matrix = other.array[other_row_perm, :]
+        other_matrix = other_matrix[:, other_column_perm]
+        # Search all partition constrained permutations of this matrix to match the other matrix
+        row_itr = self.row_collection.partitionPermutationIterator()
+        count = 0
+        array = self.array.copy()
+        for row_perm in row_itr:
+            column_itr = self.column_collection.partitionPermutationIterator()
+            for col_perm in column_itr:
+                count += 1
+                matrix = array[row_perm, :]
+                matrix = matrix[:, col_perm]
+                if np.all(matrix == other_matrix):
+                    return True
+        return False
     
     def isCompatible(self, other)->bool:
         """
@@ -35,3 +123,105 @@ class OrderedMatrix(Matrix):
         is_true = self.row_collection.isCompatible(other.row_collection)
         is_true = is_true and self.column_collection.isCompatible(other.column_collection)
         return is_true
+    
+    def serialize(self)->OrderedMatrixSerialization:
+        """Provides a list from which the ordered matrix can be constructed.
+
+        Returns:
+            SerializationString
+               model_name
+               str(self.array)
+               row_names
+               column_names
+        """
+        serialization = OrderedMatrixSerialization(
+            model_name=self.model_name,
+            array=self.array,
+            row_names=self.row_names,
+            column_names=self.column_names,
+        )
+        return serialization
+    
+    @classmethod
+    def serializeAntimonyFile(cls, path:str)->OrderedMatrixSerialization:
+        """Provides a list from which the ordered matrix can be constructed.
+
+        Args:
+            path (str): Path to the antimony model file
+
+        Returns:
+            SerializationString
+               model_name
+               str(self.array)
+               row_names
+               column_names
+        """
+        rr = te.loada(path)
+        model_name = os.path.split(path)[1]
+        model_name = model_name.split('.')[0]
+        #
+        row_names = rr.getFloatingSpeciesIds()
+        column_names = rr.getReactionIds()
+        #
+        named_array = rr.getFullStoichiometryMatrix()
+        array =  np.array(named_array.tolist())
+        #
+        ordered_matrix = cls(array, row_names=row_names, column_names=column_names, model_name=model_name)
+        return ordered_matrix.serialize()
+
+    @classmethod
+    def serializeAntimonyDirectory(cls, indir_path:str, outfile_path:str)->None:
+        """Constructs a serialization file for all Antimony files in a directory
+
+        Args:
+            indir_path (str): Path to the antimony model directory
+            outfile_path (str): Path to the file to create
+        """
+        ffiles = os.listdir(indir_path)
+        serialization_strs = []
+        for ffile in ffiles:
+            if not any([ffile.endswith(ext) for ext in ANTIMONY_EXTS]):
+                continue
+            ffile = os.path.join(indir_path, ffile)
+            serialization_strs.append(cls.serializeAntimonyFile(ffile))
+        df = OrderedMatrixSerialization.makeDataFrame(serialization_strs)
+        df.to_csv(outfile_path, index=False)
+
+    @classmethod 
+    def constructFromSerializationString(cls, serialization:OrderedMatrixSerialization):  # type: ignore
+        """Constructs an OrderedMatrix from a SerializationString.
+
+        Args:
+            SerializationString
+
+        Returns:
+            OrderedMatrix
+        """
+        arr = np.array(eval(serialization.array_str))
+        return cls(arr,
+                   row_names=serialization.row_names,
+                   column_names=serialization.column_names,
+                   model_name=serialization.model_name
+                   )
+    
+    @classmethod 
+    def deserialize(cls, path:str)->list:  # type: ignore
+        """Constructs a lit of OrderedMatrix from a CSV file.
+
+        Args:
+            path (str): Path to the CSV file of SerializationString
+        """
+        if not os.path.exists(path):
+            raise FileNotFoundError(f'File not found: {path}')
+        df = pd.read_csv(path)
+        #
+        ordered_matrices = []
+        for _, row in df.iterrows():
+            serialization = OrderedMatrixSerialization(
+                eval(row['model_name']),
+                eval(row['array']),
+                eval(row['row_names']),
+                eval(row['column_names']),
+            )
+            ordered_matrices.append(cls.constructFromSerializationString(serialization))
+        return ordered_matrices
