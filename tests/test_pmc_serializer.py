@@ -76,7 +76,7 @@ class TestPermutableSerializer(unittest.TestCase):
         self.assertTrue(isinstance(pmatrix, PMatrix))
         self.assertTrue(pmatrix.isPermutablyIdentical(pmatrix))
     
-    def testDeserializeAntimonyDirectory(self):
+    def testPMCollectionAntimonyDirectory(self):
         if IGNORE_TEST:
             return
         pmatrix_collection = PMCSerializer.makePMCollectionAntimonyDirectory(cn.MODEL_DIR)
@@ -84,6 +84,16 @@ class TestPermutableSerializer(unittest.TestCase):
         self.assertTrue(len(pmatrix_collection) == 1)
         name = FILE_NAME.split(".")[0]
         self.assertTrue(name in str(pmatrix_collection))
+
+    def testPMCollectionAntimonyDirectory2(self):
+        # Existing dataframe
+        if IGNORE_TEST:
+            return
+        processed_model_names = [FILE_NAME.split(".")[0]]
+        pmatrix_collection = PMCSerializer.makePMCollectionAntimonyDirectory(cn.MODEL_DIR,
+                    processed_model_names=processed_model_names)
+        self.assertTrue(isinstance(pmatrix_collection, PMatrixCollection))
+        self.assertTrue(len(pmatrix_collection) == 0)
 
 
 if __name__ == '__main__':

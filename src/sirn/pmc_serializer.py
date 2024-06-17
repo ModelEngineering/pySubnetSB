@@ -12,9 +12,9 @@ import numpy as np
 import os
 import pandas as pd  # type: ignore
 import tellurium as te # type: ignore
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
-ANTIMONY_EXTS = [".ant", ".txt"]  # Antimony file extensions:95
+ANTIMONY_EXTS = [".ant", ".txt", ""]  # Antimony file extensions:95
 MODEL_NAME = 'model_name'
 ARRAY_STR = 'array_str'
 NUM_ROW = 'num_row'
@@ -117,12 +117,14 @@ class PMCSerializer(object):
 
     @classmethod
     def makePMCollectionAntimonyDirectory(cls, indir_path:str, max_file:Optional[int]=None,
-                                          report_interval:Optional[int]=None)->PMatrixCollection:
+                processed_model_names:Optional[List[str]]=None,
+                report_interval:Optional[int]=None)->PMatrixCollection:
         """Creates a pmatrixCollection from a directory of Antimony files.
 
         Args:
             indir_path (str): Path to the antimony model directory
             max_file (int): Maximum number of files to process
+            processed_model_names (List[str]): Names of models already processed
             report_interval (int): Report interval
 
         Returns:
@@ -130,13 +132,25 @@ class PMCSerializer(object):
         """
         ffiles = os.listdir(indir_path)
         pmatrices = []
+        model_names = []
+        if processed_model_names is not None:
+            model_names = list(processed_model_names)
         for count, ffile in enumerate(ffiles):
+            if report_interval is not None and count % report_interval == 0:
+                is_report = True
+            else:
+                is_report = False
+            model_name = ffile.split('.')[0]
+            if model_name in model_names:
+                if is_report:
+                    print(".")
+                continue
             if (max_file is not None) and (count >= max_file):
                 break
             if not any([ffile.endswith(ext) for ext in ANTIMONY_EXTS]):
                 continue
             ffile = os.path.join(indir_path, ffile)
             pmatrices.append(cls._makePMatrixAntimonyFile(ffile))
-            if report_interval is not None and count % report_interval == 0:
+            if is_report:
                 print(f"Processed {count} files.")
         return PMatrixCollection(pmatrices)
