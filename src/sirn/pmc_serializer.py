@@ -143,7 +143,7 @@ class PMCSerializer(object):
             model_name = ffile.split('.')[0]
             if model_name in model_names:
                 if is_report:
-                    print(".")
+                    print(".", end='')
                 continue
             if (max_file is not None) and (count >= max_file):
                 break

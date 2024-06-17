@@ -67,6 +67,7 @@ class Matrix(object):
         Returns:
             FixedMatrix
         """
+        array = self.array.copy()
         row_perm = np.random.permutation(self.num_row)
         col_perm = np.random.permutation(self.num_column)
-        return Matrix(self.array[row_perm][:, col_perm])  # type: ignore
+        return Matrix(array[row_perm][:, col_perm])  # type: ignore
