@@ -1,12 +1,22 @@
 # DETECTING STRUCTURALLY IDENTICAL REACTION NETWORKS
 
-Two **chemical reaction networks (CRNs)** are structurally identical if they have the same stoichiometry matrix, regardless of their rate laws. Because of renamings of chemical species and reactions, testing for structurally
+Two **chemical reaction networks (CRNs)** are structurally identical if they have the same stoichiometry for reactants (reactant stoichiometry matrix) and products (product stoichiometry matrix), regardless of their rate laws. Because of renamings of chemical species and reactions, testing for structurally
 identical networks requires an element-wise comparison of every permutation of the rows and columns of the
-stoichiometry matrices. That is, if two networks are structurally identical then they have **permutably identical stoichiometry matrices**.
+stoichiometry matrices. That is, if two networks are structurally identical then they have permutably identical stoichiometry reactant matrices and their product stoichiometry matrix are identical for the same permutations used to get equal reactant matrices. Clearly, this definition applies if we exchange "reactant" and "product".
+
+Why do we use the above definition and not simply the stoichiometry matrix? This is best answered by showing an example. Consider the following two networks that consist of a single reaction:
+
+    // Network 1
+    S1 -> S1 + S2
+
+    // Network 2
+    S2 -> S2 + S2
+
+These networks have the same Stoichiometry matrix that has a 0 for ``S1`` and a 1 for ``S2``. However, the reactant and product stoichiometry matrices are different for these two networks.
 
 # Problem Addressed
 The above approach to finding structurally identical CRNs has a huge computational complexity.
-Let $N$ be the number of rows (species) in the stoichiometry matrix and M be the number of columns.
+Let $N$ be the number of rows (species) in a stoichiometry matrix and M be the number of columns.
 Then, the computational complexity of a single pair-wise comparison is $O(N!M!)$. If each comparison takes 1 microsecond, then: (i) $N=8=M$ takes about an hour; (ii) N=10=M takes about a day; and (iii) $N=20=M$ takes
 longer than the current age of the Universe (14B years). In systems biology, $N=20=M$ is a modest size CRN.
 
