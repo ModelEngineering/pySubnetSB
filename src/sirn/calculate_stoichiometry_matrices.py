@@ -5,9 +5,12 @@ import tellurium as te  # type: ignore
 import simplesbml  # type: ignore
 import numpy as np  # type: ignore
 
+# Result: namedtuple
 #  reactant_mat: reactant stoichiometry matrix
 #  product_mat: product stoichiometry matrix
 #  stoichiometry_mat: stoichiometry matrix
+#  species_names: list of species names
+#  reaction_names: list of reaction names
 Result = collections.namedtuple('Result', 
         'reactant_mat, product_mat, stoichiometry_mat, species_names, reaction_names')
 
@@ -18,7 +21,7 @@ def CalculateStoichiometryMatrices(antimony_str:str)->Result:
     Args:
         antimony_str (str): Antimony model
     Returns:
-        Result: reactant stoichiometry matrix, product stoichiometry matrix, and stoichiometry matrix
+        Result: Result(reactant_mat, product_mat, stoichiometry_mat, species_names, reaction_names)
     """
     roadrunner = te.loada(antimony_str)
     sbml = roadrunner.getSBML()
