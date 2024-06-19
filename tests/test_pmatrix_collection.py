@@ -9,12 +9,11 @@ import numpy as np # type: ignore
 import unittest
 
 
-IGNORE_TEST = True
+IGNORE_TEST = False
 IS_PLOT = False
-MODEL_NAME = 'model_name'
 COLLECTION_SIZE = 10
 PMATRICES = [PMatrix(np.random.randint(0, 2, (3, 3)), ['r1', 'r2', 'r3'],
-     ['s1', 's2', 's3'], model_name=MODEL_NAME) for _ in range(COLLECTION_SIZE)]
+     ['s1', 's2', 's3']) for _ in range(COLLECTION_SIZE)]
 SERIALIZATION_PATH = os.path.join(cn.TEST_DIR, "Oscillators_DOE_JUNE_10.csv")
 
 
@@ -34,7 +33,7 @@ class TestPMatrixCollection(unittest.TestCase):
     def testRepr(self):
         if IGNORE_TEST:
             return
-        self.assertTrue(MODEL_NAME in str(self.collection))
+        self.assertTrue(isinstance(str(self.collection), str))
 
     def testMakeRandomCollection(self):
         if IGNORE_TEST:

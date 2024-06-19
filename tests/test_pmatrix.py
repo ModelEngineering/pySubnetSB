@@ -14,7 +14,7 @@ IS_PLOT = False
 MAT = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 
 
-class TestMatrixClassifier(unittest.TestCase):
+class TestPMatrix(unittest.TestCase):
 
     def setUp(self):
         pass
@@ -156,14 +156,15 @@ class TestMatrixClassifier(unittest.TestCase):
         test(20)
 
     def testEq(self):
-        if IGNORE_TEST:
-            return
+        #if IGNORE_TEST:
+        #    return
         pmatrix = PMatrix(MAT)
         self.assertTrue(pmatrix == pmatrix)
         # Test different matrices
-        pmatrix2 = PMatrix(MAT)
+        pmatrix2 = PMatrix(MAT.copy())
         pmatrix2.array[0, 0] = 2
-        self.assertFalse(pmatrix == pmatrix2)
+        result = pmatrix == pmatrix2
+        self.assertFalse(result)
 
 
 if __name__ == '__main__':
