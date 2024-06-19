@@ -32,11 +32,10 @@ so that rows (columns) are only compared if they have the same OIE. The stoichio
 
 By so doing, we partition the rows (columns) so that we only need to consider the permutations in each partition.
 Let $N_P$ be the number of rows of with distinct OIE encodings for two structurally identical matrices, and $M_P$ be the same for the number of columns.
-We can approximate the speedup by assuming that each partition of rows has the same number of elements, and a similar approximation can be made for the columns. Under these assumpations, the speedup of our algorithm is
-$(N_P)^N \times (M_P)^M$.
-
-The approximation works well for a smaller number of partitions. Consider the extreme case that $N_P = 1 = M_P$. And so,
-$(N_P)^N \times (M_P)^M = 1^N \times 1^M = 1.$ That is, there is no speedup. The approximation at the other extreme is less accurate. That is, if $N_P = N$, then there is only one ordering of the rows consistent with the OIE. Similarly, for $M_P = M$ for columns. Thus, we estimate the total number of permutations to be $N^N \times M^M >> N!M!.$
+Suppose that each partition contains the same number of elements; $\frac{N}{N_P}$ for species
+and $\frac{M}{M_P}$ for reactions. Then, the complexity for using partitions is
+$O( (\frac{N}{N_P}!)^{N_P} (\frac{M}{M_P}!)^{M_P})$.
+When $N_P = 1 = M_P$, we get $O(N!M!)$. When $N_P = N$, $M_P =M$, we get 1.
 
 # Design
 
@@ -45,5 +44,5 @@ $(N_P)^N \times (M_P)^M = 1^N \times 1^M = 1.$ That is, there is no speedup. The
 * A **``PMatrix``** is ``Matrix`` that provides an efficient test for permutably identical matrices. ``PMatrix`` has an ``ArrayCollection`` for it rows and another for its columns. ``PMatrix`` uses ``ArrayCollection`` to obtain OIEs from which it constructs partitions of rows (columns) to do efficient checking for permutably identical matrices.
 * A **``Network``** represents a CRN. It has a reactant ``PMatrix`` that represents the reactant stoichiometry matrix, and a product ``PMatrix`` that represents the product stoichiometry matrix. ``Network`` has a hash that is calculated from the reactant and product ``PMatrix``.
 * and product stoichiometry matrices.
-* A **NetworkCollection** is a collection of Network. NetworkCollection provides a way to discover subsets that are structurally identical. ``NetworkCollection.is_structurally_identical`` indicates if all Network in the collection are structurally identical.
-* A **NCSerializer** provides a way to save and restore a NetworkCollection. It also provides for creating a NetworkCollection from a directory of Antimony Files.
+* A **``NetworkCollection``** is a collection of ``Network``. ``NetworkCollection`` provides a way to discover subsets that are structurally identical. The boolean attribute``NetworkCollection.is_structurally_identical indicates if all ``Network`` in the collection are structurally identical.
+* A **``NCSerializer``** provides a way to save and restore a ``NetworkCollection``. It also provides for creating a ``NetworkCollection`` from a directory of Antimony Files.

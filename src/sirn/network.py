@@ -3,6 +3,7 @@
 from sirn.stoichometry import Stoichiometry  # type: ignore
 from sirn.pmatrix import PMatrix  # type: ignore
 
+import os
 import numpy as np
 from typing import Optional
 
@@ -52,21 +53,20 @@ class Network(object):
     
     def isStructurallyIdentical(self, other)->bool:
         if self.is_simple_stoichiometry:
-            return self.stoichiometry_pmatrix == other.stoichiometry_pmatrix
+            return bool(self.stoichiometry_pmatrix.isPermutablyIdentical(other.stoichiometry_pmatrix))
         # Must separately check the reactant and product matrices.
         result = self.reactant_pmatrix.isPermutablyIdentical(other.reactant_pmatrix)
         if not result:
             return False
         # Now check that there is a permutation of the reactant stoichiometry matrix
         # that makes the product stoichiometry matrices equal.
-        other_array = other.product_pmatrix.array[result.other_row_perm, :]
-        other_array = other_array[result.other_row_perm, :]
-        for this_row_perm in result.this_row_perms:
-            for this_column_perm in result.this_column_perms:
-                this_array = self.product_pmatrix.array[this_row_perm, :]
-                this_array = this_array[:, this_column_perm]
-                if bool(np.all([x == y for x, y in zip(this_array, other_array)])):
-                    return True
+        other_array = PMatrix.permuteArray(other.product_pmatrix.array,
+                     result.other_row_perm, result.other_column_perm)  # type: ignore
+        for idx, this_row_perm in enumerate(result.this_row_perms):
+            this_column_perm = result.this_column_perms[idx]
+            this_array = PMatrix.permuteArray(self.product_pmatrix.array, this_row_perm, this_column_perm)
+            if bool(np.all([x == y for x, y in zip(this_array, other_array)])):
+                return True
         return False
     
     @classmethod
@@ -78,6 +78,7 @@ class Network(object):
         Args:
             antimony_str (str): Antimony string.
             network_name (str): Name of the network.
+            is_simple_stoichiometry (bool): If True, then test for identical structure
 
         Returns:
             Network
@@ -87,17 +88,25 @@ class Network(object):
                    is_simple_stoichiometry=is_simple_stoichiometry)
     
     @classmethod
-    def makeAntimonyFile(cls, antimony_file:str, **kwargs)->'Network':
+    def makeAntimonyFile(cls, antimony_path:str, is_structurally_identical:bool=False,
+                         network_name:Optional[str]=None,
+                         is_simple_stoichiometry:bool=False)->'Network':
         """
-        Make a Network from an Antimony file.
+        Make a Network from an Antimony file. The default network name is the file name.
 
         Args:
-            antimony_file (str)
-            **kwargs: Keyword arguments for makeAntimony.
+            antimony_path (str): path to an Antimony file.
+            network_name (str): Name of the network.
+            is_structurally_identical (bool): If True, then test for identical structure
+            is_simple_stoichiometry (bool): If True, then test for identical structure
 
         Returns:
             Network
         """
-        with open(antimony_file, 'r') as fd:
+        with open(antimony_path, 'r') as fd:
             antimony_str = fd.read()
-        return cls.makeAntimony(antimony_str, **kwargs)
+        if network_name is None:
+            filename = os.path.basename(antimony_path)
+            network_name = filename.split('.')[0]
+        return cls.makeAntimony(antimony_str, network_name=network_name,
+                                is_simple_stoichiometry=is_simple_stoichiometry)

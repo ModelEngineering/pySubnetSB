@@ -20,8 +20,8 @@ class PermutablyIdenticalResult(object):
     def __init__(self, is_permutably_identical:bool,
                  this_row_perms:Optional[List[np.ndarray]]=None,
                  this_column_perms:Optional[List[np.ndarray]]=None,
-                 other_row_perm:Optional[np.ndarray]=None,
-                 other_column_perm:Optional[np.ndarray]=None,
+                 other_row_perm:Optional[np.ndarray[int]]=None,
+                 other_column_perm:Optional[np.ndarray[int]]=None,
                  ):
         """
         Args:
@@ -92,6 +92,24 @@ class PMatrix(Matrix):
 
     def __repr__(self)->str:
         return str(self.array) + '\n' + str(self.row_collection) + '\n' + str(self.column_collection)
+
+    @staticmethod 
+    def permuteArray(array:np.ndarray, row_perm:np.ndarray[int],
+                     column_perm:np.ndarray[int])->np.ndarray:
+        """
+        Permute the rows and columns of a matrix.
+
+        Args:
+            array (np.array): Matrix to permute.
+            row_perm (np.array): Permutation of the rows.
+            column_perm (np.array): Permutation of the columns.
+
+        Returns:
+            np.array: Permuted matrix.
+        """
+        new_array = array.copy()
+        new_array = new_array[row_perm, :]
+        return new_array[:, column_perm]
     
     def isPermutablyIdentical(self, other:'PMatrix') -> PermutablyIdenticalResult:
         """
@@ -112,24 +130,21 @@ class PMatrix(Matrix):
         other_column_itr = other.column_collection.partitionPermutationIterator()
         other_row_perm = next(other_row_itr)
         other_column_perm = next(other_column_itr)
-        other_pmatrix = other.array[other_row_perm, :]
-        other_pmatrix = other_pmatrix[:, other_column_perm]
+        other_array = self.permuteArray(other.array, other_row_perm, other_column_perm)
         # Search all partition constrained permutations of this matrix to match the other matrix
         row_itr = self.row_collection.partitionPermutationIterator()
         count = 0
-        array = self.array.copy()
         # Find all permutations that result in equality
         this_row_perms: list = []
         this_column_perms: list = []
         for row_perm in row_itr:
             column_itr = self.column_collection.partitionPermutationIterator()
-            for col_perm in column_itr:
+            for column_perm in column_itr:
                 count += 1
-                matrix = array[row_perm, :]
-                matrix = matrix[:, col_perm]
-                if np.all(matrix == other_pmatrix):
+                this_array = self.permuteArray(self.array, row_perm, column_perm)
+                if np.all(this_array == other_array):
                     this_row_perms.append(row_perm)
-                    this_column_perms.append(col_perm)
+                    this_column_perms.append(column_perm)
         #
         is_permutably_identical = len(this_row_perms) > 0
         permutably_identical_result = PermutablyIdenticalResult(is_permutably_identical,
