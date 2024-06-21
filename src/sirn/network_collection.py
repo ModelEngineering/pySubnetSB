@@ -11,13 +11,27 @@ Notes
 
 
 from sirn.network import Network   # type: ignore
+from sirn.pmatrix import PMatrix   # type: ignore
 
+import collections
 import os
+import pandas as pd
 import numpy as np
 from typing import List, Optional, Dict
 
 
 ANTIMONY_EXTS = [".ant", ".txt", ""]  # Antimony file extensions
+MODEL_NAME = 'model_name'
+REACTANT_ARRAY_STR = 'reactant_array_str'
+PRODUCT_ARRAY_STR = 'product_array_str'
+NUM_ROW = 'num_row'
+NUM_COL = 'num_col'
+ROW_NAMES = 'row_names'
+COLUMN_NAMES = 'column_names'
+SERIALIZATION_NAMES = [MODEL_NAME, REACTANT_ARRAY_STR, PRODUCT_ARRAY_STR, ROW_NAMES,
+                       COLUMN_NAMES, NUM_ROW, NUM_COL, NUM_ROW, NUM_COL]
+
+ArrayContext = collections.namedtuple('ArrayContext', "string, nrow, ncol")
 
 
 ####################################
@@ -180,4 +194,69 @@ class NetworkCollection(object):
             networks.append(network)
             if is_report:
                 print(f"Processed {count} files.")
+        return NetworkCollection(networks)
+    
+    @staticmethod 
+    def _array2Context(array:np.ndarray)->ArrayContext:
+        nrow, ncol = np.shape(array)
+        flat_array = np.reshape(array, nrow*ncol)
+        str_arr = [str(i) for i in flat_array]
+        array_str = "[" + ",".join(str_arr) + "]"
+        return ArrayContext(array_str, nrow, ncol)
+    
+    @staticmethod
+    def _string2Array(array_context:ArrayContext)->np.ndarray:
+        array = np.array(eval(array_context.string))
+        array = np.reshape(array, (array_context.nrow, array_context.ncol))
+        return array
+
+    def serialize(self)->pd.DataFrame:
+        """Constructs a DataFrame from a NetworkCollection
+
+        Returns:
+            pd.DataFrame: See SERIALIZATION_NAMES
+        """
+        dct: Dict[str, list] = {n: [] for n in SERIALIZATION_NAMES}
+        for network in self.networks:
+            dct[MODEL_NAME].append(network.network_name)
+            reactant_pmatrix = network.reactant_pmatrix
+            product_pmatrix = network.product_pmatrix
+            reactant_array_context = self._array2Context(reactant_pmatrix.array)
+            dct[REACTANT_ARRAY_STR].append(reactant_array_context.string)
+            product_array_context = self._array2Context(product_pmatrix.array)
+            dct[PRODUCT_ARRAY_STR].append(product_array_context.string)
+            dct[NUM_ROW].append(reactant_array_context.nrow)
+            dct[NUM_COL].append(reactant_array_context.ncol)
+            dct[ROW_NAMES].append(str(reactant_pmatrix.row_names))
+            dct[COLUMN_NAMES].append(str(reactant_pmatrix.column_names))
+        return pd.DataFrame(dct)
+    
+    @classmethod 
+    def deserialize(cls, df:pd.DataFrame)->'NetworkCollection':
+        """Deserializes a DataFrame to a NetworkCollection
+
+        Args:
+            df: pd.DataFrame
+
+        Returns:
+            PMatrixCollection
+        """
+        def _makePMatrix(array_str:str, num_row:int, num_col:int, row_names:str,
+                         column_names:str):
+            array_context = ArrayContext(array_str, num_row, num_col)
+            array = cls._string2Array(array_context)
+            return PMatrix(array, row_names=eval(row_names), column_names=eval(column_names))
+        #
+        networks = []
+        for _, row in df.iterrows():
+            row_names:str = row[ROW_NAMES],
+            column_names:str = row[COLUMN_NAMES],
+            num_row = row[NUM_ROW]
+            num_col = row[NUM_COL]
+            reactant_pmatrix = _makePMatrix(row[REACTANT_ARRAY_STR],
+                                            num_row, num_col, row_names, column_names) 
+            product_pmatrix = _makePMatrix(row[PRODUCT_ARRAY_STR],
+                                            num_row, num_col, row_names, column_names) 
+            pmatrix = Network(reactant_pmatrix, product_pmatrix, network_name=row[MODEL_NAME])
+            networks.append(pmatrix)
         return NetworkCollection(networks)

@@ -6,7 +6,7 @@ from sirn.util import hashArray  # type: ignore
 
 import os
 import numpy as np
-from typing import Optional
+from typing import Optional, Union
 
 
 class Network(object):
@@ -14,7 +14,8 @@ class Network(object):
     Abstraction for a reaction network. This is represented by a reactant PMatrix and product PMatrix.
     """
 
-    def __init__(self, reactant_mat:np.ndarray, product_mat:np.ndarray,
+    def __init__(self, reactant_mat:Union[np.ndarray, PMatrix],
+                 product_mat:Union[np.ndarray, PMatrix],
                  network_name:Optional[str]=None):
         """
         Args:
@@ -22,8 +23,14 @@ class Network(object):
             product_mat (np.ndarray): Product matrix.
             network_name (str): Name of the network.
         """
-        self.reactant_pmatrix = PMatrix(reactant_mat)
-        self.product_pmatrix = PMatrix(product_mat)
+        if isinstance(reactant_mat, PMatrix):
+            self.reactant_pmatrix = reactant_mat
+        else:
+            self.reactant_pmatrix = PMatrix(reactant_mat)
+        if isinstance(product_mat, PMatrix):
+            self.product_pmatrix = product_mat
+        else:
+            self.product_pmatrix = PMatrix(product_mat)
         if network_name is None:
             network_name = str(np.random.randint(0, 100000))
         self.network_name = network_name
