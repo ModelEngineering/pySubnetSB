@@ -2,6 +2,7 @@
 
 from sirn.stoichometry import Stoichiometry  # type: ignore
 from sirn.pmatrix import PMatrix  # type: ignore
+from sirn.util import hashArray  # type: ignore
 
 import os
 import numpy as np
@@ -14,14 +15,12 @@ class Network(object):
     """
 
     def __init__(self, reactant_mat:np.ndarray, product_mat:np.ndarray,
-                 network_name:Optional[str]=None, is_simple_stoichiometry:bool=False):
+                 network_name:Optional[str]=None):
         """
         Args:
             reactant_mat (np.ndarray): Reactant matrix.
             product_mat (np.ndarray): Product matrix.
             network_name (str): Name of the network.
-            is_simple_stoichiometry (bool): If True, then test for identical structure
-                is based of the difference between the product and reactant stoichiometry matrices.
         """
         self.reactant_pmatrix = PMatrix(reactant_mat)
         self.product_pmatrix = PMatrix(product_mat)
@@ -30,12 +29,14 @@ class Network(object):
         self.network_name = network_name
         stoichiometry_array = self.product_pmatrix.array - self.reactant_pmatrix.array
         self.stoichiometry_pmatrix = PMatrix(stoichiometry_array)
-        self.is_simple_stoichiometry = is_simple_stoichiometry
+        # Hash values for simple stoichiometry (only stoichiometry matrix) and non-simple stoichiometry
+        self.nonsimple_hash = hashArray(np.array([self.reactant_pmatrix.hash_val,
+                                                  self.product_pmatrix.hash_val]))
+        self.simple_hash = self.stoichiometry_pmatrix.hash_val
 
     def copy(self)->'Network':
         return Network(self.reactant_pmatrix.array.copy(), self.product_pmatrix.array.copy(),
-                       network_name=self.network_name,
-                       is_simple_stoichiometry=self.is_simple_stoichiometry)
+                       network_name=self.network_name)
 
     def __repr__(self)->str:
         return self.network_name
@@ -47,13 +48,14 @@ class Network(object):
             return False
         if self.product_pmatrix != other.product_pmatrix:
             return False
-        if self.is_simple_stoichiometry != other.is_simple_stoichiometry:
-            return False
         return True
     
-    def isStructurallyIdentical(self, other)->bool:
-        if self.is_simple_stoichiometry:
+    def isStructurallyIdentical(self, other:'Network', is_simple_stoichiometry:bool=False)->bool:
+        if is_simple_stoichiometry:
             return bool(self.stoichiometry_pmatrix.isPermutablyIdentical(other.stoichiometry_pmatrix))
+        # Check that the combined hash (reactant_pmatrix, product_pmatrix) is the same.
+        if self.nonsimple_hash != other.nonsimple_hash:
+            return False
         # Must separately check the reactant and product matrices.
         result = self.reactant_pmatrix.isPermutablyIdentical(other.reactant_pmatrix)
         if not result:
@@ -69,26 +71,53 @@ class Network(object):
                 return True
         return False
     
+    def randomize(self, is_structurally_identical:bool=True, num_iteration:int=10)->'Network':
+        """
+        Creates a new network with randomly permuted reactant and product matrices.
+
+        Args:
+            is_structurally_identical (bool): If True, then test for identical structure
+            num_iteration (int): Number of iterations to find a randomized
+
+        Returns:
+            Network
+        """
+        is_found = False
+        for _ in range(num_iteration):
+            randomize_result = self.reactant_pmatrix.randomize()
+            reactant_arr = randomize_result.pmatrix.array.copy()
+            if is_structurally_identical:
+                product_arr = PMatrix.permuteArray(self.product_pmatrix.array,
+                        randomize_result.row_perm, randomize_result.column_perm) 
+            else:
+                randomize_result = self.product_pmatrix.randomize()
+                product_arr = randomize_result.pmatrix.array
+            network = Network(reactant_arr, product_arr)
+            if is_structurally_identical == self.isStructurallyIdentical(
+                    network, is_simple_stoichiometry=False):
+                is_found = True
+                break
+        if not is_found:
+            raise ValueError("Could not find a randomized network. Try increasing num_iteration.")
+        return network
+    
     @classmethod
-    def makeAntimony(cls, antimony_str:str, network_name:Optional[str]=None,
-                     is_simple_stoichiometry=True)->'Network':
+    def makeFromAntimonyStr(cls, antimony_str:str, network_name:Optional[str]=None)->'Network':
         """
         Make a Network from an Antimony string.
 
         Args:
             antimony_str (str): Antimony string.
             network_name (str): Name of the network.
-            is_simple_stoichiometry (bool): If True, then test for identical structure
 
         Returns:
             Network
         """
         stoichiometry = Stoichiometry(antimony_str)
-        return cls(stoichiometry.reactant_mat, stoichiometry.product_mat, network_name=network_name,
-                   is_simple_stoichiometry=is_simple_stoichiometry)
+        return cls(stoichiometry.reactant_mat, stoichiometry.product_mat, network_name=network_name)
     
     @classmethod
-    def makeAntimonyFile(cls, antimony_path:str, is_structurally_identical:bool=False,
+    def makeFromAntimonyFile(cls, antimony_path:str, is_structurally_identical:bool=False,
                          network_name:Optional[str]=None,
                          is_simple_stoichiometry:bool=False)->'Network':
         """
@@ -108,5 +137,4 @@ class Network(object):
         if network_name is None:
             filename = os.path.basename(antimony_path)
             network_name = filename.split('.')[0]
-        return cls.makeAntimony(antimony_str, network_name=network_name,
-                                is_simple_stoichiometry=is_simple_stoichiometry)
+        return cls.makeFromAntimonyStr(antimony_str, network_name=network_name)

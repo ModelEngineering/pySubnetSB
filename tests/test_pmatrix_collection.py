@@ -78,8 +78,8 @@ class TestPMatrixCollection(unittest.TestCase):
         test(num_collection=5)
     
     def testCluster1(self):
-        #if IGNORE_TEST:
-        #    return
+        if IGNORE_TEST:
+            return
         df = pd.read_csv(SERIALIZATION_PATH)
         pmatrix_collection = PMCSerializer.deserialize(df)
         pmatrix_identity_collections = pmatrix_collection.cluster()

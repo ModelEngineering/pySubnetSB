@@ -13,7 +13,11 @@ import numpy as np
 from typing import List, Optional
 
 
+
 ####################################
+RandomizeResult = collections.namedtuple('RandomizeResult', ['pmatrix', 'row_perm', 'column_perm'])    
+
+
 class PermutablyIdenticalResult(object):
     # Auxiliary object returned by isPermutablyIdentical
 
@@ -66,6 +70,25 @@ class PMatrix(Matrix):
         self.column_collection = ArrayCollection(column_arr)
         hash_arr = np.concatenate((self.row_collection.encoding_arr, self.column_collection.encoding_arr))
         self.hash_val = hashArray(hash_arr)
+
+    def randomize(self)->RandomizeResult:
+        """Randomly permutes the rows and columns of the matrix.
+
+        Returns:
+            PMatrix
+        """
+        array = self.array.copy()
+        for _ in range(10):
+            row_perm = np.random.permutation(self.num_row)
+            column_perm = np.random.permutation(self.num_column)
+        array = self.permuteArray(array, row_perm, column_perm)
+        randomize_result = RandomizeResult(
+            pmatrix= PMatrix(array, self.row_names.copy(), self.column_names.copy()),
+            row_perm=row_perm,
+            column_perm=column_perm
+            )
+        return randomize_result
+        
 
     def copy(self)->'PMatrix':
         return PMatrix(self.array.copy(), self.row_names.copy(), self.column_names.copy())

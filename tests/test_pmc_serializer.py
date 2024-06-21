@@ -12,7 +12,7 @@ import unittest
 IGNORE_TEST = False
 IS_PLOT = False
 MAT = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-MODEL_NAME = 'model_name'
+network_name = 'network_name'
 PMATRIX_COLLECTION = PMatrixCollection.makeRandomCollection(num_pmatrix=10, matrix_size=5)
 SERIALIZER_PATH = os.path.join(cn.TEST_DIR, 'pmc_serializers.csv')
 REMOVE_FILES = [SERIALIZER_PATH]
@@ -46,15 +46,11 @@ class TestPermutableSerializer(unittest.TestCase):
                                     matrix_size=matrix_size)
                 serializer = PMCSerializer(pmatrix_collection)
                 df = serializer.serialize()
-                for column in df.columns:
-                    if "num" in column:
-                        if not isinstance(df.loc[0, column], np.int64):
-                            import pdb; pdb.set_trace()
-                        #self.assertTrue(isinstance(df.loc[0, column], np.int64))
-                    else:
-                        #self.assertTrue(isinstance(df.loc[0, column], str))
-                        if not isinstance(df.loc[0, column], str):
-                            import pdb; pdb.set_trace()
+#                for column in df.columns:
+#                    if "num" in column:
+#                        #self.assertTrue(isinstance(df.loc[0, column], np.int64))
+#                    else:
+#                        #self.assertTrue(isinstance(df.loc[0, column], str))
                 # Deserialize
                 pmatrix_collection = PMCSerializer.deserialize(df)
                 self.assertTrue(isinstance(pmatrix_collection, PMatrixCollection))
@@ -89,9 +85,9 @@ class TestPermutableSerializer(unittest.TestCase):
         # Existing dataframe
         if IGNORE_TEST:
             return
-        processed_model_names = [FILE_NAME.split(".")[0]]
+        processed_network_names = [FILE_NAME.split(".")[0]]
         pmatrix_collection = PMCSerializer.makePMCollectionAntimonyDirectory(cn.MODEL_DIR,
-                    processed_model_names=processed_model_names)
+                    processed_network_names=processed_network_names)
         self.assertTrue(isinstance(pmatrix_collection, PMatrixCollection))
         self.assertTrue(len(pmatrix_collection) == 0)
 

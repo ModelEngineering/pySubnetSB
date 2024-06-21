@@ -3,7 +3,6 @@ from sirn.matrix import Matrix # type: ignore
 from sirn import util # type: ignore
 import sirn.constants as cn  # type: ignore
 
-import os
 import pandas as pd  # type: ignore
 import numpy as np # type: ignore
 import unittest
@@ -17,7 +16,8 @@ MAT = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 class TestPMatrix(unittest.TestCase):
 
     def setUp(self):
-        pass
+        array = MAT.copy()
+        self.pmatrix = PMatrix(array)
 
     def testConstructor(self):
         if IGNORE_TEST:
@@ -107,8 +107,7 @@ class TestPMatrix(unittest.TestCase):
             [ 0,  1,  0]])
         pmatrix1 = PMatrix(arr1)
         pmatrix2 = PMatrix(arr2)
-        if not pmatrix1.isPermutablyIdentical(pmatrix2):
-            import pdb; pdb.set_trace()
+        self.assertTrue(pmatrix1.isPermutablyIdentical(pmatrix2))
 
     def testIsPermutablyIdentical3(self):
         # Test permutably identical matrices
@@ -165,6 +164,13 @@ class TestPMatrix(unittest.TestCase):
         pmatrix2.array[0, 0] = 2
         result = pmatrix == pmatrix2
         self.assertFalse(result)
+
+    def testRandomize(self):
+        if IGNORE_TEST:
+            return
+        pmatrix = self.pmatrix.randomize().pmatrix
+        self.assertTrue(pmatrix != self.pmatrix)
+        self.assertTrue(self.pmatrix.isPermutablyIdentical(pmatrix))
 
 
 if __name__ == '__main__':

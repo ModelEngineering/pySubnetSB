@@ -39,7 +39,7 @@ class Matrix(object):
         return False
     
     @classmethod
-    def makeTrinaryMatrix(cls, nrow: int=3, ncol: int=2, prob0=1.0/3)->np.array:
+    def makeTrinaryMatrix(cls, num_row: int=3, num_column: int=2, prob0=1.0/3)->np.array:
         """
         Make a trinary matrix with 0, 1, and -1. No row or column can have all zeros.
         Args:
@@ -52,7 +52,7 @@ class Matrix(object):
         arr = [0, 1, -1]
         prob_arr = [prob0, prob_other, prob_other]
         for _ in range(100):
-            matrix = np.random.choice(arr, size=(nrow, ncol), p=prob_arr)
+            matrix = np.random.choice(arr, size=(num_row, num_column), p=prob_arr)
             matrix_sq = matrix*matrix
             is_nozerorow = np.all(matrix_sq.sum(axis=1) > 0)
             is_nozerocol = np.all(matrix_sq.sum(axis=0) > 0)
