@@ -15,7 +15,7 @@ from sirn.pmatrix import PMatrix   # type: ignore
 
 import collections
 import os
-import pandas as pd
+import pandas as pd # type: ignore
 import numpy as np
 from typing import List, Optional, Dict
 
@@ -28,8 +28,11 @@ NUM_ROW = 'num_row'
 NUM_COL = 'num_col'
 ROW_NAMES = 'row_names'
 COLUMN_NAMES = 'column_names'
+IS_STRUCTURALLY_IDENTICAL = 'is_structurally_identical'
+IS_SIMPLE_STOICHIOMETRY = 'is_simple_stoichiometry'
 SERIALIZATION_NAMES = [MODEL_NAME, REACTANT_ARRAY_STR, PRODUCT_ARRAY_STR, ROW_NAMES,
-                       COLUMN_NAMES, NUM_ROW, NUM_COL, NUM_ROW, NUM_COL]
+                       COLUMN_NAMES, NUM_ROW, NUM_COL, NUM_ROW, NUM_COL,
+                       IS_STRUCTURALLY_IDENTICAL, IS_SIMPLE_STOICHIOMETRY]
 
 ArrayContext = collections.namedtuple('ArrayContext', "string, nrow, ncol")
 
@@ -50,6 +53,26 @@ class NetworkCollection(object):
         self.is_structurally_identical = is_structurally_identical
         self.is_simple_stoichiometry = is_simple_stoichiometry
 
+    def __eq__(self, other:'NetworkCollection')->bool:  # type: ignore
+        # Check that collections have networks with the same attribute values
+        if len(self) != len(other):
+            return False
+        if not self.is_simple_stoichiometry == other.is_simple_stoichiometry:
+            return False
+        if not self.is_structurally_identical == other.is_structurally_identical:
+            return False
+        # Check the network names
+        network1_dct = {n.network_name: n for n in self.networks}
+        network2_dct = {n.network_name: n for n in other.networks}
+        key_set = set(network1_dct.keys())
+        key_diff = key_set.symmetric_difference(set(network2_dct.keys()))
+        if len(key_diff) > 0:
+            return False
+        #
+        for key in key_set:
+            if not network1_dct[key] == network2_dct[key]:
+                return False
+        return True
 
     def __len__(self)->int:
         return len(self.networks)
@@ -227,8 +250,10 @@ class NetworkCollection(object):
             dct[PRODUCT_ARRAY_STR].append(product_array_context.string)
             dct[NUM_ROW].append(reactant_array_context.nrow)
             dct[NUM_COL].append(reactant_array_context.ncol)
-            dct[ROW_NAMES].append(str(reactant_pmatrix.row_names))
-            dct[COLUMN_NAMES].append(str(reactant_pmatrix.column_names))
+            dct[ROW_NAMES] = str(reactant_pmatrix.row_names)  # type: ignore
+            dct[COLUMN_NAMES] = str(reactant_pmatrix.column_names)  # type: ignore
+            dct[IS_STRUCTURALLY_IDENTICAL].append(self.is_structurally_identical)
+            dct[IS_SIMPLE_STOICHIOMETRY].append(self.is_simple_stoichiometry)
         return pd.DataFrame(dct)
     
     @classmethod 
@@ -247,16 +272,22 @@ class NetworkCollection(object):
             array = cls._string2Array(array_context)
             return PMatrix(array, row_names=eval(row_names), column_names=eval(column_names))
         #
+        is_structurally_identical = False
+        is_simple_stoichiometry = False
         networks = []
         for _, row in df.iterrows():
-            row_names:str = row[ROW_NAMES],
-            column_names:str = row[COLUMN_NAMES],
+            is_structurally_identical = row[IS_STRUCTURALLY_IDENTICAL]
+            is_simple_stoichiometry = row[IS_SIMPLE_STOICHIOMETRY]
+            row_names:str = row[ROW_NAMES]  # type: ignore
+            column_names:str = row[COLUMN_NAMES]  # type: ignore
             num_row = row[NUM_ROW]
             num_col = row[NUM_COL]
-            reactant_pmatrix = _makePMatrix(row[REACTANT_ARRAY_STR],
+            reactant_array_str = row[REACTANT_ARRAY_STR]
+            reactant_pmatrix = _makePMatrix(reactant_array_str,
                                             num_row, num_col, row_names, column_names) 
             product_pmatrix = _makePMatrix(row[PRODUCT_ARRAY_STR],
                                             num_row, num_col, row_names, column_names) 
-            pmatrix = Network(reactant_pmatrix, product_pmatrix, network_name=row[MODEL_NAME])
-            networks.append(pmatrix)
-        return NetworkCollection(networks)
+            network = Network(reactant_pmatrix, product_pmatrix, network_name=row[MODEL_NAME])
+            networks.append(network)
+        return NetworkCollection(networks, is_structurally_identical=is_structurally_identical,
+                                 is_simple_stoichiometry=is_simple_stoichiometry)
