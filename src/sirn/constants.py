@@ -19,3 +19,6 @@ OSCILLATOR_DIRS = [
         "Oscillators_DOE_JUNE_12_B_41373",
         "Oscillators_DOE_JUNE_12_C_27662",
         ]
+STRUCTURAL_IDENTITY_TYPE_NOT = "identity_collection_type_not"
+STRUCTURAL_IDENTITY_TYPE_WEAK = "identity_collection_type_weak"
+STRUCTURAL_IDENTITY_TYPE_STRONG = "identity_collection_type_strong"

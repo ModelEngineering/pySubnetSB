@@ -46,6 +46,11 @@ class TestStoichiometryMatrices(unittest.TestCase):
             self.assertTrue(all([x == y for x, y in zip(stoichiometry.species_names, smat.rownames)]))
             self.assertTrue(all([x == y for x, y in zip(stoichiometry.reaction_names, smat.colnames)]))
 
+    def testWithFile(self):
+        if IGNORE_TEST:
+            return
+        path = os.path.join(MODEL_DIR, "M0w8nyrOxzZ57_420_9")
+
 
 if __name__ == '__main__':
     unittest.main()

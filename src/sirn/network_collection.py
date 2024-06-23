@@ -10,6 +10,7 @@ Notes
 """
 
 
+from sirn import constants as cn
 from sirn.network import Network   # type: ignore
 from sirn.pmatrix import PMatrix   # type: ignore
 
@@ -28,38 +29,32 @@ NUM_ROW = 'num_row'
 NUM_COL = 'num_col'
 ROW_NAMES = 'row_names'
 COLUMN_NAMES = 'column_names'
-IS_STRUCTURALLY_IDENTICAL = 'is_structurally_identical'
-IS_SIMPLE_STOICHIOMETRY = 'is_simple_stoichiometry'
+STRUCTURALLY_IDENTICAL_TYPE = 'structurally_identical_type'
 SERIALIZATION_NAMES = [MODEL_NAME, REACTANT_ARRAY_STR, PRODUCT_ARRAY_STR, ROW_NAMES,
                        COLUMN_NAMES, NUM_ROW, NUM_COL, NUM_ROW, NUM_COL,
-                       IS_STRUCTURALLY_IDENTICAL, IS_SIMPLE_STOICHIOMETRY]
+                       STRUCTURALLY_IDENTICAL_TYPE]
 
-ArrayContext = collections.namedtuple('ArrayContext', "string, nrow, ncol")
+ArrayContext = collections.namedtuple('ArrayContext', "string, num_row, num_column")
 
 
 ####################################
 class NetworkCollection(object):
         
-    def __init__(self, networks: List[Network], is_structurally_identical:bool=False,
-                 is_simple_stoichiometry:bool=False)->None:
+    def __init__(self, networks: List[Network],
+                 structural_identity_type:str=cn.STRUCTURAL_IDENTITY_TYPE_NOT)->None:
         """
         Args:
             networks (List[Network]): Networks in the collection
-            is_structurally_identical (bool, optional): Indicates that networks are structurally identical
-            is_simple_stoichiometry (bool, optional): Indicates that structural identical is calculated
-                using only the stoichiometry matrix.
+            collection_identity_type (str): Type of identity collection (not, weak, strong)
         """
         self.networks = networks
-        self.is_structurally_identical = is_structurally_identical
-        self.is_simple_stoichiometry = is_simple_stoichiometry
+        self.structural_identity_type = structural_identity_type
 
     def __eq__(self, other:'NetworkCollection')->bool:  # type: ignore
         # Check that collections have networks with the same attribute values
         if len(self) != len(other):
             return False
-        if not self.is_simple_stoichiometry == other.is_simple_stoichiometry:
-            return False
-        if not self.is_structurally_identical == other.is_structurally_identical:
+        if not self.structural_identity_type == other.structural_identity_type:
             return False
         # Check the network names
         network1_dct = {n.network_name: n for n in self.networks}
@@ -81,9 +76,18 @@ class NetworkCollection(object):
         names = [n.network_name for n in self.networks]
         return "---".join(names)
     
+    def _findCommonType(self, collection_identity_type1:str, collection_identity_type2:str)->str:
+        if (collection_identity_type1 == cn.STRUCTURAL_IDENTITY_TYPE_NOT) \
+                or (collection_identity_type2 == cn.STRUCTURAL_IDENTITY_TYPE_NOT):
+            return cn.STRUCTURAL_IDENTITY_TYPE_NOT
+        if (collection_identity_type1 == cn.STRUCTURAL_IDENTITY_TYPE_WEAK) \
+                or (collection_identity_type2 == cn.STRUCTURAL_IDENTITY_TYPE_WEAK):
+            return cn.STRUCTURAL_IDENTITY_TYPE_WEAK
+        return cn.STRUCTURAL_IDENTITY_TYPE_STRONG
+    
     def __add__(self, other:'NetworkCollection')->'NetworkCollection':
         """
-        Union of two network collections.
+        Union of two network collections. Constructs the correct collection_identity_type.
 
         Args:
             other (NetworkCollection)
@@ -91,22 +95,20 @@ class NetworkCollection(object):
         Returns:
             NetworkCollection: _description_
         """
+        structural_identity_type = self._findCommonType(self.structural_identity_type,
+                                                        other.structural_identity_type)
         network_collection = self.copy()
-        is_structurally_identical = self.is_structurally_identical and other.is_structurally_identical
-        if is_structurally_identical:
-            is_structurally_identical = self.networks[0].isStructurallyIdentical(other.networks[0])
-        network_collection.is_structurally_identical = is_structurally_identical
+        network_collection.structural_identity_type = structural_identity_type
         network_collection.networks.extend(other.networks)
         return network_collection
     
     def copy(self)->'NetworkCollection':
         return NetworkCollection(self.networks.copy(),
-                                 is_structurally_identical=self.is_structurally_identical,
-                                 is_simple_stoichiometry=self.is_simple_stoichiometry)
+                                 structural_identity_type=self.structural_identity_type)
     
     @classmethod
     def makeRandomCollection(cls, array_size:int=3, num_network:int=10,
-                             is_structurally_identical:bool=False)->'NetworkCollection':
+            structural_identity_type:str=cn.STRUCTURAL_IDENTITY_TYPE_NOT)->'NetworkCollection':
         """
         Make a collection of random networks according to the specified parameters.
 
@@ -125,29 +127,29 @@ class NetworkCollection(object):
         #
         networks = [_make()]
         for _ in range(num_network-1):
-            if is_structurally_identical:
-                network = networks[0].randomize(is_structurally_identical=True)
+            if structural_identity_type:
+                network = networks[0].randomize(structural_identity_type=structural_identity_type)
             else:
                 network = _make()
             networks.append(network)
-        return cls(networks, is_structurally_identical=is_structurally_identical,
-                   is_simple_stoichiometry=False)
-    
-    def cluster(self, is_report=True, is_simple_stoichiometry:bool=False)->List['NetworkCollection']:
+        return cls(networks, structural_identity_type=structural_identity_type)
+
+    def cluster(self, is_report=True,
+                is_structurally_identity_type_strong:bool=True)->List['NetworkCollection']:
         """
         Clusters the network in the collection by finding those that are permutably identical.
         Uses the is_simple_stoichiometry flag from the constructor
 
         Args:
             is_report (bool, optional): _description_
-            is_simple_stoichiometry (bool, optional): Criteria for structurally identical
+            is_structurally_identical_type_strong (bool, optional): Criteria for structurally identical
 
         Returns:
             List[NetworkCollection]: A list of network collections. 
                     Each collection contains network that are permutably identical.
         """
         hash_dct: Dict[int, List[Network]] = {}  # dict values are lists of network with the same hash value
-        network_collections = []  # list of permutably identical network collections
+        network_lists = []  # list of permutably identical network collections
         # Build the hash dictionary
         for network in self.networks:
             if network.nonsimple_hash in hash_dct:
@@ -156,26 +158,32 @@ class NetworkCollection(object):
                 hash_dct[network.nonsimple_hash] = [network]
         if is_report:
             print(f"**Number of hash values: {len(hash_dct)}")
-        # Construct the collections of permutably identical matrices
+        # Construct the collections of structurally identical Networks
         for idx, networks in enumerate(hash_dct.values()):  # Iterate over collections of pmatrice with the same hash value
             # Find collections of structurally identical networks
-            first_collection = [networks[0]]
-            new_collections = [first_collection]  # list of collections of permutably identical matrices
+            first_network_list = [networks[0]]
+            this_network_lists = [first_network_list]  # list of collections of permutably identical matrices
             for network in networks[1:]:
                 is_in_existing_collection = False
-                for new_collection in new_collections:
-                    if new_collection[0].isStructurallyIdentical(network,
-                            is_simple_stoichiometry=is_simple_stoichiometry): 
-                        new_collection.append(network)
+                for network_list in this_network_lists:
+                    if network_list[0].isStructurallyIdentical(network,
+                            is_structural_identity_type_weak=not is_structurally_identity_type_strong): 
+                        network_list.append(network)
                         is_in_existing_collection = True
                         break
                 if not is_in_existing_collection:
-                    new_collections.append([network])
+                    this_network_lists.append([network])
             if is_report:
                 print(".", end='')
-            new_network_collections = [NetworkCollection(networks, is_structurally_identical=True) 
-                                for networks in new_collections]
-            network_collections.extend(new_network_collections)
+            
+            network_lists.extend(this_network_lists)
+        if is_structurally_identity_type_strong:
+            structural_identity_type = cn.STRUCTURAL_IDENTITY_TYPE_STRONG
+        else:
+            structural_identity_type = cn.STRUCTURAL_IDENTITY_TYPE_WEAK
+        network_collections = [NetworkCollection(network_list,
+                               structural_identity_type=structural_identity_type)
+                               for network_list in network_lists]
         return network_collections
 
     @classmethod
@@ -221,16 +229,16 @@ class NetworkCollection(object):
     
     @staticmethod 
     def _array2Context(array:np.ndarray)->ArrayContext:
-        nrow, ncol = np.shape(array)
-        flat_array = np.reshape(array, nrow*ncol)
+        num_row, num_column = np.shape(array)
+        flat_array = np.reshape(array, num_row*num_column)
         str_arr = [str(i) for i in flat_array]
         array_str = "[" + ",".join(str_arr) + "]"
-        return ArrayContext(array_str, nrow, ncol)
+        return ArrayContext(array_str, num_row, num_column)
     
     @staticmethod
     def _string2Array(array_context:ArrayContext)->np.ndarray:
         array = np.array(eval(array_context.string))
-        array = np.reshape(array, (array_context.nrow, array_context.ncol))
+        array = np.reshape(array, (array_context.num_row, array_context.num_column))
         return array
 
     def serialize(self)->pd.DataFrame:
@@ -241,6 +249,10 @@ class NetworkCollection(object):
         """
         dct: Dict[str, list] = {n: [] for n in SERIALIZATION_NAMES}
         for network in self.networks:
+            if len(network.reactant_pmatrix.row_names) != network.reactant_pmatrix.num_row:
+                raise ValueError("row_names and column_names must have the same length.")
+            if len(network.reactant_pmatrix.column_names) != network.reactant_pmatrix.num_column:
+                raise ValueError("column_names and column_names must have the same length.")
             dct[MODEL_NAME].append(network.network_name)
             reactant_pmatrix = network.reactant_pmatrix
             product_pmatrix = network.product_pmatrix
@@ -248,12 +260,11 @@ class NetworkCollection(object):
             dct[REACTANT_ARRAY_STR].append(reactant_array_context.string)
             product_array_context = self._array2Context(product_pmatrix.array)
             dct[PRODUCT_ARRAY_STR].append(product_array_context.string)
-            dct[NUM_ROW].append(reactant_array_context.nrow)
-            dct[NUM_COL].append(reactant_array_context.ncol)
-            dct[ROW_NAMES] = str(reactant_pmatrix.row_names)  # type: ignore
-            dct[COLUMN_NAMES] = str(reactant_pmatrix.column_names)  # type: ignore
-            dct[IS_STRUCTURALLY_IDENTICAL].append(self.is_structurally_identical)
-            dct[IS_SIMPLE_STOICHIOMETRY].append(self.is_simple_stoichiometry)
+            dct[NUM_ROW].append(reactant_array_context.num_row)
+            dct[NUM_COL].append(reactant_array_context.num_column)
+            dct[ROW_NAMES].append(str(reactant_pmatrix.row_names))  # type: ignore
+            dct[COLUMN_NAMES].append(str(reactant_pmatrix.column_names))  # type: ignore
+            dct[STRUCTURALLY_IDENTICAL_TYPE].append(self.structural_identity_type)
         return pd.DataFrame(dct)
     
     @classmethod 
@@ -266,18 +277,16 @@ class NetworkCollection(object):
         Returns:
             PMatrixCollection
         """
-        def _makePMatrix(array_str:str, num_row:int, num_col:int, row_names:str,
+        def _makePMatrix(array_str:str, num_row:int, num_column:int, row_names:str,
                          column_names:str):
-            array_context = ArrayContext(array_str, num_row, num_col)
+            array_context = ArrayContext(array_str, num_row, num_column)
             array = cls._string2Array(array_context)
             return PMatrix(array, row_names=eval(row_names), column_names=eval(column_names))
         #
-        is_structurally_identical = False
-        is_simple_stoichiometry = False
+        structurally_identical_type = cn.STRUCTURAL_IDENTITY_TYPE_NOT
         networks = []
         for _, row in df.iterrows():
-            is_structurally_identical = row[IS_STRUCTURALLY_IDENTICAL]
-            is_simple_stoichiometry = row[IS_SIMPLE_STOICHIOMETRY]
+            structurally_identical_type = row[STRUCTURALLY_IDENTICAL_TYPE]
             row_names:str = row[ROW_NAMES]  # type: ignore
             column_names:str = row[COLUMN_NAMES]  # type: ignore
             num_row = row[NUM_ROW]
@@ -289,5 +298,4 @@ class NetworkCollection(object):
                                             num_row, num_col, row_names, column_names) 
             network = Network(reactant_pmatrix, product_pmatrix, network_name=row[MODEL_NAME])
             networks.append(network)
-        return NetworkCollection(networks, is_structurally_identical=is_structurally_identical,
-                                 is_simple_stoichiometry=is_simple_stoichiometry)
+        return NetworkCollection(networks, structural_identity_type=structurally_identical_type)

@@ -63,4 +63,7 @@ class Stoichiometry(object):
                         reactant_mat[ispecies, ireaction] += model.getReactantStoichiometry(ireaction, k1)
         # Calculate the stoichiometry matrix
         stoichiometry_mat = product_mat - reactant_mat
+        num_row, num_column = stoichiometry_mat.shape
+        if (num_row != len(species_names)) or (num_column != len(reaction_names)):
+            raise RuntimeError("The stoichiometry matrix is not the correct size!")
         return reactant_mat, product_mat, stoichiometry_mat, species_names, reaction_names

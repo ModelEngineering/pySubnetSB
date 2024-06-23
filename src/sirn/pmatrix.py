@@ -62,7 +62,11 @@ class PMatrix(Matrix):
             row_names = [str(i) for i in range(self.num_row)]  # type: ignore
         if column_names is None:
             column_names = [str(i) for i in range(self.num_column)]  # type: ignore
+        if len(row_names) != self.num_row:
+            raise ValueError(f"Row names {len(row_names)} != {self.num_row}")
         self.row_names = row_names
+        if len(column_names) != self.num_column:
+            raise ValueError(f"Column names {len(column_names)} != {self.num_column}")
         self.column_names = column_names
         # Outputs
         self.row_collection = ArrayCollection(self.array)

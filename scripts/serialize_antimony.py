@@ -2,7 +2,7 @@
 
 import os
 import pandas as pd # type: ignore
-from sirn.pmc_serializer import PMCSerializer  # type: ignore
+from sirn.network_collection import NetworkCollection  # type: ignore
 import sirn.constants as cn  # type: ignore
 import argparse
 
@@ -19,13 +19,12 @@ def serialize_antimony(directory_name):
     # Check if there is an existing output file
     if os.path.exists(output_path):
         initial_df = pd.read_csv(output_path)
-        processed_model_names = list(initial_df['model_name'])
+        processed_network_names = list(initial_df['model_name'])
     else:
-        processed_model_names = []
-    pmatrix_collection = PMCSerializer.makePMCollectionAntimonyDirectory(directory_path,
-            processed_model_names=processed_model_names, report_interval=100)
-    serializer = PMCSerializer(pmatrix_collection)
-    df = serializer.serialize()
+        processed_network_names = []
+    network_collection = NetworkCollection.makeFromAntimonyDirectory(directory_path,
+            processed_network_names=processed_network_names, report_interval=100)
+    df = network_collection.serialize()
     df.to_csv(output_path, index=False)
 
 

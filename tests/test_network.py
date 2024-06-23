@@ -41,7 +41,7 @@ S2 = 0
 S3 = 0
 """
 NETWORK2 = """
-// Structurally identical with Network1
+// Strong structural identity with Network1
 Ja: S2 -> S2 + S1; k1*S2;
 Jb: S1 -> S3; k2*S1;
 
@@ -52,7 +52,7 @@ S2 = 0
 S3 = 0
 """
 NETWORK3 = """
-// Not structurally identical with Network1 if not is_simple_stoichiometry
+// Weak sructural identity with Network1
 Ja: 2 S1 -> 2 S1 + S2; k1*S1*S1
 Jb: S2 -> S3; k2*S1;
 
@@ -94,30 +94,32 @@ class TestNetwork(unittest.TestCase):
         network = self.network.copy()
         self.assertEqual(self.network, network)
 
-    def evaluateIsStructurallyIdentical(self, network1, network2, is_simple_stoichiometry, expected_result):
+    def evaluateIsStructurallyIdentical(self, network1, network2, is_structural_identity_type_weak, expected_result):
         network1 = Network.makeFromAntimonyStr(network1, network_name="NETWORK1")
         network2 = Network.makeFromAntimonyStr(network2, network_name="NETWORK2")
         self.assertEqual(network1.isStructurallyIdentical(network2,
-             is_simple_stoichiometry=is_simple_stoichiometry), expected_result)
+             is_structural_identity_type_weak=is_structural_identity_type_weak), expected_result)
         
     def testRandomize(self):
         if IGNORE_TEST:
             return
-        def test(is_structurally_identical):
-            for idx in range(10):
+        def test(structural_identity_type):
+            for idx in range(1000):
                 big_network = Network.makeFromAntimonyStr(BIG_NETWORK)
-                network = big_network.randomize(is_structurally_identical=is_structurally_identical)
-                if is_structurally_identical:
-                    if not big_network.isStructurallyIdentical(network):
-                        import pdb; pdb.set_trace( )
-                    self.assertTrue(big_network.isStructurallyIdentical(network))
+                network = big_network.randomize(structural_identity_type=structural_identity_type)
+                if structural_identity_type == cn.STRUCTURAL_IDENTITY_TYPE_STRONG:
+                    self.assertTrue(big_network.isStructurallyIdentical(network,
+                                        is_structural_identity_type_weak=False))
+                elif structural_identity_type == cn.STRUCTURAL_IDENTITY_TYPE_WEAK:
+                    self.assertTrue(big_network.isStructurallyIdentical(network,
+                                        is_structural_identity_type_weak=True))
                 else:
-                    if big_network.isStructurallyIdentical(network):
-                        import pdb; pdb.set_trace( )
-                    self.assertFalse(big_network.isStructurallyIdentical(network))
+                    self.assertFalse(big_network.isStructurallyIdentical(network,
+                             is_structural_identity_type_weak=True))
         #
-        test(True)
-        test(False)
+        test(cn.STRUCTURAL_IDENTITY_TYPE_STRONG)
+        test(cn.STRUCTURAL_IDENTITY_TYPE_WEAK)
+        test(cn.STRUCTURAL_IDENTITY_TYPE_NOT)
 
     def testIsStructurallyIdentical(self):
         # Structurally identical under any definition

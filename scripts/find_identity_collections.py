@@ -2,7 +2,7 @@
 
 import os
 import pandas as pd # type: ignore
-from sirn.pmc_serializer import PMCSerializer  # type: ignore
+from sirn.network_collection import NetworkCollection  # type: ignore
 import sirn.constants as cn  # type: ignore
 import argparse
 
@@ -14,8 +14,8 @@ def find_identity_collections(directory_name):
     filename = f'{directory_name}_serializers.csv'
     csv_file = os.path.join(cn.DATA_DIR, filename)
     df = pd.read_csv(csv_file)
-    pmatrix_collection = PMCSerializer.deserialize(df)
-    pmatrix_identity_collections = pmatrix_collection.cluster()
+    network_collection = NetworkCollection.deserialize(df)
+    pmatrix_identity_collections = network_collection.cluster()
     output_path = os.path.join(cn.DATA_DIR, f'{PREFIX}{directory_name}.txt')
     with open(output_path, 'w') as f:
         for pmatrix_identity_collection in pmatrix_identity_collections:

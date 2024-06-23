@@ -3,6 +3,7 @@
 from sirn.stoichometry import Stoichiometry  # type: ignore
 from sirn.pmatrix import PMatrix  # type: ignore
 from sirn.util import hashArray  # type: ignore
+from sirn import constants as cn  # type: ignore
 
 import os
 import numpy as np
@@ -57,8 +58,21 @@ class Network(object):
             return False
         return True
     
-    def isStructurallyIdentical(self, other:'Network', is_simple_stoichiometry:bool=False)->bool:
-        if is_simple_stoichiometry:
+    def isStructurallyIdentical(self, other:'Network', is_structural_identity_type_weak:bool=False)->bool:
+        """
+        Determines if two networks are structurally identical. This means that the reactant and product
+        matrices are identical, up to a permutation of the rows and columns. If tructural_identity_weak
+        is True, then the stoichiometry matrix is also checked for a permutation that makes the product
+        stoichiometry matrix equal to the reactant stoichiometry matrix.
+
+        Args:
+            other (Network): _description_
+            is_structural_identity_type_weak (bool, optional): _description_. Defaults to False.
+
+        Returns:
+            bool
+        """
+        if is_structural_identity_type_weak:
             return bool(self.stoichiometry_pmatrix.isPermutablyIdentical(other.stoichiometry_pmatrix))
         # Check that the combined hash (reactant_pmatrix, product_pmatrix) is the same.
         if self.nonsimple_hash != other.nonsimple_hash:
@@ -78,13 +92,14 @@ class Network(object):
                 return True
         return False
     
-    def randomize(self, is_structurally_identical:bool=True, num_iteration:int=10)->'Network':
+    def randomize(self, structural_identity_type:str=cn.STRUCTURAL_IDENTITY_TYPE_STRONG,
+                  num_iteration:int=10)->'Network':
         """
         Creates a new network with randomly permuted reactant and product matrices.
 
         Args:
-            is_structurally_identical (bool): If True, then test for identical structure
-            num_iteration (int): Number of iterations to find a randomized
+            collection_identity_type (str): Type of identity collection
+            num_iteration (int): Number of iterations to find a randomized network
 
         Returns:
             Network
@@ -93,17 +108,31 @@ class Network(object):
         for _ in range(num_iteration):
             randomize_result = self.reactant_pmatrix.randomize()
             reactant_arr = randomize_result.pmatrix.array.copy()
-            if is_structurally_identical:
+            is_structural_identity_type_weak = None
+            if structural_identity_type == cn.STRUCTURAL_IDENTITY_TYPE_STRONG:
+                is_structural_identity_type_weak = False
                 product_arr = PMatrix.permuteArray(self.product_pmatrix.array,
                         randomize_result.row_perm, randomize_result.column_perm) 
+            elif structural_identity_type == cn.STRUCTURAL_IDENTITY_TYPE_WEAK:
+                is_structural_identity_type_weak = True
+                stoichiometry_arr = PMatrix.permuteArray(self.stoichiometry_pmatrix.array,
+                        randomize_result.row_perm, randomize_result.column_perm) 
+                product_arr = reactant_arr + stoichiometry_arr
             else:
+                # No requirement for being structurally identical
                 randomize_result = self.product_pmatrix.randomize()
                 product_arr = randomize_result.pmatrix.array
             network = Network(reactant_arr, product_arr)
-            if is_structurally_identical == self.isStructurallyIdentical(
-                    network, is_simple_stoichiometry=False):
-                is_found = True
-                break
+            if is_structural_identity_type_weak is None:
+                # Cannot be weakly structurally identical
+                if not self.isStructurallyIdentical(network, is_structural_identity_type_weak=True):
+                    is_found = True
+                    break
+            else:
+                if self.isStructurallyIdentical(network,
+                        is_structural_identity_type_weak=is_structural_identity_type_weak):
+                    is_found = True
+                    break
         if not is_found:
             raise ValueError("Could not find a randomized network. Try increasing num_iteration.")
         return network
@@ -121,7 +150,14 @@ class Network(object):
             Network
         """
         stoichiometry = Stoichiometry(antimony_str)
-        return cls(stoichiometry.reactant_mat, stoichiometry.product_mat, network_name=network_name)
+        reactant_pmatrix = PMatrix(stoichiometry.reactant_mat, row_names=stoichiometry.species_names,
+                                   column_names=stoichiometry.reaction_names)
+        product_pmatrix = PMatrix(stoichiometry.product_mat, row_names=stoichiometry.species_names,
+                                   column_names=stoichiometry.reaction_names)
+        network = cls(reactant_pmatrix, product_pmatrix, network_name=network_name)
+        return network
+                   
+                   
     
     @classmethod
     def makeFromAntimonyFile(cls, antimony_path:str, is_structurally_identical:bool=False,
