@@ -7,6 +7,7 @@ order independent properties.
 from sirn.util import hashArray  # type: ignore
 from sirn.matrix import Matrix # type: ignore
 from sirn.array_collection import ArrayCollection # type: ignore
+from sirn import constants as cn  # type: ignore
 
 import collections
 import numpy as np
@@ -22,6 +23,8 @@ class PermutablyIdenticalResult(object):
     # Auxiliary object returned by isPermutablyIdentical
 
     def __init__(self, is_permutably_identical:bool,
+                 is_compatible:bool=False,
+                 is_excessive_perm:bool=False,
                  this_row_perms:Optional[List[np.ndarray]]=None,
                  this_column_perms:Optional[List[np.ndarray]]=None,
                  other_row_perm:Optional[np.ndarray[int]]=None,
@@ -30,12 +33,19 @@ class PermutablyIdenticalResult(object):
         """
         Args:
             is_permutably_identical (bool): _description_
+            is_compatible (bool): the two PMatrix have the same row and column encodings and counts
+                                  wihin the encodings
+            is_excessive_perm(bool): the number of permutations exceeds a threshold
             this_row_perms (Optional[List[int]], optional): Permutation of this matrix rows
             this_column_perms (Optional[List[int]], optional): Permutation of this matrix columns
             other_row_perm (Optional[List[int]], optional): Permutation of other matrix rows
             other_column_perm (Optional[List[int]], optional): Permutation of other matrix columns
         """
+        self.is_excessive_perm = is_excessive_perm
         self.is_permutably_identical = is_permutably_identical
+        if self.is_permutably_identical:
+            is_compatible = True
+        self.is_compatible = is_compatible
         if this_row_perms is None:
             this_row_perms = []
         if this_column_perms is None:
@@ -74,6 +84,8 @@ class PMatrix(Matrix):
         self.column_collection = ArrayCollection(column_arr)
         hash_arr = np.concatenate((self.row_collection.encoding_arr, self.column_collection.encoding_arr))
         self.hash_val = hashArray(hash_arr)
+        # log10 of the estimated number of permutations of rows and columns
+        self.log_estimate = self.row_collection.log_estimate + self.column_collection.log_estimate
 
     def randomize(self)->RandomizeResult:
         """Randomly permutes the rows and columns of the matrix.
@@ -138,19 +150,26 @@ class PMatrix(Matrix):
         new_array = new_array[row_perm, :]
         return new_array[:, column_perm]
     
-    def isPermutablyIdentical(self, other:'PMatrix') -> PermutablyIdenticalResult:
+    def isPermutablyIdentical(self, other:'PMatrix', max_log_perm:float=cn.MAX_LOG_PERM,
+                              is_find_all_perms:bool=True) -> PermutablyIdenticalResult:
         """
         Check if the matrices are permutably identical.
         Order other PMatrix
 
         Args:
             other (PMatrix)
+            max_log_permutation (float): Maximum number of permutations to search in log units
+            is_find_all_perms (bool): If True, find all permutations that make the matrices equal
         Returns:
             bool
         """
         # Check compatibility
         if not self.isCompatible(other):
             return PermutablyIdenticalResult(False)
+        # Check if the number of permutations is excessive
+        if self.log_estimate > max_log_perm:
+            return PermutablyIdenticalResult(False, 
+                    is_compatible=True, is_excessive_perm=True)
         # The matrices have the same shape and partitions
         #  Order the other PMatrix to align the partitions of the two matrices
         other_row_itr = other.row_collection.partitionPermutationIterator()
@@ -165,6 +184,7 @@ class PMatrix(Matrix):
         this_row_perms: list = []
         this_column_perms: list = []
         for row_perm in row_itr:
+            # There may be a large number of column permutations
             column_itr = self.column_collection.partitionPermutationIterator()
             for column_perm in column_itr:
                 count += 1
@@ -172,6 +192,8 @@ class PMatrix(Matrix):
                 if np.all(this_array == other_array):
                     this_row_perms.append(row_perm)
                     this_column_perms.append(column_perm)
+                    if not is_find_all_perms:
+                        break
         #
         is_permutably_identical = len(this_row_perms) > 0
         permutably_identical_result = PermutablyIdenticalResult(is_permutably_identical,

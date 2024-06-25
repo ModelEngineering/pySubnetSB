@@ -10,6 +10,36 @@ import numpy as np
 from typing import Optional, Union
 
 
+class StructurallyIdenticalResult(object):
+    # Auxiliary object returned by isStructurallyIdentical
+
+    def __init__(self,
+                 is_compatible:bool=False,
+                 is_structural_identity_weak:bool=False,
+                 is_structural_identity_strong:bool=False,
+                 is_excessive_perm:bool=False
+                 ):
+        """
+        Args:
+            is_compatible (bool): has the same shapes and row/column encodings
+            is_structural_identity_weak (bool)
+            is_structural_identity_strong (bool)
+            is_excessive_perm (bool): the number of permutations exceeds a threshold
+        """
+        self.is_excessive_perm = is_excessive_perm
+        self.is_compatible = is_compatible
+        self.is_structural_identity_weak = is_structural_identity_weak
+        self.is_structural_identity_strong = is_structural_identity_strong
+        #
+        if self.is_structural_identity_strong:
+            self.is_structural_identity_weak = True
+        if self.is_structural_identity_weak:
+            self.is_compatible = True
+        if is_excessive_perm:
+            self.is_structural_identity_weak = False
+            self.is_structural_identity_strong = False
+
+
 class Network(object):
     """
     Abstraction for a reaction network. This is represented by a reactant PMatrix and product PMatrix.
@@ -17,12 +47,13 @@ class Network(object):
 
     def __init__(self, reactant_mat:Union[np.ndarray, PMatrix],
                  product_mat:Union[np.ndarray, PMatrix],
-                 network_name:Optional[str]=None):
+                 network_name:Optional[str]=None)->None:
         """
         Args:
             reactant_mat (np.ndarray): Reactant matrix.
             product_mat (np.ndarray): Product matrix.
             network_name (str): Name of the network.
+            max_log_permutation (float): Maximum log of the number of permutations to consider. 
         """
         if isinstance(reactant_mat, PMatrix):
             self.reactant_pmatrix = reactant_mat
@@ -41,13 +72,26 @@ class Network(object):
         self.nonsimple_hash = hashArray(np.array([self.reactant_pmatrix.hash_val,
                                                   self.product_pmatrix.hash_val]))
         self.simple_hash = self.stoichiometry_pmatrix.hash_val
+        # Number of permutations for determining structural identity for weak and strong
+        log_permutation_weak = self.stoichiometry_pmatrix.log_estimate
+        log_permutation_strong = self.reactant_pmatrix.log_estimate + self.product_pmatrix.log_estimate
+        self.log_permutation_dct = {
+            cn.STRUCTURAL_IDENTITY_TYPE_WEAK: log_permutation_weak,
+            cn.STRUCTURAL_IDENTITY_TYPE_STRONG: log_permutation_strong
+            }
+        # Used if search stopped because too many permutations
+        self.is_indeterminant_structural_identity = False
 
     def copy(self)->'Network':
         return Network(self.reactant_pmatrix.array.copy(), self.product_pmatrix.array.copy(),
                        network_name=self.network_name)
 
     def __repr__(self)->str:
-        return self.network_name
+        if self.is_indeterminant_structural_identity:
+            prefix = cn.UNKNOWN_STRUCTURAL_IDENTITY_NAME
+        else:
+            prefix = ""
+        return f"{prefix}{self.network_name}"
     
     def __eq__(self, other)->bool:
         if self.network_name != other.network_name:
@@ -58,7 +102,9 @@ class Network(object):
             return False
         return True
     
-    def isStructurallyIdentical(self, other:'Network', is_structural_identity_type_weak:bool=False)->bool:
+    def isStructurallyIdentical(self, other:'Network', is_report:bool=False,
+            max_log_perm:float=cn.MAX_LOG_PERM,
+            is_structural_identity_weak:bool=False)->StructurallyIdenticalResult:
         """
         Determines if two networks are structurally identical. This means that the reactant and product
         matrices are identical, up to a permutation of the rows and columns. If tructural_identity_weak
@@ -66,31 +112,44 @@ class Network(object):
         stoichiometry matrix equal to the reactant stoichiometry matrix.
 
         Args:
-            other (Network): _description_
+            other (Network)
+            max_log_perm (float, optional): Maximum log of the number of permutations to consider.
+            is_report (bool, optional): Report on analysis progress. Defaults to False.
             is_structural_identity_type_weak (bool, optional): _description_. Defaults to False.
 
         Returns:
-            bool
+            StructurallyIdenticalResult
         """
-        if is_structural_identity_type_weak:
-            return bool(self.stoichiometry_pmatrix.isPermutablyIdentical(other.stoichiometry_pmatrix))
+        # Check for weak structural identity
+        weak_identity = self.stoichiometry_pmatrix.isPermutablyIdentical(
+            other.stoichiometry_pmatrix, is_find_all_perms=False, max_log_perm=max_log_perm)
+        if is_structural_identity_weak:
+            return StructurallyIdenticalResult(is_compatible=weak_identity.is_compatible,
+                    is_structural_identity_weak=weak_identity.is_permutably_identical,
+                    is_excessive_perm=weak_identity.is_excessive_perm)
         # Check that the combined hash (reactant_pmatrix, product_pmatrix) is the same.
         if self.nonsimple_hash != other.nonsimple_hash:
-            return False
-        # Must separately check the reactant and product matrices.
-        result = self.reactant_pmatrix.isPermutablyIdentical(other.reactant_pmatrix)
-        if not result:
-            return False
-        # Now check that there is a permutation of the reactant stoichiometry matrix
-        # that makes the product stoichiometry matrices equal.
+            return StructurallyIdenticalResult(is_structural_identity_weak=True)
+        # Find the permutations that work for weak identity and see if one works for strong identity
+        all_weak_identities = self.stoichiometry_pmatrix.isPermutablyIdentical(
+            other.stoichiometry_pmatrix, is_find_all_perms=True, max_log_perm=max_log_perm)
+        if is_report:
+            print(f'all_weak_identities: {len(all_weak_identities.this_column_perms)}')
         other_array = PMatrix.permuteArray(other.product_pmatrix.array,
-                     result.other_row_perm, result.other_column_perm)  # type: ignore
-        for idx, this_row_perm in enumerate(result.this_row_perms):
-            this_column_perm = result.this_column_perms[idx]
+                     all_weak_identities.other_row_perm,     # type: ignore
+                     all_weak_identities.other_column_perm)  # type: ignore
+        num_perm = 0
+        for idx, this_row_perm in enumerate(all_weak_identities.this_row_perms):
+            num_perm += 1
+            if num_perm >= 10**max_log_perm:
+                return StructurallyIdenticalResult(is_structural_identity_weak=True,
+                                                   is_excessive_perm=True)
+            this_column_perm = all_weak_identities.this_column_perms[idx]
             this_array = PMatrix.permuteArray(self.product_pmatrix.array, this_row_perm, this_column_perm)
             if bool(np.all([x == y for x, y in zip(this_array, other_array)])):
-                return True
-        return False
+                return StructurallyIdenticalResult(is_structural_identity_strong=True)
+        # Has weak structurally identity but not strong
+        return StructurallyIdenticalResult(is_structural_identity_weak=True)
     
     def randomize(self, structural_identity_type:str=cn.STRUCTURAL_IDENTITY_TYPE_STRONG,
                   num_iteration:int=10)->'Network':
@@ -108,7 +167,6 @@ class Network(object):
         for _ in range(num_iteration):
             randomize_result = self.reactant_pmatrix.randomize()
             reactant_arr = randomize_result.pmatrix.array.copy()
-            is_structural_identity_type_weak = None
             if structural_identity_type == cn.STRUCTURAL_IDENTITY_TYPE_STRONG:
                 is_structural_identity_type_weak = False
                 product_arr = PMatrix.permuteArray(self.product_pmatrix.array,
@@ -120,19 +178,24 @@ class Network(object):
                 product_arr = reactant_arr + stoichiometry_arr
             else:
                 # No requirement for being structurally identical
+                is_structural_identity_type_weak = True
                 randomize_result = self.product_pmatrix.randomize()
                 product_arr = randomize_result.pmatrix.array
             network = Network(reactant_arr, product_arr)
-            if is_structural_identity_type_weak is None:
-                # Cannot be weakly structurally identical
-                if not self.isStructurallyIdentical(network, is_structural_identity_type_weak=True):
-                    is_found = True
-                    break
+            result =self.isStructurallyIdentical(network,
+                     is_structural_identity_weak=is_structural_identity_type_weak)
+            if (structural_identity_type==cn.STRUCTURAL_IDENTITY_TYPE_NOT)  \
+                  and (not result.is_structural_identity_weak):
+                is_found = True
+                break
+            elif (is_structural_identity_type_weak) and result.is_structural_identity_weak:
+                is_found = True
+                break
+            elif (not is_structural_identity_type_weak) and result.is_structural_identity_strong:
+                is_found = True
+                break
             else:
-                if self.isStructurallyIdentical(network,
-                        is_structural_identity_type_weak=is_structural_identity_type_weak):
-                    is_found = True
-                    break
+                pass
         if not is_found:
             raise ValueError("Could not find a randomized network. Try increasing num_iteration.")
         return network
@@ -160,17 +223,14 @@ class Network(object):
                    
     
     @classmethod
-    def makeFromAntimonyFile(cls, antimony_path:str, is_structurally_identical:bool=False,
-                         network_name:Optional[str]=None,
-                         is_simple_stoichiometry:bool=False)->'Network':
+    def makeFromAntimonyFile(cls, antimony_path:str,
+                         network_name:Optional[str]=None)->'Network':
         """
         Make a Network from an Antimony file. The default network name is the file name.
 
         Args:
             antimony_path (str): path to an Antimony file.
             network_name (str): Name of the network.
-            is_structurally_identical (bool): If True, then test for identical structure
-            is_simple_stoichiometry (bool): If True, then test for identical structure
 
         Returns:
             Network

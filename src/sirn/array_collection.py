@@ -12,6 +12,7 @@ Terminology:
 import itertools
 import numpy as np
 import scipy  # type: ignore
+import scipy.special  # type: ignore
 from typing import Dict
 
 SEPARATOR = 1000 # Separates the counts in a single numbera
@@ -38,9 +39,30 @@ class ArrayCollection(object):
         encodings.sort()
         self.encoding_arr = np.array(encodings)   # Encodings of the arrays
         self.num_partition = len(self.encoding_arr)
+        self.log_estimate = self.logEstimateNumPermutations()  # log10 of the estimated number of permutations
 
     def __repr__(self)->str:
         return str(self.encoding_arr)
+    
+    def logEstimateNumPermutations(self)->float:
+        """
+        Estimates the number of permutations of the ArrayCollection in log units. Uses the
+        continuous approximation, which is more accurate for large numbers of permutations.
+
+        Returns:
+            float: The estimated number of permutations.
+        """
+        def factorial(n):
+            if n == 0:
+                return 1
+            if n < 15:
+                return np.log10(scipy.special.factorial(n))
+            else:
+                return n*np.log10(n) - n
+        #
+        lengths = [len(v) for v in self.encoding_dct.values()]
+        log_estimate = np.sum([factorial(v) for v in lengths])
+        return np.sum(log_estimate)
     
     def isCompatible(self, other)->bool:
         """

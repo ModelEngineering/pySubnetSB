@@ -155,8 +155,8 @@ class TestPMatrix(unittest.TestCase):
         test(20)
 
     def testEq(self):
-        #if IGNORE_TEST:
-        #    return
+        if IGNORE_TEST:
+            return
         pmatrix = PMatrix(MAT)
         self.assertTrue(pmatrix == pmatrix)
         # Test different matrices
@@ -169,8 +169,29 @@ class TestPMatrix(unittest.TestCase):
         if IGNORE_TEST:
             return
         pmatrix = self.pmatrix.randomize().pmatrix
+        import pdb;
         self.assertTrue(pmatrix != self.pmatrix)
         self.assertTrue(self.pmatrix.isPermutablyIdentical(pmatrix))
+
+    def testLogEstimate(self):
+        if IGNORE_TEST:
+            return
+        pmatrix = PMatrix(MAT)
+        self.assertTrue(np.isclose(pmatrix.log_estimate, 2*np.log10(6)))
+
+    def testLogEstimate2(self):
+        if IGNORE_TEST:
+            return
+        log_estimates = []
+        def test(size=3, num_iteration=20):
+            for _ in range(num_iteration):
+                arr = PMatrix.makeTrinaryMatrix(size, size)
+                pmatrix = PMatrix(arr)
+                log_estimates.append(pmatrix.log_estimate)
+            return np.max(log_estimates)
+        #
+        max_log_num_permutation = test(15, 2000)
+        self.assertGreater(max_log_num_permutation, 2)
 
 
 if __name__ == '__main__':

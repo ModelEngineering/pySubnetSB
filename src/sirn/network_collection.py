@@ -73,7 +73,9 @@ class NetworkCollection(object):
         return len(self.networks)
     
     def __repr__(self)->str:
-        names = [n.network_name for n in self.networks]
+        names = [cn.UNKNOWN_STRUCTURAL_IDENTITY_NAME+n.network_name
+                 if n.is_indeterminant_structural_identity
+                 else n.network_name for n in self.networks]
         return "---".join(names)
     
     def _findCommonType(self, collection_identity_type1:str, collection_identity_type2:str)->str:
@@ -134,56 +136,93 @@ class NetworkCollection(object):
             networks.append(network)
         return cls(networks, structural_identity_type=structural_identity_type)
 
-    def cluster(self, is_report=True,
-                is_structurally_identity_type_strong:bool=True)->List['NetworkCollection']:
+    def cluster(self, is_report=True, max_log_perm:float=cn.MAX_LOG_PERM,
+                is_structural_identity_type_strong:bool=True)->List['NetworkCollection']:
         """
         Clusters the network in the collection by finding those that are permutably identical.
         Uses the is_simple_stoichiometry flag from the constructor
 
         Args:
-            is_report (bool, optional): _description_
+            is_report (bool, optional): Progress reporting
+            max_log_perm (int, optional): Maximum log10 of the number of permutations that
+                are examined
             is_structurally_identical_type_strong (bool, optional): Criteria for structurally identical
 
         Returns:
             List[NetworkCollection]: A list of network collections. 
                     Each collection contains network that are permutably identical.
         """
-        hash_dct: Dict[int, List[Network]] = {}  # dict values are lists of network with the same hash value
-        network_lists = []  # list of permutably identical network collections
-        # Build the hash dictionary
-        for network in self.networks:
-            if network.nonsimple_hash in hash_dct:
-                hash_dct[network.nonsimple_hash].append(network)
-            else:
-                hash_dct[network.nonsimple_hash] = [network]
+        REPORT_INTERVAL = 100
+        if is_structural_identity_type_strong:
+            structural_identity_type = cn.STRUCTURAL_IDENTITY_TYPE_STRONG
+        else:
+            structural_identity_type = cn.STRUCTURAL_IDENTITY_TYPE_WEAK
+        def sequenceMax(sequence:List[int])->int:
+            if len(sequence) == 0:
+                return 0
+            return max(sequence)
+        def makeHashDct(attr:str)->Dict[int, List[Network]]:
+            # Build the hash dictionary based on the attribute
+            hash_dct: Dict[int, List[Network]] = {}
+            # Build the hash dictionary
+            for network in self.networks:
+                hash_val = getattr(network, attr)
+                if hash_val in hash_dct:
+                    hash_dct[hash_val].append(network)
+                else:
+                    hash_dct[hash_val] = [network]
+            return hash_dct
+        #
+        hash_simple_dct = makeHashDct('simple_hash')
+        simple_max = sequenceMax([len(networks) for networks in hash_simple_dct.values()])
+        hash_nonsimple_dct = makeHashDct('nonsimple_hash')
+        nonsimple_max = sequenceMax([len(networks) for networks in hash_nonsimple_dct.values()])
+        if simple_max < nonsimple_max:
+            hash_dct = hash_simple_dct
+        else:
+            hash_dct = hash_nonsimple_dct
+        network_lists: list = []  # list of permutably identical network collections
         if is_report:
             print(f"**Number of hash values: {len(hash_dct)}")
         # Construct the collections of structurally identical Networks
-        for idx, networks in enumerate(hash_dct.values()):  # Iterate over collections of pmatrice with the same hash value
+        for idx, hash_networks in enumerate(hash_dct.values()):  # Iterate over collections of pmatrice with the same hash value
             # Find collections of structurally identical networks
-            first_network_list = [networks[0]]
+            if is_report:
+                print(f" {len(hash_networks)}.", end="")
+            first_network_list = [hash_networks[0]]
             this_network_lists = [first_network_list]  # list of collections of permutably identical matrices
-            for network in networks[1:]:
-                is_in_existing_collection = False
+            for idx, network in enumerate(hash_networks[1:]):
+                is_done = False
                 for network_list in this_network_lists:
-                    if network_list[0].isStructurallyIdentical(network,
-                            is_structural_identity_type_weak=not is_structurally_identity_type_strong): 
-                        network_list.append(network)
-                        is_in_existing_collection = True
+                    # See if the combinatorics of this network are too high
+                    if network.log_permutation_dct[structural_identity_type] > max_log_perm:
+                        network.is_indeterminant_structural_identity = True
                         break
-                if not is_in_existing_collection:
+                    result = network_list[0].isStructurallyIdentical(network,
+                            max_log_perm=max_log_perm,
+                            is_structural_identity_weak=not is_structural_identity_type_strong)
+                    if (result.is_structural_identity_weak) and (not result.is_excessive_perm):
+                        if is_structural_identity_type_strong and (not result.is_structural_identity_strong):
+                            continue
+                        network.is_indeterminant_structural_identity = result.is_excessive_perm
+                        network_list.append(network)
+                        is_done = True
+                        break
+                if not is_done:
                     this_network_lists.append([network])
             if is_report:
                 print(".", end='')
             
             network_lists.extend(this_network_lists)
-        if is_structurally_identity_type_strong:
+        if is_structural_identity_type_strong:
             structural_identity_type = cn.STRUCTURAL_IDENTITY_TYPE_STRONG
         else:
             structural_identity_type = cn.STRUCTURAL_IDENTITY_TYPE_WEAK
         network_collections = [NetworkCollection(network_list,
                                structural_identity_type=structural_identity_type)
                                for network_list in network_lists]
+        if is_report:
+            print(f"**Number of network collections: {len(network_collections)}")
         return network_collections
 
     @classmethod

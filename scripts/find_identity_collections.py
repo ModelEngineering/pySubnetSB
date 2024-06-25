@@ -15,10 +15,10 @@ def find_identity_collections(directory_name):
     csv_file = os.path.join(cn.DATA_DIR, filename)
     df = pd.read_csv(csv_file)
     network_collection = NetworkCollection.deserialize(df)
-    pmatrix_identity_collections = network_collection.cluster()
+    network_identity_collections = network_collection.cluster(is_structural_identity_type_strong=False)
     output_path = os.path.join(cn.DATA_DIR, f'{PREFIX}{directory_name}.txt')
     with open(output_path, 'w') as f:
-        for pmatrix_identity_collection in pmatrix_identity_collections:
+        for pmatrix_identity_collection in network_identity_collections:
             f.write(str(pmatrix_identity_collection) + '\n')
 
 

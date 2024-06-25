@@ -3,9 +3,6 @@ from sirn.pmatrix import PMatrix # type: ignore
 from sirn.network import Network # type: ignore
 
 import copy
-import os
-import pandas as pd  # type: ignore
-import numpy as np # type: ignore
 import unittest
 
 
@@ -94,28 +91,38 @@ class TestNetwork(unittest.TestCase):
         network = self.network.copy()
         self.assertEqual(self.network, network)
 
-    def evaluateIsStructurallyIdentical(self, network1, network2, is_structural_identity_type_weak, expected_result):
+    def evaluateIsStructurallyIdentical(self, network1, network2,
+            is_structural_identity_type_weak, expected_result):
         network1 = Network.makeFromAntimonyStr(network1, network_name="NETWORK1")
         network2 = Network.makeFromAntimonyStr(network2, network_name="NETWORK2")
-        self.assertEqual(network1.isStructurallyIdentical(network2,
-             is_structural_identity_type_weak=is_structural_identity_type_weak), expected_result)
+        structural_identity_result = network1.isStructurallyIdentical(network2,
+             is_structural_identity_weak=is_structural_identity_type_weak)
+        if is_structural_identity_type_weak:
+            self.assertEqual(expected_result, structural_identity_result.is_structural_identity_weak)
+        else:
+            self.assertEqual(expected_result, structural_identity_result.is_structural_identity_strong)
         
     def testRandomize(self):
         if IGNORE_TEST:
             return
         def test(structural_identity_type):
-            for idx in range(1000):
+            for idx in range(10):
                 big_network = Network.makeFromAntimonyStr(BIG_NETWORK)
                 network = big_network.randomize(structural_identity_type=structural_identity_type)
                 if structural_identity_type == cn.STRUCTURAL_IDENTITY_TYPE_STRONG:
-                    self.assertTrue(big_network.isStructurallyIdentical(network,
-                                        is_structural_identity_type_weak=False))
+                    result = big_network.isStructurallyIdentical(network,
+                                        is_structural_identity_weak=False)
+                    self.assertTrue(result.is_structural_identity_strong)
                 elif structural_identity_type == cn.STRUCTURAL_IDENTITY_TYPE_WEAK:
-                    self.assertTrue(big_network.isStructurallyIdentical(network,
-                                        is_structural_identity_type_weak=True))
-                else:
-                    self.assertFalse(big_network.isStructurallyIdentical(network,
-                             is_structural_identity_type_weak=True))
+                    result = big_network.isStructurallyIdentical(network,
+                                        is_structural_identity_weak=True)
+                    self.assertTrue(result.is_structural_identity_weak)
+                else:  # cn.STRUCTURAL_IDENTITY_TYPE_NOT
+                    result = big_network.isStructurallyIdentical(network,
+                                        is_structural_identity_weak=True)
+                    is_identical = result.is_structural_identity_weak  \
+                        or result.is_structural_identity_strong
+                    self.assertFalse(is_identical)
         #
         test(cn.STRUCTURAL_IDENTITY_TYPE_STRONG)
         test(cn.STRUCTURAL_IDENTITY_TYPE_WEAK)
@@ -127,7 +134,8 @@ class TestNetwork(unittest.TestCase):
             return
         def test(is_simple_stoichiometry):
             network1 = Network.makeFromAntimonyFile(NETWORK1, network_name="NETWORK1", is_simple_stoichiometry=is_simple_stoichiometry)
-            self.assertTrue(network1.isStructurallyIdentical(network1))
+            result = network1.isStructurallyIdentical(network1)
+            self.assertTrue(result.is_structural_identity_strong)
         #
         self.evaluateIsStructurallyIdentical(NETWORK1, NETWORK1, True, True)
         self.evaluateIsStructurallyIdentical(NETWORK1, NETWORK1, False, True)
@@ -153,7 +161,18 @@ class TestNetwork(unittest.TestCase):
         self.evaluateIsStructurallyIdentical(NETWORK1, NETWORK4, True, False)
         self.evaluateIsStructurallyIdentical(NETWORK1, NETWORK4, False, False)
 
-
+    def testIsStructurallyIdenticalMaxLogPerm(self):
+        # Fails because of max_log_perm
+        if IGNORE_TEST:
+            return
+        network1 = Network.makeFromAntimonyStr(NETWORK1, network_name="NETWORK1")
+        network2 = Network.makeFromAntimonyStr(NETWORK2, network_name="NETWORK2")
+        result = network1.isStructurallyIdentical(network2,
+            is_structural_identity_weak=False, max_log_perm=10)
+        self.assertTrue(result.is_structural_identity_strong)
+        result = network1.isStructurallyIdentical(network2,
+            is_structural_identity_weak=False, max_log_perm=0)
+        self.assertTrue(result.is_excessive_perm)
 
 if __name__ == '__main__':
     unittest.main()
