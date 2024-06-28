@@ -17,7 +17,8 @@ class StructurallyIdenticalResult(object):
                  is_compatible:bool=False,
                  is_structural_identity_weak:bool=False,
                  is_structural_identity_strong:bool=False,
-                 is_excessive_perm:bool=False
+                 is_excessive_perm:bool=False,
+                 num_perm:int=0,
                  ):
         """
         Args:
@@ -30,6 +31,7 @@ class StructurallyIdenticalResult(object):
         self.is_compatible = is_compatible
         self.is_structural_identity_weak = is_structural_identity_weak
         self.is_structural_identity_strong = is_structural_identity_strong
+        self.num_perm = num_perm
         #
         if self.is_structural_identity_strong:
             self.is_structural_identity_weak = True
@@ -79,19 +81,13 @@ class Network(object):
             cn.STRUCTURAL_IDENTITY_TYPE_WEAK: log_permutation_weak,
             cn.STRUCTURAL_IDENTITY_TYPE_STRONG: log_permutation_strong
             }
-        # Used if search stopped because too many permutations
-        self.is_indeterminant_structural_identity = False
 
     def copy(self)->'Network':
         return Network(self.reactant_pmatrix.array.copy(), self.product_pmatrix.array.copy(),
                        network_name=self.network_name)
 
     def __repr__(self)->str:
-        if self.is_indeterminant_structural_identity:
-            prefix = cn.UNKNOWN_STRUCTURAL_IDENTITY_NAME
-        else:
-            prefix = ""
-        return f"{prefix}{self.network_name}"
+        return self.network_name
     
     def __eq__(self, other)->bool:
         if self.network_name != other.network_name:
@@ -126,7 +122,8 @@ class Network(object):
         if is_structural_identity_weak:
             return StructurallyIdenticalResult(is_compatible=weak_identity.is_compatible,
                     is_structural_identity_weak=weak_identity.is_permutably_identical,
-                    is_excessive_perm=weak_identity.is_excessive_perm)
+                    is_excessive_perm=weak_identity.is_excessive_perm,
+                    num_perm=weak_identity.num_perm)
         # Check that the combined hash (reactant_pmatrix, product_pmatrix) is the same.
         if self.nonsimple_hash != other.nonsimple_hash:
             return StructurallyIdenticalResult(is_structural_identity_weak=True)
@@ -138,7 +135,7 @@ class Network(object):
         other_array = PMatrix.permuteArray(other.product_pmatrix.array,
                      all_weak_identities.other_row_perm,     # type: ignore
                      all_weak_identities.other_column_perm)  # type: ignore
-        num_perm = 0
+        num_perm = weak_identity.num_perm
         for idx, this_row_perm in enumerate(all_weak_identities.this_row_perms):
             num_perm += 1
             if num_perm >= 10**max_log_perm:
@@ -147,9 +144,11 @@ class Network(object):
             this_column_perm = all_weak_identities.this_column_perms[idx]
             this_array = PMatrix.permuteArray(self.product_pmatrix.array, this_row_perm, this_column_perm)
             if bool(np.all([x == y for x, y in zip(this_array, other_array)])):
-                return StructurallyIdenticalResult(is_structural_identity_strong=True)
+                return StructurallyIdenticalResult(is_structural_identity_strong=True,
+                                                   num_perm=num_perm)
         # Has weak structurally identity but not strong
-        return StructurallyIdenticalResult(is_structural_identity_weak=True)
+        return StructurallyIdenticalResult(is_structural_identity_weak=True,
+                                           num_perm=num_perm)
     
     def randomize(self, structural_identity_type:str=cn.STRUCTURAL_IDENTITY_TYPE_STRONG,
                   num_iteration:int=10)->'Network':

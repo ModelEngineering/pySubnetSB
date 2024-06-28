@@ -29,6 +29,7 @@ class PermutablyIdenticalResult(object):
                  this_column_perms:Optional[List[np.ndarray]]=None,
                  other_row_perm:Optional[np.ndarray[int]]=None,
                  other_column_perm:Optional[np.ndarray[int]]=None,
+                 num_perm:int=0,
                  ):
         """
         Args:
@@ -40,6 +41,7 @@ class PermutablyIdenticalResult(object):
             this_column_perms (Optional[List[int]], optional): Permutation of this matrix columns
             other_row_perm (Optional[List[int]], optional): Permutation of other matrix rows
             other_column_perm (Optional[List[int]], optional): Permutation of other matrix columns
+            num_perm (Optional[int], optional): Number of permutations explored
         """
         self.is_excessive_perm = is_excessive_perm
         self.is_permutably_identical = is_permutably_identical
@@ -54,6 +56,7 @@ class PermutablyIdenticalResult(object):
         self.this_column_perms = this_column_perms
         self.other_row_perm = other_row_perm
         self.other_column_perm = other_column_perm
+        self.num_perm = num_perm
 
     # Boolean value is the result of the test
     def __bool__(self)->bool:
@@ -198,7 +201,8 @@ class PMatrix(Matrix):
         is_permutably_identical = len(this_row_perms) > 0
         permutably_identical_result = PermutablyIdenticalResult(is_permutably_identical,
                             this_row_perms=this_row_perms, this_column_perms=this_column_perms,
-                            other_row_perm=other_row_perm, other_column_perm=other_column_perm)
+                            other_row_perm=other_row_perm, other_column_perm=other_column_perm,
+                            num_perm=count)
         return permutably_identical_result
     
     def isCompatible(self, other)->bool:

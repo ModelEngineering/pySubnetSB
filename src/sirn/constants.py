@@ -24,3 +24,4 @@ STRUCTURAL_IDENTITY_TYPE_NOT = "identity_collection_type_not"
 STRUCTURAL_IDENTITY_TYPE_WEAK = "identity_collection_type_weak"
 STRUCTURAL_IDENTITY_TYPE_STRONG = "identity_collection_type_strong"
 UNKNOWN_STRUCTURAL_IDENTITY_NAME = "*" # Used for networks whose structural identity cannot be determined
+NETWORK_NAME_DELIMITER = "---"

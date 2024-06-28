@@ -40,21 +40,19 @@ ArrayContext = collections.namedtuple('ArrayContext', "string, num_row, num_colu
 ####################################
 class NetworkCollection(object):
         
-    def __init__(self, networks: List[Network],
-                 structural_identity_type:str=cn.STRUCTURAL_IDENTITY_TYPE_NOT)->None:
+    def __init__(self, networks: List[Network])->None:
         """
         Args:
             networks (List[Network]): Networks in the collection
-            collection_identity_type (str): Type of identity collection (not, weak, strong)
         """
         self.networks = networks
-        self.structural_identity_type = structural_identity_type
+
+    def add(self, network:Network)->None:
+        self.networks.append(network)
 
     def __eq__(self, other:'NetworkCollection')->bool:  # type: ignore
         # Check that collections have networks with the same attribute values
         if len(self) != len(other):
-            return False
-        if not self.structural_identity_type == other.structural_identity_type:
             return False
         # Check the network names
         network1_dct = {n.network_name: n for n in self.networks}
@@ -73,9 +71,7 @@ class NetworkCollection(object):
         return len(self.networks)
     
     def __repr__(self)->str:
-        names = [cn.UNKNOWN_STRUCTURAL_IDENTITY_NAME+n.network_name
-                 if n.is_indeterminant_structural_identity
-                 else n.network_name for n in self.networks]
+        names = [str(n) for n in self.networks]
         return "---".join(names)
     
     def _findCommonType(self, collection_identity_type1:str, collection_identity_type2:str)->str:
@@ -97,16 +93,12 @@ class NetworkCollection(object):
         Returns:
             NetworkCollection: _description_
         """
-        structural_identity_type = self._findCommonType(self.structural_identity_type,
-                                                        other.structural_identity_type)
         network_collection = self.copy()
-        network_collection.structural_identity_type = structural_identity_type
         network_collection.networks.extend(other.networks)
         return network_collection
     
     def copy(self)->'NetworkCollection':
-        return NetworkCollection(self.networks.copy(),
-                                 structural_identity_type=self.structural_identity_type)
+        return NetworkCollection(self.networks.copy())
     
     @classmethod
     def makeRandomCollection(cls, array_size:int=3, num_network:int=10,
@@ -134,96 +126,7 @@ class NetworkCollection(object):
             else:
                 network = _make()
             networks.append(network)
-        return cls(networks, structural_identity_type=structural_identity_type)
-
-    def cluster(self, is_report=True, max_log_perm:float=cn.MAX_LOG_PERM,
-                is_structural_identity_type_strong:bool=True)->List['NetworkCollection']:
-        """
-        Clusters the network in the collection by finding those that are permutably identical.
-        Uses the is_simple_stoichiometry flag from the constructor
-
-        Args:
-            is_report (bool, optional): Progress reporting
-            max_log_perm (int, optional): Maximum log10 of the number of permutations that
-                are examined
-            is_structurally_identical_type_strong (bool, optional): Criteria for structurally identical
-
-        Returns:
-            List[NetworkCollection]: A list of network collections. 
-                    Each collection contains network that are permutably identical.
-        """
-        REPORT_INTERVAL = 100
-        if is_structural_identity_type_strong:
-            structural_identity_type = cn.STRUCTURAL_IDENTITY_TYPE_STRONG
-        else:
-            structural_identity_type = cn.STRUCTURAL_IDENTITY_TYPE_WEAK
-        def sequenceMax(sequence:List[int])->int:
-            if len(sequence) == 0:
-                return 0
-            return max(sequence)
-        def makeHashDct(attr:str)->Dict[int, List[Network]]:
-            # Build the hash dictionary based on the attribute
-            hash_dct: Dict[int, List[Network]] = {}
-            # Build the hash dictionary
-            for network in self.networks:
-                hash_val = getattr(network, attr)
-                if hash_val in hash_dct:
-                    hash_dct[hash_val].append(network)
-                else:
-                    hash_dct[hash_val] = [network]
-            return hash_dct
-        #
-        hash_simple_dct = makeHashDct('simple_hash')
-        simple_max = sequenceMax([len(networks) for networks in hash_simple_dct.values()])
-        hash_nonsimple_dct = makeHashDct('nonsimple_hash')
-        nonsimple_max = sequenceMax([len(networks) for networks in hash_nonsimple_dct.values()])
-        if simple_max < nonsimple_max:
-            hash_dct = hash_simple_dct
-        else:
-            hash_dct = hash_nonsimple_dct
-        network_lists: list = []  # list of permutably identical network collections
-        if is_report:
-            print(f"**Number of hash values: {len(hash_dct)}")
-        # Construct the collections of structurally identical Networks
-        for idx, hash_networks in enumerate(hash_dct.values()):  # Iterate over collections of pmatrice with the same hash value
-            # Find collections of structurally identical networks
-            if is_report:
-                print(f" {len(hash_networks)}.", end="")
-            first_network_list = [hash_networks[0]]
-            this_network_lists = [first_network_list]  # list of collections of permutably identical matrices
-            for idx, network in enumerate(hash_networks[1:]):
-                is_done = False
-                for network_list in this_network_lists:
-                    # See if the combinatorics of this network are too high
-                    if network.log_permutation_dct[structural_identity_type] > max_log_perm:
-                        network.is_indeterminant_structural_identity = True
-                        break
-                    result = network_list[0].isStructurallyIdentical(network,
-                            max_log_perm=max_log_perm,
-                            is_structural_identity_weak=not is_structural_identity_type_strong)
-                    if (result.is_structural_identity_weak) and (not result.is_excessive_perm):
-                        if is_structural_identity_type_strong and (not result.is_structural_identity_strong):
-                            continue
-                        network.is_indeterminant_structural_identity = result.is_excessive_perm
-                        network_list.append(network)
-                        is_done = True
-                        break
-                if not is_done:
-                    this_network_lists.append([network])
-            if is_report:
-                print(".", end='')
-            
-            network_lists.extend(this_network_lists)
-        if is_structural_identity_type_strong:
-            structural_identity_type = cn.STRUCTURAL_IDENTITY_TYPE_STRONG
-        else:
-            structural_identity_type = cn.STRUCTURAL_IDENTITY_TYPE_WEAK
-        network_collections = [NetworkCollection(network_list,
-                               structural_identity_type=structural_identity_type)
-                               for network_list in network_lists]
-        if is_report:
-            print(f"**Number of network collections: {len(network_collections)}")
-        return network_collections
+        return cls(networks)
 
     @classmethod
     def makeFromAntimonyDirectory(cls, indir_path:str, max_file:Optional[int]=None,
@@ -303,7 +206,6 @@ class NetworkCollection(object):
             dct[NUM_COL].append(reactant_array_context.num_column)
             dct[ROW_NAMES].append(str(reactant_pmatrix.row_names))  # type: ignore
             dct[COLUMN_NAMES].append(str(reactant_pmatrix.column_names))  # type: ignore
-            dct[STRUCTURALLY_IDENTICAL_TYPE].append(self.structural_identity_type)
         return pd.DataFrame(dct)
     
     @classmethod 
@@ -325,7 +227,6 @@ class NetworkCollection(object):
         structurally_identical_type = cn.STRUCTURAL_IDENTITY_TYPE_NOT
         networks = []
         for _, row in df.iterrows():
-            structurally_identical_type = row[STRUCTURALLY_IDENTICAL_TYPE]
             row_names:str = row[ROW_NAMES]  # type: ignore
             column_names:str = row[COLUMN_NAMES]  # type: ignore
             num_row = row[NUM_ROW]
@@ -337,4 +238,4 @@ class NetworkCollection(object):
                                             num_row, num_col, row_names, column_names) 
             network = Network(reactant_pmatrix, product_pmatrix, network_name=row[MODEL_NAME])
             networks.append(network)
-        return NetworkCollection(networks, structural_identity_type=structurally_identical_type)
+        return NetworkCollection(networks)
