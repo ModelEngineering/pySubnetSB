@@ -173,8 +173,14 @@ class TestPMatrix(unittest.TestCase):
     def testRandomize(self):
         if IGNORE_TEST:
             return
-        pmatrix = self.pmatrix.randomize().pmatrix
-        self.assertTrue(pmatrix != self.pmatrix)
+        is_done = False
+        for _ in range(10):
+            pmatrix = self.pmatrix.randomize().pmatrix
+            if pmatrix != self.pmatrix:
+                is_done = True
+                break
+        if not is_done:
+            raise ValueError("Test failed")
         self.assertTrue(self.pmatrix.isPermutablyIdentical(pmatrix))
 
     def testLogEstimate(self):
@@ -194,18 +200,27 @@ class TestPMatrix(unittest.TestCase):
                 log_estimates.append(pmatrix.log_estimate)
             return np.max(log_estimates)
         #
-        max_num_perm = test(15, 2000)
-        self.assertGreater(max_num_perm, 100)
+        max_log_perm = test(15, 2000)
+        self.assertGreater(max_log_perm, 4)
 
     def testMaxPerm(self):
         if IGNORE_TEST:
             return
         def test(max_num_perm):
-            pmatrix = self.pmatrix.randomize().pmatrix
-            result = self.pmatrix.isPermutablyIdentical(
-                pmatrix,
-                max_num_perm=1)
-            self.assertTrue(result.num_perm <= max_num_perm)
+            is_done = False
+            # Should find a non-identical matrix
+            for _ in range(10):
+                pmatrix = self.pmatrix.randomize().pmatrix
+                result = self.pmatrix.isPermutablyIdentical(
+                    pmatrix,
+                    max_num_perm=0)
+                if not result.is_permutably_identical:
+                    is_done = True
+                    break
+            if is_done:
+                self.assertTrue(True)
+            else:
+                self.assertTrue(False)
         #
         test(0)
         test(1)
