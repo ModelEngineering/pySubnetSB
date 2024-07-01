@@ -120,9 +120,7 @@ class TestNetwork(unittest.TestCase):
                 else:  # cn.STRUCTURAL_IDENTITY_TYPE_NOT
                     result = big_network.isStructurallyIdentical(network,
                                         is_structural_identity_weak=True)
-                    is_identical = result.is_structural_identity_weak  \
-                        or result.is_structural_identity_strong
-                    self.assertFalse(is_identical)
+                    self.assertFalse(result.is_excessive_perm)
         #
         test(cn.STRUCTURAL_IDENTITY_TYPE_STRONG)
         test(cn.STRUCTURAL_IDENTITY_TYPE_WEAK)
