@@ -226,8 +226,6 @@ class Network(object):
         network = cls(reactant_pmatrix, product_pmatrix, network_name=network_name)
         return network
                    
-                   
-    
     @classmethod
     def makeFromAntimonyFile(cls, antimony_path:str,
                          network_name:Optional[str]=None)->'Network':

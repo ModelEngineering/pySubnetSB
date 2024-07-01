@@ -43,6 +43,17 @@ class ClusterBuilder(object):
         # Results
         self.clustered_network_collections:List['ClusteredNetworkCollection'] = []
 
+    @property
+    def num_indeterminant(self)->int:
+        count = 0
+        for clustered_network_collection in self.clustered_network_collections:
+            count += sum([cn.is_indeterminate for cn in clustered_network_collection.clustered_networks])
+        return count
+    
+    @property
+    def collection_sizes(self)->List[int]:
+        return [len(cnc) for cnc in self.clustered_network_collections]
+
     @staticmethod
     def sequenceMax(sequence:List[int])->int:
         if len(sequence) == 0:
