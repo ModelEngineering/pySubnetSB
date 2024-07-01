@@ -214,7 +214,7 @@ class NetworkCollection(object):
             dct[ROW_NAMES].append(str(reactant_pmatrix.row_names))  # type: ignore
             dct[COLUMN_NAMES].append(str(reactant_pmatrix.column_names))  # type: ignore
         df = pd.DataFrame(dct)
-        df.metadata = {"directory": self.directory}
+        df.attrs["directory"] = self.directory
         return df
 
     @classmethod 
