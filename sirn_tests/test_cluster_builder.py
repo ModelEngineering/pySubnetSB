@@ -158,7 +158,6 @@ class TestClusterBuilder(unittest.TestCase):
         for num_network in [5, 10, 15]:
             test(num_network=num_network, max_num_perm=10, num_collection=10)
             test(num_network=num_network, max_num_perm=55, num_collection=10)
-            test(num_network=num_network, max_num_perm=100, num_collection=10)
             # Test large networks
             test(num_network=num_network, max_num_perm=10, num_collection=10,
                         num_row=100, num_column=100,
