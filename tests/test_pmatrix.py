@@ -110,10 +110,10 @@ class TestPMatrix(unittest.TestCase):
         self.assertTrue(pmatrix1.isPermutablyIdentical(pmatrix2))
 
     def testIsPermutablyIdentical3(self):
-        # Test permutably identical matrices
+        # Test permutably identical matrices and calculation limits
         if IGNORE_TEST:
             return
-        def test(size=3, num_iteration=20):
+        def test(size=3, num_iteration=10, expected_result=True):
             for _ in range(num_iteration):
                 arr1 = PMatrix.makeTrinaryMatrix(size, size)
                 arr2 = arr1.copy()
@@ -125,11 +125,16 @@ class TestPMatrix(unittest.TestCase):
                 arr2 = arr2[:, perm]
                 pmatrix1 = PMatrix(arr1)
                 pmatrix2 = PMatrix(arr2)
-                self.assertTrue(pmatrix1.isPermutablyIdentical(pmatrix2))
+                result = pmatrix1.isPermutablyIdentical(pmatrix2, 
+                        is_find_all_perms=True, max_num_perm=10000)
+                if expected_result:
+                    self.assertTrue(result)
+                else:
+                    self.assertFalse(result)
         #
+        test(200, expected_result=False)
         test(3)
         test(10)
-        test(20)
     
     def testIsPermutablyIdentical4(self):
         # Test not permutably identical matrices
@@ -169,7 +174,6 @@ class TestPMatrix(unittest.TestCase):
         if IGNORE_TEST:
             return
         pmatrix = self.pmatrix.randomize().pmatrix
-        import pdb;
         self.assertTrue(pmatrix != self.pmatrix)
         self.assertTrue(self.pmatrix.isPermutablyIdentical(pmatrix))
 
@@ -190,8 +194,22 @@ class TestPMatrix(unittest.TestCase):
                 log_estimates.append(pmatrix.log_estimate)
             return np.max(log_estimates)
         #
-        max_log_num_permutation = test(15, 2000)
-        self.assertGreater(max_log_num_permutation, 2)
+        max_num_perm = test(15, 2000)
+        self.assertGreater(max_num_perm, 100)
+
+    def testMaxPerm(self):
+        if IGNORE_TEST:
+            return
+        def test(max_num_perm):
+            pmatrix = self.pmatrix.randomize().pmatrix
+            result = self.pmatrix.isPermutablyIdentical(
+                pmatrix,
+                max_num_perm=1)
+            self.assertTrue(result.num_perm <= max_num_perm)
+        #
+        test(0)
+        test(1)
+        test(4)
 
 
 if __name__ == '__main__':

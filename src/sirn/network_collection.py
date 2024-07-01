@@ -1,13 +1,4 @@
-'''Analysis of a collection of Network.'''
-"""
-
-A key operation on a collection is cluster. 
-The cluster operation groups constructs a collection of network_collection
-each of which contains permutably identical matrices.
-
-Notes
-1. Handle is_simple_stoichiometry
-"""
+'''Container of networks. Can serialize and deserialize to a DataFrame. Construct from Antimony files. '''
 
 
 from sirn import constants as cn
@@ -31,8 +22,7 @@ ROW_NAMES = 'row_names'
 COLUMN_NAMES = 'column_names'
 STRUCTURALLY_IDENTICAL_TYPE = 'structurally_identical_type'
 SERIALIZATION_NAMES = [MODEL_NAME, REACTANT_ARRAY_STR, PRODUCT_ARRAY_STR, ROW_NAMES,
-                       COLUMN_NAMES, NUM_ROW, NUM_COL, NUM_ROW, NUM_COL,
-                       STRUCTURALLY_IDENTICAL_TYPE]
+                       COLUMN_NAMES, NUM_ROW, NUM_COL, NUM_ROW, NUM_COL]
 
 ArrayContext = collections.namedtuple('ArrayContext', "string, num_row, num_column")
 
@@ -40,12 +30,14 @@ ArrayContext = collections.namedtuple('ArrayContext', "string, num_row, num_colu
 ####################################
 class NetworkCollection(object):
         
-    def __init__(self, networks: List[Network])->None:
+    def __init__(self, networks: List[Network], directory:Optional[str]=None)->None:
         """
         Args:
             networks (List[Network]): Networks in the collection
         """
         self.networks = networks
+        self.network_dct = {n.network_name: n for n in networks}
+        self.directory = directory
 
     def add(self, network:Network)->None:
         self.networks.append(network)
@@ -92,10 +84,23 @@ class NetworkCollection(object):
 
         Returns:
             NetworkCollection: _description_
+
+        Raises:
+            ValueError: Common names between collections
         """
-        network_collection = self.copy()
-        network_collection.networks.extend(other.networks)
-        return network_collection
+        # Error checking
+        this_names = set([n.network_name for n in self.networks])
+        other_names = set([n.network_name for n in other.networks]) 
+        common_names = this_names.intersection(other_names)
+        if len(common_names) > 0:
+            raise ValueError(f"Common names between collections: {common_names}")
+        # Construct the new collection
+        networks = self.networks.copy()
+        networks.extend(other.networks)
+        directory = None
+        if self.directory == other.directory:
+            directory = self.directory
+        return NetworkCollection(networks, directory=directory)
     
     def copy(self)->'NetworkCollection':
         return NetworkCollection(self.networks.copy())
@@ -167,7 +172,7 @@ class NetworkCollection(object):
             networks.append(network)
             if is_report:
                 print(f"Processed {count} files.")
-        return NetworkCollection(networks)
+        return NetworkCollection(networks, directory=indir_path)
     
     @staticmethod 
     def _array2Context(array:np.ndarray)->ArrayContext:
@@ -188,6 +193,8 @@ class NetworkCollection(object):
 
         Returns:
             pd.DataFrame: See SERIALIZATION_NAMES
+               DataFrame.metadata: Dictionary of metadata
+                    "directory": Directory of the Antimony files
         """
         dct: Dict[str, list] = {n: [] for n in SERIALIZATION_NAMES}
         for network in self.networks:
@@ -206,8 +213,10 @@ class NetworkCollection(object):
             dct[NUM_COL].append(reactant_array_context.num_column)
             dct[ROW_NAMES].append(str(reactant_pmatrix.row_names))  # type: ignore
             dct[COLUMN_NAMES].append(str(reactant_pmatrix.column_names))  # type: ignore
-        return pd.DataFrame(dct)
-    
+        df = pd.DataFrame(dct)
+        df.metadata = {"directory": self.directory}
+        return df
+
     @classmethod 
     def deserialize(cls, df:pd.DataFrame)->'NetworkCollection':
         """Deserializes a DataFrame to a NetworkCollection
@@ -224,7 +233,6 @@ class NetworkCollection(object):
             array = cls._string2Array(array_context)
             return PMatrix(array, row_names=eval(row_names), column_names=eval(column_names))
         #
-        structurally_identical_type = cn.STRUCTURAL_IDENTITY_TYPE_NOT
         networks = []
         for _, row in df.iterrows():
             row_names:str = row[ROW_NAMES]  # type: ignore

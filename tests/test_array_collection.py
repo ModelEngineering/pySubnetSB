@@ -2,6 +2,7 @@ from sirn.array_collection import ArrayCollection # type: ignore
 from sirn.matrix import Matrix # type: ignore
 
 import numpy as np
+import scipy  # type: ignore
 import unittest
 
 
@@ -64,12 +65,12 @@ class TestArrayCollection(unittest.TestCase):
     def testPartitionPermutationIteratorComplicated(self):
         if IGNORE_TEST:
             return
-        def test(size=3, num_iteration=10):
+        def test(size=3, num_iteration=10, max_num_perm=int(1e3)):
             for _ in range(num_iteration):
                 mat = Matrix.makeTrinaryMatrix(size, size)
                 collection = ArrayCollection(mat)
                 #print(collection.num_partition/size)
-                permutations = list(collection.partitionPermutationIterator())
+                permutations = list(collection.partitionPermutationIterator(max_num_perm=max_num_perm))
                 # Check that each permutation is unique
                 for idx, permutation in enumerate(permutations):
                     checks = list(permutations)

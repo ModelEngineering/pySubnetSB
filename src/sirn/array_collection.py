@@ -8,6 +8,7 @@ Terminology:
 - ArrayCollection: A collection of arrays.
 - Encoding: A single number that represents the array, a homomorphism (and so is not unique).
 """
+import sirn.constants as cn
 
 import itertools
 import numpy as np
@@ -120,7 +121,7 @@ class ArrayCollection(object):
             dct[this_encoding].append(idx)
         return dct
     
-    def partitionPermutationIterator(self):
+    def partitionPermutationIterator(self, max_num_perm:int=cn.MAX_NUM_PERM):
         """
         Iterates through all permutations of arrays in the ArrayCollection
         that are constrained by the encoding of the arrays.
@@ -131,27 +132,28 @@ class ArrayCollection(object):
         iter_dct = {e: None for e, v in self.encoding_dct.items()}  # Iterators for each partition
         permutation_dct = {e: None for e, v in self.encoding_dct.items()}  # Iterators for each partition
         idx = 0  # Index of the partition processed in an iteration
-        max_count = np.prod([scipy.special.factorial(len(v)) for v in self.encoding_dct.values()])
         count = 0
+        max_count = np.prod([scipy.special.factorial(len(v)) for v in self.encoding_dct.values()])
+        max_count = min(max_count, max_num_perm)
         while count < max_count:
             cur_encoding = self.encoding_arr[idx]
             # Try to get the next permutation for the current partition
             if permutation_dct[cur_encoding] is not None:
-                permutation_dct[cur_encoding] = next(iter_dct[cur_encoding], None)
+                permutation_dct[cur_encoding] = next(iter_dct[cur_encoding], None)  # type: ignore
             # Handle the case of a missing or exhaustive iterator
             if permutation_dct[cur_encoding] is None:
                 # Get a valid iterator and permutation for this partition
-                iter_dct[cur_encoding] = itertools.permutations(self.encoding_dct[cur_encoding])
-                permutation_dct[cur_encoding] = next(iter_dct[cur_encoding])
+                iter_dct[cur_encoding] = itertools.permutations(self.encoding_dct[cur_encoding])  # type: ignore
+                permutation_dct[cur_encoding] = next(iter_dct[cur_encoding])  # type: ignore
                 if idx < len(self.encoding_arr)-1:
                     idx += 1  # Move to the next partition to get a valid iterator
                     continue
             # Have a valid iterator and permutations for all partitions
             # Construct the permutation array by flattening the partition_permutations
             idx = 0  # Reset the partition index
-            permutation_idxs = []
+            permutation_idxs:list = []
             for encoding in self.encoding_arr:
-                permutation_idxs.extend(permutation_dct[encoding])
+                permutation_idxs.extend(permutation_dct[encoding])  # type: ignore
             permutation_arr = np.array(permutation_idxs)
             count += 1
             yield permutation_arr

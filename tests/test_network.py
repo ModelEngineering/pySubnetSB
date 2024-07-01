@@ -162,17 +162,34 @@ class TestNetwork(unittest.TestCase):
         self.evaluateIsStructurallyIdentical(NETWORK1, NETWORK4, False, False)
 
     def testIsStructurallyIdenticalMaxLogPerm(self):
-        # Fails because of max_log_perm
+        # Fails because of max_num_perm
         if IGNORE_TEST:
             return
         network1 = Network.makeFromAntimonyStr(NETWORK1, network_name="NETWORK1")
         network2 = Network.makeFromAntimonyStr(NETWORK2, network_name="NETWORK2")
         result = network1.isStructurallyIdentical(network2,
-            is_structural_identity_weak=False, max_log_perm=10)
+            is_structural_identity_weak=False, max_num_perm=100000)
         self.assertTrue(result.is_structural_identity_strong)
+        #
         result = network1.isStructurallyIdentical(network2,
-            is_structural_identity_weak=False, max_log_perm=0)
+            is_structural_identity_weak=True, max_num_perm=100)
+        self.assertFalse(result.is_excessive_perm)
+        self.assertFalse(result.is_structural_identity_strong)
+        #
+        result = network1.isStructurallyIdentical(network2,
+            is_structural_identity_weak=False, max_num_perm=1)
+        self.assertTrue(result.num_perm == 1)
         self.assertTrue(result.is_excessive_perm)
+
+    def testIsStructurallyIdentical5(self):
+        # Test num_perm limits
+        if IGNORE_TEST:
+            return
+        network1 = Network.makeFromAntimonyStr(NETWORK1, network_name="NETWORK1")
+        network2 = Network.makeFromAntimonyStr(NETWORK2, network_name="NETWORK2")
+        result = network1.isStructurallyIdentical(network2,
+            is_structural_identity_weak=False)
+        self.assertTrue(result.is_structural_identity_strong)
 
 if __name__ == '__main__':
     unittest.main()

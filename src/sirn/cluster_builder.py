@@ -2,60 +2,15 @@
 
 from sirn import constants as cn
 from sirn.network import Network
-from sirn.network_collection import NetworkCollection
-from sirn.identified_network_collection import IdentifiedNetworkCollection
+from sirn.network_collection import NetworkCollection, SERIALIZATION_NAMES
+from sirn.clustered_network import ClusteredNetwork
+from sirn.clustered_network_collection import ClusteredNetworkCollection
 
-from typing import List, Dict, Optional
+import numpy as np
+import pandas as pd  # type: ignore
+from typing import List, Dict
 
-
-###############################################
-class ClusteredNetwork(object):
-
-    def __init__(self, network:Network, is_indeterminate:bool=False, num_perm:int=0):
-        self.network = network
-        self.is_indeterminate = is_indeterminate
-        self.num_perm = num_perm
-
-    def __repr__(self)->str:
-        # Indeterminate networks are prefixed with "?"
-        if self.is_indeterminate:
-            prefix = "?"
-        else:
-            prefix = ""
-        return f"{prefix}{str(self.network)}"
-    
-    def add(self, num_perm:int)->None:
-        self.num_perm += num_perm
-    
-    
-
-###############################################
-class ClusteredNetworkCollection(object):
-    # Collection of networks that are structurally identical
-    CSV_HEADER_STR = "network_names, num_network, total_perm"
-
-    def __init__(self, clustered_networks:List[ClusteredNetwork], is_structural_identity_strong:bool=True):
-        self.clustered_networks = clustered_networks
-        self.is_structural_identity_strong = is_structural_identity_strong
-        # Statistics
-
-    def __len__(self)->int:
-        return len(self.clustered_networks)
-    
-    def __repr__(self)->str:
-        # Elision of network names, number of networks, and total number of permutation: CSV_HEADER_STR
-        if self.is_structural_identity_strong:
-            prefix = "+"
-        else:
-            prefix = "-"
-        names = [str(n) for n in self.clustered_networks]
-        name_str = cn.NETWORK_NAME_DELIMITER.join(names)
-        total_perm = sum([n.num_perm for n in self.clustered_networks]) 
-        return f"{prefix}{name_str}, {len(self), {total_perm}}"
-    
-    def add(self, clustered_network:ClusteredNetwork)->None:
-        self.clustered_networks.append(clustered_network)
-    
+IS_STRUCTURAL_IDENTITY_STRONG = 'is_structural_identity_strong'
 
 
 ###############################################
@@ -63,28 +18,30 @@ class ClusterBuilder(object):
     # Builds ClusterNetworks from a NetworkCollection based on their structural identity
 
     def __init__(self, network_collection:NetworkCollection, is_report=True,
-                 max_log_perm:float=cn.MAX_LOG_PERM,
+                 max_num_perm:int=cn.MAX_NUM_PERM,
                  is_structural_identity_strong:bool=True):
         """
         Args:
             network_collection (NetworkCollection): Collection of networks to cluster
             is_report (bool, optional): Progress reporting
-            max_log_perm (float, optional): Maximum log10 of the number of permutations that
+            max_num_perm (float, optional): Maximum log10 of the number of permutations that
                 are examined
             is_structural_identity_strong (bool, optional): Criteria for structurally identical
         """
         self.network_collection = network_collection
         self.is_report = is_report # Progress reporting
-        self.max_log_perm = max_log_perm  # Maximum log of the number of permutations to search
+        self.max_num_perm = max_num_perm  # Maximum number of permutations to search
         self.is_structural_identity_strong = is_structural_identity_strong
         if self.is_structural_identity_strong:
             self.structural_identity_type = cn.STRUCTURAL_IDENTITY_TYPE_STRONG
         else:
             self.structural_identity_type = cn.STRUCTURAL_IDENTITY_TYPE_WEAK
-        # Results
+        # Statistics
         self.hash_dct = self._makeHashDct()
         self.num_hash = len(self.hash_dct)
-        self.clustered_network_collections:Optional[List[IdentifiedNetworkCollection]] = None
+        self.max_hash = max([len(l) for l in self.hash_dct.values()])  # Most NetworkCollection
+        # Results
+        self.clustered_network_collections:List['ClusteredNetworkCollection'] = []
 
     @staticmethod
     def sequenceMax(sequence:List[int])->int:
@@ -99,7 +56,7 @@ class ClusterBuilder(object):
         Returns:
             Dict[int, List[Network]]: _description_
         """
-        def makeDct(self, attr:str)->Dict[int, List[Network]]:
+        def makeDct(attr:str)->Dict[int, List[Network]]:
             # Build the hash dictionary based on the attribute
             hash_dct: Dict[int, List[Network]] = {}
             # Build the hash dictionary
@@ -111,15 +68,19 @@ class ClusterBuilder(object):
                     hash_dct[hash_val] = [network]
             return hash_dct
         #
-        hash_simple_dct = self.makeDct('simple_hash')
+        hash_simple_dct = makeDct('simple_hash')
         simple_max = self.sequenceMax([len(networks) for networks in hash_simple_dct.values()])
-        hash_nonsimple_dct = self.makeDct('nonsimple_hash')
+        hash_nonsimple_dct = makeDct('nonsimple_hash')
         nonsimple_max = self.sequenceMax([len(networks) for networks in hash_nonsimple_dct.values()])
         if simple_max < nonsimple_max:
             hash_dct = hash_simple_dct
         else:
             hash_dct = hash_nonsimple_dct
         return hash_dct
+
+    def clustered2Network(self, clustered_network:ClusteredNetwork)->Network:
+        result = self.network_collection.network_dct[clustered_network.network_name]
+        return result
 
     def cluster(self)->None:
         """
@@ -128,43 +89,85 @@ class ClusterBuilder(object):
         Returns:
             Updates sef.clustered_network_collections
         """
+        # Initialize result
         self.clustered_network_collections = []
-        # Construct the collections of structurally identical Networks
-        for idx, hash_networks in enumerate(self.hash_dct.values()):
+        if self.is_report:
+            print(f"\n**Number of hash values: {self.num_hash}", end="")
+        # Construct collections of structurally identical Networks
+        for idx, (hash_val, hash_networks) in enumerate(self.hash_dct.items()):
             if self.is_report:
-                print(f" {idx+1}/{len(hash_networks)}.", end="")
-            first_clustered_network = ClusteredNetwork(hash_networks[0])
-            clustered_network_collections = [first_clustered_network]
+                print(f" {np.round((idx+1)/self.num_hash, 2)}.", end="")
+            first_clustered_network = ClusteredNetwork(str(hash_networks[0]))
+            # Create list of new collections for this key of hash_dct
+            new_clustered_network_collections =  \
+                [ClusteredNetworkCollection([first_clustered_network],
+                     is_structural_identity_strong=self.is_structural_identity_strong,
+                     hash_val=hash_val)]
             # Find structurally identical networks and add to the appropriate ClusteredNetworkCollection,
-            # creating new ClusteredNetworkCollections as needed.
+            # creating new ClusteredNetworkCollections as needed.a
             for network in hash_networks[1:]:
                 clustered_network = ClusteredNetwork(network)
-                for clustered_network_collection in clustered_network_collections:
+                for clustered_network_collection in new_clustered_network_collections:
                     selected_clustered_network_collection = None
-                    first_network = clustered_network_collection.clustered_networks[0]
+                    first_clustered_network = clustered_network_collection.clustered_networks[0]
+                    first_network = self.clustered2Network(first_clustered_network)
+                    adjusted_max_num_perm = self.max_num_perm - clustered_network.num_perm
                     result = first_network.isStructurallyIdentical(network,
-                            max_log_perm=self.max_log_perm,
+                            max_num_perm=adjusted_max_num_perm,
                             is_structural_identity_weak=not self.is_structural_identity_strong)
-                    self.clustered_network.add(result.num_perm)
+                    clustered_network.add(result.num_perm)
                     if result.is_structural_identity_strong:
                         selected_clustered_network_collection = clustered_network_collection
                         break
                     if result.is_structural_identity_weak and (not self.is_structural_identity_strong):
                         selected_clustered_network_collection = clustered_network_collection
                         break
-                    if self.clustered_network.num_perm > 10**self.max_log_perm:
+                    if clustered_network.num_perm >= self.max_num_perm:
+                        clustered_network.is_indeterminate = True
                         break
                 # Process the result of the search
                 if selected_clustered_network_collection is not None:
-                    # Add to the current IdentifiedNetworkCollection
                     selected_clustered_network_collection.add(clustered_network)
                 else:
-                    # Create a new IdentifiedNetworkCollection
+                    # Not structurally identical to any ClusteredNetworkCollection with this hash
                     clustered_network_collection = ClusteredNetworkCollection([clustered_network],
-                        is_structural_identity_strong=self.is_structural_identity_strong)
-                    clustered_network_collections.append(clustered_network_collection)
-            self.clustered_network_collections.extend(clustered_network_collections)
+                        is_structural_identity_strong=self.is_structural_identity_strong,
+                        hash_val=hash_val)
+                    new_clustered_network_collections.append(clustered_network_collection)
+            self.clustered_network_collections.extend(new_clustered_network_collections)
             if self.is_report:
                 print(".", end='')
         if self.is_report:
-            print(f"**Number of network collections: {len(identified_network_collections)}")
+            print(f"\n . Number of network collections: {len(self.clustered_network_collections)}")
+
+    def serializeClusteredNetworkCollections(self)->pd.DataFrame:
+        """
+        Serializes the clustering result. Information about the clustering is contained in df.attrs,
+        a dict of the form {property_name: property_value}.
+
+        Returns:
+            pd.DataFrame: Serialized data
+        """
+        # Augment with the clustered network information
+        values = [str(v) for v in self.clustered_network_collections]
+        dct = {"clustered_network_repr": values}
+        df = pd.DataFrame(dct)
+        # Augment the dataframe
+        df.attrs = {cn.STRUCTURAL_IDENTITY_TYPE_STRONG: self.is_structural_identity_strong,
+                       cn.NUM_HASH: self.num_hash,
+                       cn.MAX_HASH: self.max_hash}
+        return df
+    
+    @classmethod
+    def deserializeClusteredNetworkCollections(cls, df:pd.DataFrame)->List[ClusteredNetworkCollection]:
+        """
+        Deserializes the clustering result.
+
+        Args:
+            df (pd.DataFrame): Serialized data
+
+        Returns:
+            ClusterBuilder: Deserialized data
+        """
+        return [ClusteredNetworkCollection.makeFromRepr(repr_str)
+                                         for repr_str in df.clustered_network_repr.values]

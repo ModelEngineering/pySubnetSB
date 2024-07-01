@@ -153,7 +153,7 @@ class PMatrix(Matrix):
         new_array = new_array[row_perm, :]
         return new_array[:, column_perm]
     
-    def isPermutablyIdentical(self, other:'PMatrix', max_log_perm:float=cn.MAX_LOG_PERM,
+    def isPermutablyIdentical(self, other:'PMatrix', max_num_perm:int=cn.MAX_NUM_PERM,
                               is_find_all_perms:bool=True) -> PermutablyIdenticalResult:
         """
         Check if the matrices are permutably identical.
@@ -161,7 +161,7 @@ class PMatrix(Matrix):
 
         Args:
             other (PMatrix)
-            max_log_permutation (float): Maximum number of permutations to search in log units
+            max_num_perm (int): Maximum number of permutations to search
             is_find_all_perms (bool): If True, find all permutations that make the matrices equal
         Returns:
             bool
@@ -169,28 +169,30 @@ class PMatrix(Matrix):
         # Check compatibility
         if not self.isCompatible(other):
             return PermutablyIdenticalResult(False)
-        # Check if the number of permutations is excessive
-        if self.log_estimate > max_log_perm:
-            return PermutablyIdenticalResult(False, 
-                    is_compatible=True, is_excessive_perm=True)
         # The matrices have the same shape and partitions
         #  Order the other PMatrix to align the partitions of the two matrices
-        other_row_itr = other.row_collection.partitionPermutationIterator()
-        other_column_itr = other.column_collection.partitionPermutationIterator()
-        other_row_perm = next(other_row_itr)
-        other_column_perm = next(other_column_itr)
+        other_row_perm =  list(other.row_collection.partitionPermutationIterator())[0]
+        other_column_perm = list(other.column_collection.partitionPermutationIterator())[0]
         other_array = self.permuteArray(other.array, other_row_perm, other_column_perm)
         # Search all partition constrained permutations of this matrix to match the other matrix
         row_itr = self.row_collection.partitionPermutationIterator()
-        count = 0
+        num_perm = 0
         # Find all permutations that result in equality
         this_row_perms: list = []
         this_column_perms: list = []
+        is_done = False
+        is_excessive_perm = False
         for row_perm in row_itr:
+            if is_done:
+                break
             # There may be a large number of column permutations
             column_itr = self.column_collection.partitionPermutationIterator()
             for column_perm in column_itr:
-                count += 1
+                if num_perm >= max_num_perm:
+                    is_excessive_perm = True
+                    is_done = True
+                    break
+                num_perm += 1
                 this_array = self.permuteArray(self.array, row_perm, column_perm)
                 if np.all(this_array == other_array):
                     this_row_perms.append(row_perm)
@@ -202,7 +204,7 @@ class PMatrix(Matrix):
         permutably_identical_result = PermutablyIdenticalResult(is_permutably_identical,
                             this_row_perms=this_row_perms, this_column_perms=this_column_perms,
                             other_row_perm=other_row_perm, other_column_perm=other_column_perm,
-                            num_perm=count)
+                            is_excessive_perm=is_excessive_perm, num_perm=num_perm)
         return permutably_identical_result
     
     def isCompatible(self, other)->bool:
