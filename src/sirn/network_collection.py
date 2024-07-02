@@ -26,7 +26,7 @@ SERIALIZATION_NAMES = [MODEL_NAME, REACTANT_ARRAY_STR, PRODUCT_ARRAY_STR, ROW_NA
 
 ArrayContext = collections.namedtuple('ArrayContext', "string, num_row, num_column")
 
-
+# FIXME: Handle is_sirn
 ####################################
 class NetworkCollection(object):
         
