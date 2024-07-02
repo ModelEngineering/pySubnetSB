@@ -32,8 +32,7 @@ def find_identity_collections(directory_name,
 if __name__ == '__main__':
     for directory in cn.OSCILLATOR_DIRS:
         for is_strong in [True, False]:
-            #for max_num_perm in [100, 1000, 10000, 100000]:
-            for max_num_perm in [100, 100000]:
+            for max_num_perm in [100, 1000, 10000, 100000, 1000000]:
                 print("***", directory, "***")
                 find_identity_collections(directory, is_strong=is_strong,
                      max_num_perm=max_num_perm)
