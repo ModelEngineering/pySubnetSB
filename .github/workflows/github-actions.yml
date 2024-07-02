@@ -18,3 +18,4 @@ jobs:
     - name: Run tests
       run: |
         nose2 sirn_tests
+        nose2 analysis_tests

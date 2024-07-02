@@ -10,6 +10,7 @@ from sirn.array_collection import ArrayCollection # type: ignore
 from sirn import constants as cn  # type: ignore
 
 import collections
+import itertools
 import numpy as np
 from typing import List, Optional
 
@@ -68,9 +69,24 @@ class PMatrix(Matrix):
     def __init__(self, array: np.ndarray,
                  row_names:Optional[List[str]]=None,
                  column_names:Optional[List[str]]=None,
-                 ): 
+                 is_sirn:bool=True,
+                 ):
+        """
+        Abstraction for a permutable matrix
+
+        Args:
+            array (np.ndarray): _description_
+            row_names (Optional[List[str]], optional): _description_. Defaults to None.
+            column_names (Optional[List[str]], optional): _description_. Defaults to None.
+            is_sirn (bool, optional): _description_. Defaults to True.
+
+        Raises:
+            ValueError: _description_
+            ValueError: _description_
+        """
         # Inputs
         super().__init__(array)
+        self.is_sirn = is_sirn
         if row_names is None:
             row_names = [str(i) for i in range(self.num_row)]  # type: ignore
         if column_names is None:
@@ -85,8 +101,11 @@ class PMatrix(Matrix):
         self.row_collection = ArrayCollection(self.array)
         column_arr = np.transpose(self.array)
         self.column_collection = ArrayCollection(column_arr)
-        hash_arr = np.concatenate((self.row_collection.encoding_arr, self.column_collection.encoding_arr))
-        self.hash_val = hashArray(hash_arr)
+        if self.is_sirn:
+            hash_arr = np.concatenate((self.row_collection.encoding_arr, self.column_collection.encoding_arr))
+            self.hash_val = hashArray(hash_arr)
+        else:
+            self.hash_val = cn.NON_SIRN_HASH
         # log10 of the estimated number of permutations of rows and columns
         self.log_estimate = self.row_collection.log_estimate + self.column_collection.log_estimate
 
@@ -153,10 +172,28 @@ class PMatrix(Matrix):
         new_array = new_array[row_perm, :]
         return new_array[:, column_perm]
     
+
     def isPermutablyIdentical(self, other:'PMatrix', max_num_perm:int=cn.MAX_NUM_PERM,
+            is_find_all_perms:bool=True) -> PermutablyIdenticalResult:
+        """
+        Check if the matrices are permutably identical. Choose the correct algorithm.
+        Order other PMatrix
+
+        Args:
+            other (PMatrix)
+            max_num_perm (int): Maximum number of permutations to search
+            is_find_all_perms (bool): If True, find all permutations that make the matrices equal
+        Returns:
+            bool
+        """
+        if self.is_sirn:
+            return self._isPermutablyIdenticalSIRN(other, max_num_perm, is_find_all_perms)
+        return self._isPermutablyIdenticalNotSirn(other, max_num_perm, is_find_all_perms) 
+    
+    def _isPermutablyIdenticalSIRN(self, other:'PMatrix', max_num_perm:int=cn.MAX_NUM_PERM,
                               is_find_all_perms:bool=True) -> PermutablyIdenticalResult:
         """
-        Check if the matrices are permutably identical.
+        Check if the matrices are permutably identical using the SIRN algorithm.
         Order other PMatrix
 
         Args:
@@ -201,6 +238,60 @@ class PMatrix(Matrix):
                         break
         #
         is_permutably_identical = len(this_row_perms) > 0
+        permutably_identical_result = PermutablyIdenticalResult(is_permutably_identical,
+                            this_row_perms=this_row_perms, this_column_perms=this_column_perms,
+                            other_row_perm=other_row_perm, other_column_perm=other_column_perm,
+                            is_excessive_perm=is_excessive_perm, num_perm=num_perm)
+        return permutably_identical_result
+     
+    def _isPermutablyIdenticalNotSirn(self, other:'PMatrix', max_num_perm:int=cn.MAX_NUM_PERM,
+                              is_find_all_perms:bool=True) -> PermutablyIdenticalResult:
+        """
+        Check if the matrices are permutably by considering all permuations.
+
+        Args:
+            other (PMatrix)
+            max_num_perm (int): Maximum number of permutations to search
+            is_find_all_perms (bool): If True, find all permutations that make the matrices equal
+        Returns:
+            bool
+        """
+        # Check compatibility
+        this_shape = np.shape(self.array)
+        other_shape = np.shape(other.array)
+        if this_shape != other_shape:
+            return PermutablyIdenticalResult(False)
+        # 
+        num_row = this_shape[0]
+        num_column = this_shape[1]
+        row_itr = itertools.permutations(range(num_row))
+        column_itr = itertools.permutations(range(num_column))
+        # Search all permutations of this matrix to match the other matrix
+        other_row_perm = np.array(range(num_row))
+        other_column_perm = np.array(range(num_column))
+        this_row_perms: list = []
+        this_column_perms: list = []
+        is_done = False
+        num_perm = 0
+        for row_perm in row_itr:
+            if is_done:
+                break
+            for column_perm in column_itr:
+                if is_done:
+                    break
+                this_array = self.permuteArray(self.array, np.array(row_perm), np.array(column_perm))
+                num_perm += 1
+                if np.all(this_array == other.array):
+                    this_row_perms.append(row_perm)
+                    this_column_perms.append(column_perm)
+                    if not is_find_all_perms:
+                        is_done = True
+                        break
+                if num_perm >= max_num_perm:
+                    is_done = True
+                    break
+        is_permutably_identical = len(this_row_perms) > 0
+        is_excessive_perm = num_perm >= max_num_perm
         permutably_identical_result = PermutablyIdenticalResult(is_permutably_identical,
                             this_row_perms=this_row_perms, this_column_perms=this_column_perms,
                             other_row_perm=other_row_perm, other_column_perm=other_column_perm,

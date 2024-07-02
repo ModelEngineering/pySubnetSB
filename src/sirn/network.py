@@ -49,21 +49,19 @@ class Network(object):
 
     def __init__(self, reactant_mat:Union[np.ndarray, PMatrix],
                  product_mat:Union[np.ndarray, PMatrix],
+                 is_sirn:bool=True,
                  network_name:Optional[str]=None)->None:
         """
         Args:
             reactant_mat (np.ndarray): Reactant matrix.
             product_mat (np.ndarray): Product matrix.
+            is_sirn (bool): Use the SIRN algorithm
             network_name (str): Name of the network.
         """
-        if isinstance(reactant_mat, PMatrix):
-            self.reactant_pmatrix = reactant_mat
-        else:
-            self.reactant_pmatrix = PMatrix(reactant_mat)
-        if isinstance(product_mat, PMatrix):
-            self.product_pmatrix = product_mat
-        else:
-            self.product_pmatrix = PMatrix(product_mat)
+        self.is_sirn = is_sirn
+        self.reactant_pmatrix = self._makePMatrix(reactant_mat)
+        self.product_pmatrix = self._makePMatrix(product_mat)
+        #
         if network_name is None:
             network_name = str(np.random.randint(0, 10000000))
         self.network_name = network_name
@@ -73,6 +71,25 @@ class Network(object):
         self.nonsimple_hash = hashArray(np.array([self.reactant_pmatrix.hash_val,
                                                   self.product_pmatrix.hash_val]))
         self.simple_hash = self.stoichiometry_pmatrix.hash_val
+
+    def _makePMatrix(self, matrix:Union[np.ndarray, PMatrix])->PMatrix:
+        """
+        Handles having a matrix or a PMatrix.
+
+        Args:
+            matrix (Union[np.ndarray, PMatrix])
+
+        Returns:
+            PMatrix
+        """
+        if isinstance(matrix, PMatrix):
+            row_names = matrix.row_names
+            column_names = matrix.column_names
+            matrix = matrix.array
+        else:
+            row_names = None
+            column_names = None
+        return PMatrix(matrix, row_names=row_names, column_names=column_names, is_sirn=self.is_sirn)
 
     def copy(self)->'Network':
         return Network(self.reactant_pmatrix.array.copy(), self.product_pmatrix.array.copy(),
