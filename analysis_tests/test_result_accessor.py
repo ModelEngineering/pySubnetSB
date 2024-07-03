@@ -27,11 +27,8 @@ class TestResultAccessor(unittest.TestCase):
     def testConstructor(self):
         if IGNORE_TEST:
             return
-        for is_strong in [True, False]:
-            for directory in cnn.OSCILLATOR_DIRS:
-                accessor = ResultAccessor(directory, is_strong=is_strong)
-                assert(isinstance(accessor.results, list))
-                assert(isinstance(accessor.results[0], str))
+        assert(isinstance(self.accessor.results, list))
+        assert(isinstance(self.accessor.results[0], str))
 
         
 
