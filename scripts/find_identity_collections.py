@@ -20,7 +20,7 @@ def find_identity_collections(directory_name,
     df = pd.read_csv(csv_file)
     network_collection = NetworkCollection.deserialize(df)
     builder = ClusterBuilder(network_collection,
-               is_structural_identity_strong=is_strong,
+               is_structural_identity_strong=is_strong, is_sirn=False,
                max_num_perm=max_num_perm)
     builder.cluster()
     output_path = os.path.join(cn.DATA_DIR, f'{prefix}{directory_name}.txt')
@@ -30,9 +30,18 @@ def find_identity_collections(directory_name,
 
 
 if __name__ == '__main__':
-    for directory in cn.OSCILLATOR_DIRS:
-        for is_strong in [True, False]:
-            for max_num_perm in [100, 1000, 10000, 100000, 1000000]:
-                print("***", directory, "***")
-                find_identity_collections(directory, is_strong=is_strong,
-                     max_num_perm=max_num_perm)
+    if False:
+        for directory in cn.OSCILLATOR_DIRS:
+            for is_strong in [True, False]:
+                for max_num_perm in [100, 1000, 10000, 100000, 1000000]:
+                    print("***", directory, "***")
+                    find_identity_collections(directory, is_strong=is_strong,
+                        max_num_perm=max_num_perm)
+    parser = argparse.ArgumentParser(description='Serialize Antimony Models')
+    parser.add_argument('directory_name', type=str, help='Name of directory')
+    parser.add_argument('max_perm', type=int, help='Max number of permutations')
+    args = parser.parse_args()
+    if not args.directory_name in cn.OSCILLATOR_DIRS:
+        raise ValueError(f"{args.directory_name} not in {cn.OSCILLATOR_DIRS}")
+    find_identity_collections(args.directory_name, max_num_perm=args.max_perm,
+                              is_strong=True)

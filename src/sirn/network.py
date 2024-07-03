@@ -49,16 +49,13 @@ class Network(object):
 
     def __init__(self, reactant_mat:Union[np.ndarray, PMatrix],
                  product_mat:Union[np.ndarray, PMatrix],
-                 is_sirn:bool=True,
                  network_name:Optional[str]=None)->None:
         """
         Args:
             reactant_mat (np.ndarray): Reactant matrix.
             product_mat (np.ndarray): Product matrix.
-            is_sirn (bool): Use the SIRN algorithm
             network_name (str): Name of the network.
         """
-        self.is_sirn = is_sirn
         self.reactant_pmatrix = self._makePMatrix(reactant_mat)
         self.product_pmatrix = self._makePMatrix(product_mat)
         #
@@ -89,7 +86,7 @@ class Network(object):
         else:
             row_names = None
             column_names = None
-        return PMatrix(matrix, row_names=row_names, column_names=column_names, is_sirn=self.is_sirn)
+        return PMatrix(matrix, row_names=row_names, column_names=column_names)
 
     def copy(self)->'Network':
         return Network(self.reactant_pmatrix.array.copy(), self.product_pmatrix.array.copy(),
@@ -108,7 +105,7 @@ class Network(object):
         return True
     
     def isStructurallyIdentical(self, other:'Network', is_report:bool=False,
-            max_num_perm:int=cn.MAX_NUM_PERM,
+            max_num_perm:int=cn.MAX_NUM_PERM, is_sirn:bool=True,
             is_structural_identity_weak:bool=False)->StructurallyIdenticalResult:
         """
         Determines if two networks are structurally identical. This means that the reactant and product
@@ -120,6 +117,7 @@ class Network(object):
             other (Network)
             max_num_perm (int, optional): Maximum number of permutations to consider.
             is_report (bool, optional): Report on analysis progress. Defaults to False.
+            is_sirn (bool, optional): Use the SIRN algorithm. Defaults to True.
             is_structural_identity_type_weak (bool, optional): _description_. Defaults to False.
 
         Returns:
@@ -128,7 +126,8 @@ class Network(object):
         num_perm = 0
         # Check for weak structural identity
         weak_identity = self.stoichiometry_pmatrix.isPermutablyIdentical(
-            other.stoichiometry_pmatrix, is_find_all_perms=False, max_num_perm=max_num_perm)
+            other.stoichiometry_pmatrix, is_find_all_perms=False, max_num_perm=max_num_perm,
+            is_sirn=is_sirn)
         num_perm += weak_identity.num_perm
         if num_perm >= max_num_perm:
             return StructurallyIdenticalResult(num_perm=num_perm, is_excessive_perm=True)
@@ -144,7 +143,8 @@ class Network(object):
         # Find the permutations that work for weak identity and see if one works for strong identity
         revised_max_num_perm = max_num_perm - num_perm
         all_weak_identities = self.stoichiometry_pmatrix.isPermutablyIdentical(
-            other.stoichiometry_pmatrix, is_find_all_perms=True, max_num_perm=revised_max_num_perm)
+            other.stoichiometry_pmatrix, is_find_all_perms=True, max_num_perm=revised_max_num_perm,
+            is_sirn=is_sirn)
         num_perm += all_weak_identities.num_perm
         if num_perm >= max_num_perm:
             return StructurallyIdenticalResult(is_structural_identity_weak=True,

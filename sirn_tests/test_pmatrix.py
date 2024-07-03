@@ -95,6 +95,7 @@ class TestPMatrix(unittest.TestCase):
         pmatrix1 = PMatrix(arr1)
         pmatrix2 = PMatrix(arr2)
         self.assertTrue(pmatrix1.isPermutablyIdentical(pmatrix2))
+        self.assertTrue(pmatrix1.isPermutablyIdentical(pmatrix2, is_sirn=False))
 
     def testIsPermutablyIdentical2(self):
         if IGNORE_TEST:
@@ -108,6 +109,7 @@ class TestPMatrix(unittest.TestCase):
         pmatrix1 = PMatrix(arr1)
         pmatrix2 = PMatrix(arr2)
         self.assertTrue(pmatrix1.isPermutablyIdentical(pmatrix2))
+        self.assertTrue(pmatrix1.isPermutablyIdentical(pmatrix2, is_sirn=False))
 
     def testIsPermutablyIdentical3(self):
         # Test permutably identical matrices and calculation limits
@@ -158,6 +160,71 @@ class TestPMatrix(unittest.TestCase):
         test(3)
         test(10)
         test(20)
+
+    def testIsPermutablyIdenticalNotSIRN(self):
+        if IGNORE_TEST:
+            return
+        arr1 = np.array([[ 1, -1, -1],
+            [ 0,  0,  1],
+            [ 1,  1,  0]])
+        arr2 = np.array([[ 1, -1, -1],
+            [ 1,  0,  1],
+            [ 0,  1,  0]])
+        pmatrix1 = PMatrix(arr1)
+        pmatrix2 = PMatrix(arr2)
+        result = pmatrix1.isPermutablyIdentical(pmatrix2, is_sirn=False)
+        self.assertTrue(result)
+
+    def testIsPermutablyIdenticalNotSIRN2(self):
+        # Test not permutably identical matrices
+        if IGNORE_TEST:
+            return
+        def test(size=3, num_iteration=20):
+            for _ in range(num_iteration):
+                arr1 = PMatrix.makeTrinaryMatrix(size, size)
+                arr2 = arr1.copy()
+                # Randomly change a value
+                irow = np.random.randint(size)
+                icol = np.random.randint(size)
+                arr2[irow, icol] = -arr2[irow, icol]
+                if arr2[irow, icol] == 0:
+                    arr2[irow, icol] = 1
+                # Construct the ordered matrices
+                pmatrix1 = PMatrix(arr1)
+                pmatrix2 = PMatrix(arr2)
+                self.assertFalse(pmatrix1.isPermutablyIdentical(pmatrix2, is_sirn=False))
+        #
+        test(3)
+        test(5)
+
+    def testIsPermutablyIdenticalNotSIRN3(self):
+        # Test permutably identical matrices and calculation limits
+        if IGNORE_TEST:
+            return
+        def test(size=3, num_iteration=10, expected_result=True):
+            for _ in range(num_iteration):
+                arr1 = PMatrix.makeTrinaryMatrix(size, size)
+                arr2 = arr1.copy()
+                for _ in range(10):
+                    perm =  np.random.permutation(range(size))
+                    if np.sum(np.diff(perm)) != size - 1:  # Avoid the identity permutation
+                        break
+                arr2 = arr2[perm, :]
+                arr2 = arr2[:, perm]
+                pmatrix1 = PMatrix(arr1)
+                pmatrix2 = PMatrix(arr2)
+                result = pmatrix1.isPermutablyIdentical(pmatrix2, is_sirn=False,
+                        is_find_all_perms=True, max_num_perm=1000)
+                if expected_result:
+                    self.assertTrue(result or result.is_excessive_perm)
+                else:
+                    if result:
+                        import pdb; pdb.set_trace()
+                    self.assertFalse(result)
+        #
+        test(size=200, expected_result=False)
+        test(3)
+        test(10)
 
     def testEq(self):
         if IGNORE_TEST:
