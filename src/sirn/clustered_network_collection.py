@@ -4,8 +4,8 @@ Has a string representation and can construct from its string representation.
 """
 
 
-from sirn import constants as cn
-from sirn.clustered_network import ClusteredNetwork
+from sirn import constants as cn # type: ignore
+from sirn.clustered_network import ClusteredNetwork  # type: ignore
 
 import collections
 import numpy as np

@@ -38,3 +38,18 @@ def string2Array(array_str: str)->np.ndarray:
             break
         array_str = array_str.replace(",,", ",")
     return np.array(eval(array_str))
+
+def isInt(val: str)->bool:
+    """Determines if a string is an integer.
+
+    Args:
+        val (str): A string.
+
+    Returns:
+        bool: True if the string is an integer.
+    """
+    try:
+        int(val)
+        return True
+    except ValueError:
+        return False

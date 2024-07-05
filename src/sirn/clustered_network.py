@@ -8,7 +8,8 @@ import time
 from typing import Union, Optional
 
 
-Repr = collections.namedtuple('Repr', ['is_indeterminate', 'network_name', 'num_perm', 'processing_time'])
+Repr = collections.namedtuple('Repr', ['is_indeterminate', 'network_name', 'num_perm',
+                                        'processing_time'])
 TIME_SEP = "#"
 
 
@@ -63,11 +64,16 @@ class ClusteredNetwork(object):
         Returns:
             str
         """
+        repr_str = repr_str.strip()
         is_indeterminate_str, rest_str = repr_str[0], repr_str[1:]
-        network_name, rest_str = rest_str.split(cn.NETWORK_NAME_SUFFIX)
-        rest_str = rest_str.split(cn.NETWORK_NAME_SUFFIX)[0]
-        num_perm_str, processing_time_str = rest_str.split(TIME_SEP)
-        is_indeterminate = is_indeterminate_str == cn.NETWORK_NAME_PREFIX_UNKNOWN
+        split_str = rest_str.split(cn.NETWORK_NAME_SUFFIX)
+        if len(split_str) > 3:
+            new_split_str = cn.NETWORK_NAME_SUFFIX.join(split_str[:-3]), split_str[-1]
+        else:
+            new_split_str = split_str # type: ignore
+        network_name = new_split_str[0]
+        num_perm_str, processing_time_str = new_split_str[1].split(TIME_SEP)
+        is_indeterminate = bool(is_indeterminate_str == cn.NETWORK_NAME_PREFIX_UNKNOWN)
         num_perm = int(num_perm_str)
         return Repr(is_indeterminate=is_indeterminate, network_name=network_name, num_perm=num_perm,
                     processing_time=float(processing_time_str))
