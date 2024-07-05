@@ -12,7 +12,7 @@ from typing import List, Optional
 
 
 
-class AnalysisStatistics(object):
+class SummaryStatistics(object):
 
     def __init__(self, analysis_directory:str, root_path:str=cn.DATA_DIR)->None:
         """
@@ -34,13 +34,15 @@ class AnalysisStatistics(object):
         self.cluster_statistics = util.calculateSummaryStatistics(
                 [len(v) for v in self.df_groups.values()])
 
-    def plotComparisonBars(cls, root_dirs:List[str], metrics:List[str],
+    def plotComparisonBars(cls, measurement_dirs:List[str], metrics:List[str],
                            legends:Optional[List[str]]=None)->None:
         """
           Does grouped bar plots across all antimony directories. Groups together
-          the root_dirs and/or metrics.
+          the root_dirs and/or metrics. Only one of root_dirs or metrics can have more
+          than one element.
 
         Args:
-            root_dirs (List[str]): List of root directories to compare
+            measurement_dirs (List[str]): List of directories with results for comparison,
+                one for each directory
             metrics (List[str]): list of metrics to compare
         """

@@ -57,7 +57,7 @@ def isInt(val: str)->bool:
         return False
 
 Statistics = collections.namedtuple("Statistics", "mean std min_val max_val count total") 
-def calculateSummaryStatistics(arr: Union[list, np.ndar, pd.Series])->Statistics:
+def calculateSummaryStatistics(arr: Union[list, np.ndarray, pd.Series])->Statistics:
     """Calculates basic statistics for an array.
 
     Args:
