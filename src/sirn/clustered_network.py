@@ -71,8 +71,11 @@ class ClusteredNetwork(object):
             new_split_str = cn.NETWORK_NAME_SUFFIX.join(split_str[:-3]), split_str[-1]
         else:
             new_split_str = split_str # type: ignore
-        network_name = new_split_str[0]
-        num_perm_str, processing_time_str = new_split_str[1].split(TIME_SEP)
+        if len(new_split_str) > 2:
+            network_name = cn.NETWORK_NAME_SUFFIX.join(new_split_str[:-1])
+        else:
+            network_name = new_split_str[0]
+        num_perm_str, processing_time_str = new_split_str[-1].split(TIME_SEP)
         is_indeterminate = bool(is_indeterminate_str == cn.NETWORK_NAME_PREFIX_UNKNOWN)
         num_perm = int(num_perm_str)
         return Repr(is_indeterminate=is_indeterminate, network_name=network_name, num_perm=num_perm,

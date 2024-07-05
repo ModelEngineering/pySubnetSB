@@ -5,6 +5,7 @@ import analysis.constants as cn  # type: ignore
 import sirn.util as util  # type: ignore
 
 import os
+import pandas as pd  # type: ignore 
 import numpy as np  # type: ignore
 import unittest
 
@@ -18,9 +19,9 @@ FILENAME = f"{STRONG}{MAX_NUM_PERM}_{ANTIMONY_DIR}.txt"
 DATA_PATH = os.path.join(cn.TEST_DIR, FILENAME)
 IS_STRONG = True
 MAX_NUM_PERM = 100
-ra.COLUMN_DCT = {ra.COL_HASH: int, ra.COL_MODEL_NAME: str,
-                 ra.COL_PROCESS_TIME: float, ra.COL_NUM_PERM: int,
-           ra.COL_IS_INDETERMINATE: np.bool_, ra.COL_COLLECTION_IDX: int}
+COLUMN_DCT = {cn.COL_HASH: int, cn.COL_MODEL_NAME: str,
+                 cn.COL_PROCESS_TIME: float, cn.COL_NUM_PERM: int,
+           cn.COL_IS_INDETERMINATE: np.bool_, cn.COL_COLLECTION_IDX: int}
 
 
 #############################
@@ -41,14 +42,22 @@ class TestResultAccessor(unittest.TestCase):
     def testDataframe(self):
         if IGNORE_TEST:
             return
-        self.assertEqual(self.accessor.df.shape[1], len(ra.COLUMNS))
+        self.assertEqual(self.accessor.df.shape[1], len(cn.RESULT_ACCESSOR_COLUMNS))
         self.assertGreater(self.accessor.df.shape[0], 0)
-        for column, data_type in ra.COLUMN_DCT.items():
+        for column, data_type in COLUMN_DCT.items():
             value = self.accessor.df.loc[0, column]
             if data_type == int:
                 self.assertTrue(util.isInt(value))
             else:
                 self.assertTrue(isinstance(value, data_type))
+
+    def testIterateDir(self):
+        if IGNORE_TEST:
+            return
+        iter = ResultAccessor.iterateDir("sirn_analysis")
+        for directory, df in iter:
+            self.assertTrue(isinstance(directory, str))
+            self.assertTrue(isinstance(df, pd.DataFrame))
 
 
 if __name__ == '__main__':

@@ -1,6 +1,8 @@
 '''Utility functions for the SIRN package.'''
+import collections
 import numpy as np
 import pandas as pd # type: ignore
+from typing import List, Tuple, Union
 
 def hashArray(arr: np.ndarray)->int:
     """Hashes an array.
@@ -53,3 +55,23 @@ def isInt(val: str)->bool:
         return True
     except ValueError:
         return False
+
+Statistics = collections.namedtuple("Statistics", "mean std min_val max_val count total") 
+def calculateSummaryStatistics(arr: Union[list, np.ndar, pd.Series])->Statistics:
+    """Calculates basic statistics for an array.
+
+    Args:
+        arr (np.array): An array.
+
+    Returns:
+        dict: A dictionary with basic statistics.
+    """
+    arr = np.array(arr)
+    mean = np.mean(arr)
+    std = np.std(arr)
+    min_val = np.min(arr)
+    max_val = np.max(arr)
+    count = len(arr)
+    total = np.sum(arr)
+    return Statistics(mean=mean, std=std, min_val=min_val, max_val=max_val,
+                      count=count, total=total)

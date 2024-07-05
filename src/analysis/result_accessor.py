@@ -9,23 +9,10 @@ import collections
 import numpy as np
 import os
 import pandas as pd # type: ignore
-from typing import List, Tuple
+from typing import Tuple
 
-STRONG = "strong"
 WEAK = "weak"
-# Dataframe columns
-COL_HASH = "hash"
-COL_MODEL_NAME = "model_name"
-COL_PROCESS_TIME = "process_time"
-COL_NUM_PERM = "num_perm"
-COL_IS_INDETERMINATE = "is_indeterminate"
-COL_COLLECTION_IDX = "collection_idx"
-COLUMNS = [COL_HASH, COL_MODEL_NAME, COL_PROCESS_TIME, COL_NUM_PERM,
-           COL_IS_INDETERMINATE, COL_COLLECTION_IDX]
-# Dataframe metadata
-META_IS_STRONG = "is_strong"
-META_MAX_NUM_PERM = "max_num_perm"
-META_ANTIMONY_DIR = "antimony_dir"
+STRONG = "strong"
 
 DataFileStructure = collections.namedtuple("DataFileStructure", "antimony_dir is_strong max_num_perm")
 
@@ -78,26 +65,45 @@ class ResultAccessor(object):
         Reads the result of identity matching and creates a dataframe.
 
         Returns:
-            pd.DataFrame (see COLUMNS)
+            pd.DataFrame (see cn.RESULT_ACCESSOR_COLUMNS)
         """
         with open(self.dir_path, "r") as fd:
             repr_strs = fd.readlines()
         #
-        dct:dict = {c: [] for c in COLUMNS}
+        dct:dict = {c: [] for c in cn.RESULT_ACCESSOR_COLUMNS}
         collection_idx = 0
         for repr_str in repr_strs:
             collection_repr = ClusteredNetworkCollection.parseRepr(repr_str)
             clustered_networks = collection_repr.clustered_networks
             for clustered_network in clustered_networks:
-                dct[COL_HASH].append(collection_repr.hash_val)
-                dct[COL_MODEL_NAME].append(clustered_network.network_name)
-                dct[COL_PROCESS_TIME].append(clustered_network.processing_time)
-                dct[COL_NUM_PERM].append(clustered_network.num_perm)
-                dct[COL_IS_INDETERMINATE].append(clustered_network.is_indeterminate)
-                dct[COL_COLLECTION_IDX].append(collection_idx)
+                dct[cn.COL_HASH].append(collection_repr.hash_val)
+                dct[cn.COL_MODEL_NAME].append(clustered_network.network_name)
+                dct[cn.COL_PROCESS_TIME].append(clustered_network.processing_time)
+                dct[cn.COL_NUM_PERM].append(clustered_network.num_perm)
+                dct[cn.COL_IS_INDETERMINATE].append(clustered_network.is_indeterminate)
+                dct[cn.COL_COLLECTION_IDX].append(collection_idx)
             collection_idx += 1
         df = pd.DataFrame(dct)
-        df.attrs[META_IS_STRONG] = self.is_strong
-        df.attrs[META_MAX_NUM_PERM] = self.max_num_perm
-        df.attrs[META_ANTIMONY_DIR] = self.antimony_dir
+        df.attrs[cn.META_IS_STRONG] = self.is_strong
+        df.attrs[cn.META_MAX_NUM_PERM] = self.max_num_perm
+        df.attrs[cn.META_ANTIMONY_DIR] = self.antimony_dir
         return df
+
+    @staticmethod 
+    def iterateDir(result_dir:str, root_dir=cn.DATA_DIR):
+        """
+        Iterates over the directories in the root directory.
+
+        Args:
+            result_dir (str): path to the root directory
+            root_dir (str, optional): path to the root directory. Defaults to cn.DATA_DIR.
+
+        Returns:
+            Tuple[str, pd.DataFrame]: name of directory, dataframe of statistics
+        """
+        dir_path = os.path.join(root_dir, result_dir)
+        ffiles = [f for f in os.listdir(dir_path) if f.endswith(".txt")]
+        for file in ffiles:
+            full_path = os.path.join(dir_path, file)
+            accessor = ResultAccessor(full_path)
+            yield accessor.antimony_dir, accessor.df
