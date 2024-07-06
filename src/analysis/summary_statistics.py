@@ -10,8 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd # type: ignore
-from typing import List, Optional
-
+from typing import List, Tuple, Any
 
 
 class SummaryStatistics(object):
@@ -36,9 +35,9 @@ class SummaryStatistics(object):
         self.cluster_statistics = util.calculateSummaryStatistics(
                 [len(v) for v in self.df_groups.values()])
 
+    @classmethod
     def plotComparisonBars(cls, measurement_dirs:List[str], metrics:List[str],
-            indices:List[str], is_plot=True)->pd.DataFrame:
-                          
+            indices:List[str])->Tuple[Any, pd.DataFrame]:
         """
           Does grouped bar plots across all antimony directories. Groups together
           the root_dirs and/or metrics. Only one of root_dirs or metrics can have more
@@ -73,7 +72,30 @@ class SummaryStatistics(object):
                 label = label[:pos]
             labels.append(label)
         ax.set_xticklabels(labels, rotation = -50)
+        return ax, plot_df
+
+    @classmethod 
+    def plotMetricComparison(cls, metric:str, is_plot=True)->None:
+        """
+        Plots the maximum number of permutations.
+
+        Args:
+            metric: metric to plot ("max_num_perm", "processing_time", "is_indeterminate") 
+        
+        """
+        max_dct = {cn.COL_PROCESSING_TIME: 0.003, cn.COL_NUM_PERM: 200, cn.COL_IS_INDETERMINATE: 1}
+        unit_dct = {cn.COL_PROCESSING_TIME: "sec", cn.COL_NUM_PERM: "", cn.COL_IS_INDETERMINATE: ""}
+        for identity_type in [cn.WEAK, cn.STRONG]:
+            measurement_dirs = [os.path.join(cn.DATA_DIR, "sirn_analysis", f"{identity_type}{n}")
+                                for n in cn.MAX_NUM_PERMS]
+            ax, _ = cls.plotComparisonBars(measurement_dirs, [metric], cn.MAX_NUM_PERMS)
+            ax.set_title(f"{identity_type}")
+            if unit_dct[metric] != "":
+                unit_str = f" ({unit_dct[metric]})"
+            else:
+                unit_str = ""
+            ax.set_ylabel(f"avg. {metric} per network ({unit_dct[metric]})")
+            ax.set_xlabel("Antimony Directory")
+            ax.set_ylim([0, max_dct[metric]])
         if is_plot:
             plt.show()
-        #
-        return ax, plot_df

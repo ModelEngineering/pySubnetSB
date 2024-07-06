@@ -22,12 +22,12 @@ class ClusteredNetwork(object):
         self.is_indeterminate = is_indeterminate
         self.num_perm = num_perm
         if processing_time is None:
-            self.processing_time = time.time()  # Time to process the network. Initialized to current time.
+            self.processing_time = time.process_time()  # Time to process the network. Initialized to current time.
         else:
             self.processing_time = processing_time
 
     def finished(self)->None:
-        self.processing_time = time.time() - self.processing_time
+        self.processing_time = time.process_time() - self.processing_time
         if self.processing_time < 0:
             raise ValueError(f"Processing time is negative: {self.processing_time}")
 

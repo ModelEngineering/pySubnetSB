@@ -9,7 +9,7 @@ import numpy as np  # type: ignore
 import unittest
 
 
-IGNORE_TEST = True
+IGNORE_TEST = False
 IS_PLOT = False
 ANTIMONY_DIR = "Oscillators_May_28_2024_8898"
 STRONG = "strong"
@@ -37,19 +37,25 @@ class TestSummaryStatistics(unittest.TestCase):
         self.assertEqual(self.statistics.df.attrs[cn.META_ANTIMONY_DIR], ANTIMONY_DIR)
 
     def testPlotComparisonBars(self):
-        #if IGNORE_TEST:
-        #    return
+        if IGNORE_TEST:
+            return
         max_num_perms = [100, 1000, 10000, 100000, 1000000]
         root_dir = os.path.join(cn.DATA_DIR, "sirn_analysis")
         measurement_dirs = [os.path.join(root_dir, f"weak{n}") for n in max_num_perms]
-        ax, _ = self.statistics.plotComparisonBars(measurement_dirs, [cn.COL_PROCESSING_TIME],
-                                                   max_num_perms, is_plot=False)
-        ax.set_title("Comparison of processing time")
-        ax.set_ylabel("Processing time (s)")
-        ax.set_xlabel("Antimony Directory")
-        plt.show()
+        self.statistics.plotComparisonBars(measurement_dirs, [cn.COL_PROCESSING_TIME],
+                                                   max_num_perms)
+        if IS_PLOT:
+            plt.show()
         self.statistics.plotComparisonBars(measurement_dirs, [cn.COL_IS_INDETERMINATE],
                                            max_num_perms)
+        if IS_PLOT:
+            plt.show()
+
+    def testPlotMetricComparison(self):
+        if IGNORE_TEST:
+            return
+        for metric in [cn.COL_PROCESSING_TIME, cn.COL_IS_INDETERMINATE, cn.COL_NUM_PERM]:
+            self.statistics.plotMetricComparison(metric, is_plot=IS_PLOT) 
 
 
 
