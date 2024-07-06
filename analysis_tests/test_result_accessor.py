@@ -20,7 +20,7 @@ DATA_PATH = os.path.join(cn.TEST_DIR, FILENAME)
 IS_STRONG = True
 MAX_NUM_PERM = 100
 COLUMN_DCT = {cn.COL_HASH: int, cn.COL_MODEL_NAME: str,
-                 cn.COL_PROCESS_TIME: float, cn.COL_NUM_PERM: int,
+                 cn.COL_PROCESSING_TIME: float, cn.COL_NUM_PERM: int,
            cn.COL_IS_INDETERMINATE: np.bool_, cn.COL_COLLECTION_IDX: int}
 
 
