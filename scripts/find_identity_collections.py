@@ -20,7 +20,7 @@ def find_identity_collections(directory_name,
     df = pd.read_csv(csv_file)
     network_collection = NetworkCollection.deserialize(df)
     builder = ClusterBuilder(network_collection,
-               is_structural_identity_strong=is_strong, is_sirn=False,
+               is_structural_identity_strong=is_strong, is_sirn=True,
                max_num_perm=max_num_perm)
     builder.cluster()
     output_path = os.path.join(cn.DATA_DIR, f'{prefix}{directory_name}.txt')
@@ -44,4 +44,4 @@ if __name__ == '__main__':
     if not args.directory_name in cn.OSCILLATOR_DIRS:
         raise ValueError(f"{args.directory_name} not in {cn.OSCILLATOR_DIRS}")
     find_identity_collections(args.directory_name, max_num_perm=args.max_perm,
-                              is_strong=True)
+                              is_strong=False)

@@ -78,7 +78,7 @@ class ResultAccessor(object):
             for clustered_network in clustered_networks:
                 dct[cn.COL_HASH].append(collection_repr.hash_val)
                 dct[cn.COL_MODEL_NAME].append(clustered_network.network_name)
-                dct[cn.COL_PROCESS_TIME].append(clustered_network.processing_time)
+                dct[cn.COL_PROCESSING_TIME].append(clustered_network.processing_time)
                 dct[cn.COL_NUM_PERM].append(clustered_network.num_perm)
                 dct[cn.COL_IS_INDETERMINATE].append(clustered_network.is_indeterminate)
                 dct[cn.COL_COLLECTION_IDX].append(collection_idx)

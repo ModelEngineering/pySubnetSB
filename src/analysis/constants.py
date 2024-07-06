@@ -12,11 +12,11 @@ OSCILLATOR_PROJECT_DIR = "/Users/jlheller/home/Technical/repos/OscillatorDatabas
 # Dataframe columns
 COL_HASH = "hash"
 COL_MODEL_NAME = "model_name"
-COL_PROCESS_TIME = "process_time"
+COL_PROCESSING_TIME = "processing_time"
 COL_NUM_PERM = "num_perm"
 COL_IS_INDETERMINATE = "is_indeterminate"
 COL_COLLECTION_IDX = "collection_idx"
-RESULT_ACCESSOR_COLUMNS = [COL_HASH, COL_MODEL_NAME, COL_PROCESS_TIME, COL_NUM_PERM,
+RESULT_ACCESSOR_COLUMNS = [COL_HASH, COL_MODEL_NAME, COL_PROCESSING_TIME, COL_NUM_PERM,
            COL_IS_INDETERMINATE, COL_COLLECTION_IDX]
 # Dataframe metadata
 META_IS_STRONG = "is_strong"
