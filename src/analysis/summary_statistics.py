@@ -25,15 +25,21 @@ class SummaryStatistics(object):
         self.root_path = root_path
         self.result_accessor = ResultAccessor(os.path.join(root_path, analysis_directory))
         self.df = self.result_accessor.df
-        self.df_groups = self.df.groupby(cn.COL_MODEL_NAME).groups
+        self.cluster_dct = self.df.groupby(cn.COL_MODEL_NAME).groups
         #
         self.num_model = len(self.df)
-        self.num_perm_statistics = util.calculateSummaryStatistics(self.df[cn.COL_NUM_PERM])
-        self.num_indeterminate_statistics = util.calculateSummaryStatistics(
+        self.num_perm_stats = util.calculateSummaryStatistics(self.df[cn.COL_NUM_PERM])
+        self.num_indeterminate_stats = util.calculateSummaryStatistics(
               [1 if v else 0 for v in self.df[cn.COL_IS_INDETERMINATE]])
-        self.processing_time_statistics = util.calculateSummaryStatistics(self.df[cn.COL_PROCESSING_TIME])
-        self.cluster_statistics = util.calculateSummaryStatistics(
-                [len(v) for v in self.df_groups.values()])
+        self.processing_time_stats = util.calculateSummaryStatistics(self.df[cn.COL_PROCESSING_TIME])
+        # Cluster statistics
+        cluster_sizes = [len(v) for v in self.cluster_dct.values()]
+        self.cluster_stats = util.calculateSummaryStatistics(
+                [v for v in cluster_sizes])
+        self.clustereq1_stats = util.calculateSummaryStatistics(
+                [1 if v == 1 else 0 for v in cluster_sizes])
+        self.clustergt1_stats = util.calculateSummaryStatistics(
+                [1 if v > 1 else 0 for v in cluster_sizes])
 
     @classmethod
     def plotComparisonBars(cls, measurement_dirs:List[str], metrics:List[str],

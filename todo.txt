@@ -7,3 +7,5 @@ Analysis
   4. Validations
      weak is cluster superset of strong
      sirn is cluster superset of naive
+  5. Statistics for clusters: cluster_size, clustereq1, clustergt1_size
+  6. Examine strong clusters to see differences. Simulate.
