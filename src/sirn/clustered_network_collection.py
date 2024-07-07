@@ -10,7 +10,7 @@ from sirn.clustered_network import ClusteredNetwork  # type: ignore
 import collections
 import numpy as np
 import pandas as pd  # type: ignore
-from typing import List, Union
+from typing import List, Optional
 
 Repr = collections.namedtuple('Repr',
      ['is_structural_identity_strong', 'hash_val', 'clustered_networks'])
@@ -20,10 +20,12 @@ class ClusteredNetworkCollection(object):
     # Collection of networks that are structurally identical
 
     def __init__(self, clustered_networks:List[ClusteredNetwork],
-                 is_structural_identity_strong:bool=True, hash_val:int=-1):
+                 is_structural_identity_strong:bool=True, hash_val:int=-1,
+                 antimony_dir:Optional[str]=None):
         self.clustered_networks = clustered_networks  # type: ignore
         self.is_structural_identity_strong = is_structural_identity_strong
         self.hash_val = hash_val
+        self.directory = antimony_dir # Directory where the network is stored
 
     def copy(self)->'ClusteredNetworkCollection':
         return ClusteredNetworkCollection([cn.copy() for cn in self.clustered_networks],
@@ -36,6 +38,20 @@ class ClusteredNetworkCollection(object):
         return all([n1 == n2 for n1, n2 in zip(self.clustered_networks, other.clustered_networks)]) and \
                 (self.is_structural_identity_strong == other.is_structural_identity_strong) and \
                 (self.hash_val == other.hash_val)
+    
+    def isSubset(self, other:object)->bool:
+        # Is this a subset of other?
+        if not isinstance(other, ClusteredNetworkCollection):
+            return False
+        for this_network in self.clustered_networks:
+            is_found = False
+            for other_network in other.clustered_networks:
+                if this_network == other_network:
+                    is_found = True
+                    break
+            if not is_found:
+                return False
+        return True
 
     def __len__(self)->int:
         return len(self.clustered_networks)

@@ -11,6 +11,7 @@ OSCILLATOR_PROJECT_DIR = "/Users/jlheller/home/Technical/repos/OscillatorDatabas
 # ResultAccessor.dataframe
 # Dataframe columns
 COL_HASH = "hash"
+COL_ANTIMONY_DIR = "antimony_dir"
 COL_MODEL_NAME = "model_name"
 COL_PROCESSING_TIME = "processing_time"
 COL_NUM_PERM = "num_perm"

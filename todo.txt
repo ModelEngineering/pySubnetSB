@@ -4,3 +4,6 @@ Analysis
   3. Detailed analysis of
      a. Characterize weak structural identical
      b. Are strong structural identical multitone?
+  4. Validations
+     weak is cluster superset of strong
+     sirn is cluster superset of naive

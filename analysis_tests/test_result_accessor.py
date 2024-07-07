@@ -59,6 +59,17 @@ class TestResultAccessor(unittest.TestCase):
             self.assertTrue(isinstance(directory, str))
             self.assertTrue(isinstance(df, pd.DataFrame))
 
+    def testIsClusterSubset(self):
+        if IGNORE_TEST:
+            return
+        subset_dir = os.path.join(cn.DATA_DIR, "sirn_analysis", "strong10000")
+        superset_dir = os.path.join(cn.DATA_DIR, "sirn_analysis", "weak10000")
+        missing_dct = ResultAccessor.isClusterSubset(superset_dir, subset_dir)
+        self.assertEqual(len(missing_dct[cn.COL_ANTIMONY_DIR]), 0)
+        #
+        missing_dct = ResultAccessor.isClusterSubset(subset_dir, superset_dir)
+        self.assertGreater(len(missing_dct[cn.COL_ANTIMONY_DIR]), 0)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -60,6 +60,16 @@ class TestClusteredNetworkCollection(unittest.TestCase):
         current_len = len(self.clustered_network_collection)
         self.clustered_network_collection.add(self.other_clustered_network)
         self.assertEqual(current_len+1, len(self.clustered_network_collection))
+    
+    def testIsSubset(self):
+        if IGNORE_TEST:
+            return
+        clustered_network_collection = self.clustered_network_collection.copy()
+        self.assertTrue(self.clustered_network_collection.isSubset(clustered_network_collection))
+        #
+        clustered_network_collection.clustered_networks =  \
+              clustered_network_collection.clustered_networks[1:]
+        self.assertFalse(self.clustered_network_collection.isSubset(clustered_network_collection))
 
 
 if __name__ == '__main__':

@@ -93,5 +93,6 @@ class TestNetworkCollection(unittest.TestCase):
         test(num_network=10, array_size=10)
 
 
+
 if __name__ == '__main__':
     unittest.main()

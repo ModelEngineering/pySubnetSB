@@ -9,7 +9,7 @@ import collections
 import numpy as np
 import os
 import pandas as pd # type: ignore
-from typing import Tuple
+from typing import List
 
 WEAK = "weak"
 STRONG = "strong"
@@ -107,3 +107,46 @@ class ResultAccessor(object):
             full_path = os.path.join(dir_path, file)
             accessor = ResultAccessor(full_path)
             yield accessor.antimony_dir, accessor.df
+
+    @classmethod
+    def isClusterSubset(cls, superset_dir:str, subset_dir:str)->dict:
+        """
+        Checks that the the clusters in the subset directory are found in the superset directory.
+
+        Args:
+            sirn_result_dir (str)
+            naive_result_dir (str)
+
+        Returns:
+            dict: keys
+                antimony_dir
+                model_name (file name)
+        """
+        missing_dct:dict = {cn.COL_ANTIMONY_DIR: [], cn.COL_MODEL_NAME: []}
+        # Make dataframe pairs
+        superset_iter = cls.iterateDir(superset_dir)
+        superset_dct = {directory: df for directory, df in superset_iter}
+        subset_iter = cls.iterateDir(subset_dir)
+        subset_dct = {directory: df for directory, df in subset_iter}
+        # Iterate across all Oscillator directories in the path
+        for antimony_dir, subset_df in subset_dct.items():
+            superset_df = superset_dct[antimony_dir]
+            subset_groups = subset_df.groupby(cn.COL_COLLECTION_IDX).groups
+            subset_groups = {k: v for k, v in subset_groups.items() if len(v) > 1}
+            # Make sure that subset groups are in the same collection in superset
+            for _, subset_group in subset_groups.items():
+                # Find the collection_idx in superset for the first model in subset
+                subset_model_name = subset_df.loc[subset_group[0], cn.COL_MODEL_NAME]
+                superset_collection_idx = superset_df[superset_df[
+                      cn.COL_MODEL_NAME] == subset_model_name][cn.COL_COLLECTION_IDX].values[0]
+                # All members of the cluster (group) in subset 
+                # should have the same collection_idx in superset
+                for idx in subset_group[1:]:
+                    model_name = subset_df.loc[idx, cn.COL_MODEL_NAME]
+                    collection_idx = superset_df[superset_df[
+                          cn.COL_MODEL_NAME] == model_name][cn.COL_COLLECTION_IDX].values[0]
+                    if collection_idx != superset_collection_idx:
+                        missing_dct[cn.COL_ANTIMONY_DIR].append(antimony_dir)
+                        missing_dct[cn.COL_MODEL_NAME].append(model_name)
+        #
+        return missing_dct
