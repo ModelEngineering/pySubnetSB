@@ -11,7 +11,7 @@ PREFIX = "identity_"
 PREFIX_DCT = {True: "strong", False: "weak"}
 
 
-def find_identity_collections(directory_name,
+def find_identity_collections(directory_name, is_sirn=True,
         is_strong=False, max_num_perm=cn.MAX_NUM_PERM):
     """Serializes Antimony models."""
     prefix = f"{PREFIX_DCT[is_strong]}{max_num_perm}_"
@@ -20,7 +20,7 @@ def find_identity_collections(directory_name,
     df = pd.read_csv(csv_file)
     network_collection = NetworkCollection.deserialize(df)
     builder = ClusterBuilder(network_collection,
-               is_structural_identity_strong=is_strong, is_sirn=True,
+               is_structural_identity_strong=is_strong, is_sirn=is_sirn,
                max_num_perm=max_num_perm)
     builder.cluster()
     output_path = os.path.join(cn.DATA_DIR, f'{prefix}{directory_name}.txt')
@@ -44,4 +44,4 @@ if __name__ == '__main__':
     if not args.directory_name in cn.OSCILLATOR_DIRS:
         raise ValueError(f"{args.directory_name} not in {cn.OSCILLATOR_DIRS}")
     find_identity_collections(args.directory_name, max_num_perm=args.max_perm,
-                              is_strong=False)
+                              is_sirn=False, is_strong=True)

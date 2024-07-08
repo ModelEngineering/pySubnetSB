@@ -1,5 +1,21 @@
 '''Calculates statistics and simple plots'''
 
+"""
+Key concepts:
+   Metric. A measurement produced by the cluster analysis (e.g., number of cluster_size)
+   Aggregation. A function that summarizes the metric (e.g., mean, total, min_val, max_val)
+   Value. The result of applying the aggregation function to the metric. There is one value
+            for each metric, oscillator directory, and condition directory.
+   Oscillator directory. Directory with the results of the analysis of a single oscillator.
+   Condition directory. Directory with analysis results from sirn.ClusterBuilder. There is one
+         file for each oscillator directory. Conditions are:
+            - WEAK vs. STRONG
+            - MAX_NUM_PERM: maximum number of permutations
+            - NAIVE algorithm vs. SIRN algorithm
+   Groupby. The criteria for grouping together multiple values.
+            (e.g., group by the oscillator directory).
+"""
+
 
 import analysis.constants as cn  # type: ignore
 import sirn.constants as cnn  # type: ignore
@@ -10,7 +26,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd # type: ignore
-from typing import List, Tuple, Any
+from typing import List, Tuple, Any, Optional
 
 
 class SummaryStatistics(object):
@@ -27,42 +43,41 @@ class SummaryStatistics(object):
         self.df = self.result_accessor.df
         self.cluster_dct = self.df.groupby(cn.COL_MODEL_NAME).groups
         #
-        self.num_model = len(self.df)
-        self.num_perm_stats = util.calculateSummaryStatistics(self.df[cn.COL_NUM_PERM])
-        self.num_indeterminate_stats = util.calculateSummaryStatistics(
+        self.num_model = util.calculateSummaryStatistics(np.repeat(1, len(self.df)))
+        self.num_perm = util.calculateSummaryStatistics(self.df[cn.COL_NUM_PERM])
+        self.indeterminate = util.calculateSummaryStatistics(
               [1 if v else 0 for v in self.df[cn.COL_IS_INDETERMINATE]])
-        self.processing_time_stats = util.calculateSummaryStatistics(self.df[cn.COL_PROCESSING_TIME])
+        self.processing_time = util.calculateSummaryStatistics(self.df[cn.COL_PROCESSING_TIME])
         # Cluster statistics
         cluster_sizes = [len(v) for v in self.cluster_dct.values()]
-        self.cluster_stats = util.calculateSummaryStatistics(
+        self.cluster_size = util.calculateSummaryStatistics(
                 [v for v in cluster_sizes])
-        self.clustereq1_stats = util.calculateSummaryStatistics(
+        self.cluster_size_eq1 = util.calculateSummaryStatistics(
                 [1 if v == 1 else 0 for v in cluster_sizes])
-        self.clustergt1_stats = util.calculateSummaryStatistics(
+        self.cluster_size_gt1 = util.calculateSummaryStatistics(
                 [1 if v > 1 else 0 for v in cluster_sizes])
 
     @classmethod
-    def plotComparisonBars(cls, measurement_dirs:List[str], metrics:List[str],
+    def plotConditionByOscillatorDirectory(cls, condition_dirs:List[str], metric:str,
             indices:List[str])->Tuple[Any, pd.DataFrame]:
         """
-          Does grouped bar plots across all antimony directories. Groups together
-          the root_dirs and/or metrics. Only one of root_dirs or metrics can have more
-          than one element.
+          Does grouped bar plots between directories that have the oscillator analysis result files.
+          Uses the mean value of the metric.
 
         Args:
-            measurement_dirs (List[str]): List of directories with results for comparison,
-                one for each directory
-            metrics (List[str]): metrics in cn.RESULT_ACCESSOR_COLUMNS. Calculate mean values
+            condition_dirs (List[str]): List of directories with conditions for comparison.
+                Each condition directory has a file for each Oscillator Directory
+            metric [str]: metrics in cn.RESULT_ACCESSOR_COLUMNS. Calculate mean values
             indices: names of the rows (what is being compared)
         """
         # Create the plot DataFrame
         dct:dict = {n: [] for n in cnn.OSCILLATOR_DIRS}
         true_indices = [str(i) for i in indices]
-        for measurement_dir in measurement_dirs:
-            for metric in metrics:
-                iter = ResultAccessor.iterateDir(measurement_dir)
-                for oscillator_directory, df in iter:
-                    dct[oscillator_directory].append(df[metric].mean())
+        for measurement_dir in condition_dirs:
+            iter = ResultAccessor.iterateDir(measurement_dir)
+            for oscillator_directory, df in iter:
+                dct[oscillator_directory].append(df[metric].mean())
+        import pdb; pdb.set_trace()
         plot_df = pd.DataFrame(dct, columns=cnn.OSCILLATOR_DIRS, index=true_indices)
         plot_df = plot_df.transpose()
         # Plot
@@ -81,27 +96,68 @@ class SummaryStatistics(object):
         return ax, plot_df
 
     @classmethod 
-    def plotMetricComparison(cls, metric:str, is_plot=True)->None:
+    def plotConditionMetrics(cls, metric:str, max_num_perms:Optional[List[int]]=None,
+                             is_plot=True)->None:
         """
-        Plots the maximum number of permutations.
+        Plots a single metric for the conditions WEAK and STRONG grouped by oscillator directory.
 
         Args:
             metric: metric to plot ("max_num_perm", "processing_time", "is_indeterminate") 
-        
+            max_num_perms: list of maximum number of permutations
+            is_plot: True if plot is to be displayed
         """
+        if max_num_perms is None:
+            max_num_perms = cn.MAX_NUM_PERMS
+        #
         max_dct = {cn.COL_PROCESSING_TIME: 0.003, cn.COL_NUM_PERM: 200, cn.COL_IS_INDETERMINATE: 1}
         unit_dct = {cn.COL_PROCESSING_TIME: "sec", cn.COL_NUM_PERM: "", cn.COL_IS_INDETERMINATE: ""}
         for identity_type in [cn.WEAK, cn.STRONG]:
             measurement_dirs = [os.path.join(cn.DATA_DIR, "sirn_analysis", f"{identity_type}{n}")
-                                for n in cn.MAX_NUM_PERMS]
-            ax, _ = cls.plotComparisonBars(measurement_dirs, [metric], cn.MAX_NUM_PERMS)
+                                for n in max_num_perms]
+            ax, _ = cls.plotConditionByOscillatorDirectory(measurement_dirs, metric, cn.MAX_NUM_PERMS)
             ax.set_title(f"{identity_type}")
-            if unit_dct[metric] != "":
-                unit_str = f" ({unit_dct[metric]})"
-            else:
-                unit_str = ""
             ax.set_ylabel(f"avg. {metric} per network ({unit_dct[metric]})")
             ax.set_xlabel("Antimony Directory")
             ax.set_ylim([0, max_dct[metric]])
         if is_plot:
             plt.show()
+
+    @classmethod
+    def plotMetricsByOscillatorDirectory(cls, condition_dir:List[str], metrics:List[str],
+            aggregations:List[str],
+            indices:List[str])->pd.DataFrame:
+        """
+        Plot multiple metrics for a single condition grouped by oscillator directory.
+
+        Args:
+            condition_dir (str): Directory with results for comparison
+            metrics (List[str]): Metric 
+            aggregations (List[str]): Aggregation function
+            indices: names of the rows (what is being compared)
+        """
+        # Create the plot DataFrame
+        dct:dict = {n: [] for n in cnn.OSCILLATOR_DIRS}
+        true_indices = [str(i) for i in indices]
+        for idx, metric in enumerate(metrics):
+            iter = ResultAccessor.iterateDir(condition_dir)
+            for oscillator_directory, df in iter:
+                summary_statistic = SummaryStatistics(oscillator_directory)
+                statistic = getattr(summary_statistic, metric)
+                value = getattr(statistic, aggregations[idx])
+                dct[oscillator_directory].append(value)
+        plot_df = pd.DataFrame(dct, columns=cnn.OSCILLATOR_DIRS, index=true_indices)
+        plot_df = plot_df.transpose()
+        # Plot
+        ax = plot_df.plot.bar()
+        labels = []
+        for directory in cnn.OSCILLATOR_DIRS:
+            label = directory.replace("Oscillators_", "")
+            num_underscore = label.count("_")
+            if num_underscore > 0:
+                pos = 0
+                for _ in range(num_underscore):
+                    pos = label.find("_", pos+1)
+                label = label[:pos]
+            labels.append(label)
+        ax.set_xticklabels(labels, rotation = -50)
+        return ax, plot_df

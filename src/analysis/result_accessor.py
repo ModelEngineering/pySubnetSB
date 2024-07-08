@@ -1,4 +1,8 @@
 '''Provides access to results of checking for structural identity.'''
+"""
+Concepts
+1. Cluster result file. A *.txt file produced by cluster_builder.py.
+"""
 
 
 import analysis.constants as cn  # type: ignore
@@ -9,7 +13,8 @@ import collections
 import numpy as np
 import os
 import pandas as pd # type: ignore
-from typing import List
+from typing import List, Optional
+from zipfile import ZipFile
 
 WEAK = "weak"
 STRONG = "strong"
@@ -19,12 +24,12 @@ DataFileStructure = collections.namedtuple("DataFileStructure", "antimony_dir is
 
 class ResultAccessor(object):
 
-    def __init__(self, dir_path:str)->None:
+    def __init__(self, cluster_result_path:str)->None:
         """
         Args:
             dir_path: Path to the directory with analysis results from sirn.ClusterBuilder
         """
-        self.dir_path = dir_path
+        self.cluster_result_path = cluster_result_path
         datafile_structure = self.parseDirPath()
         self.antimony_dir = datafile_structure.antimony_dir
         self.is_strong = datafile_structure.is_strong
@@ -41,7 +46,7 @@ class ResultAccessor(object):
         Returns:
             List[str]: _description_
         """
-        filename = os.path.basename(self.dir_path)
+        filename = os.path.basename(self.cluster_result_path)
         filename = filename[:-4]
         #
         if STRONG in filename:
@@ -67,7 +72,7 @@ class ResultAccessor(object):
         Returns:
             pd.DataFrame (see cn.RESULT_ACCESSOR_COLUMNS)
         """
-        with open(self.dir_path, "r") as fd:
+        with open(self.cluster_result_path, "r") as fd:
             repr_strs = fd.readlines()
         #
         dct:dict = {c: [] for c in cn.RESULT_ACCESSOR_COLUMNS}
@@ -130,6 +135,9 @@ class ResultAccessor(object):
         subset_dct = {directory: df for directory, df in subset_iter}
         # Iterate across all Oscillator directories in the path
         for antimony_dir, subset_df in subset_dct.items():
+            if not antimony_dir in superset_dct:
+                print(f"Missing {antimony_dir} in superset")
+                continue
             superset_df = superset_dct[antimony_dir]
             subset_groups = subset_df.groupby(cn.COL_COLLECTION_IDX).groups
             subset_groups = {k: v for k, v in subset_groups.items() if len(v) > 1}
@@ -150,3 +158,38 @@ class ResultAccessor(object):
                         missing_dct[cn.COL_MODEL_NAME].append(model_name)
         #
         return missing_dct
+
+    def getAntimonyFromModelname(self, model_name:str)->str:
+        """
+        Returns a string, which is the content of the Antimony file.
+
+        Args:
+            model_name: Name of the model
+
+        Returns:
+            str: Antimony file
+        """
+        with ZipFile(cn.OSCILLATOR_ZIP, 'r') as zip:
+            names = zip.namelist()
+        candidates = [n for n in names if model_name in n]
+        if len(candidates) != 1:
+            raise ValueError(f"Model name {model_name} not uniquely found in {self.antimony_dir}")
+        antimony_str = ""
+        with ZipFile(cn.OSCILLATOR_ZIP, 'r') as zip:
+            fd = zip.open(candidates[0])
+            antimony_str = fd.read().decode("utf-8")
+        return antimony_str
+
+    def getAntimonyFromCollectionidx(self, collection_idx:int)->List[str]:
+        """
+        Returns one or more antimony files.
+
+        Args:
+            collection_idx: Index of the collection
+
+        Returns:
+            str: Antimony file
+        """
+        model_names = self.df[self.df[cn.COL_COLLECTION_IDX] == collection_idx][cn.COL_MODEL_NAME]
+        antimony_strs = [self.getAntimonyFromModelname(n) for n in model_names]
+        return antimony_strs

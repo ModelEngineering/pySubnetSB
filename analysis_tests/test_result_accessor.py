@@ -7,6 +7,7 @@ import sirn.util as util  # type: ignore
 import os
 import pandas as pd  # type: ignore 
 import numpy as np  # type: ignore
+import tellurium as te  # type: ignore
 import unittest
 
 
@@ -16,7 +17,7 @@ ANTIMONY_DIR = "Oscillators_May_28_2024_8898"
 STRONG = "strong"
 MAX_NUM_PERM = 100
 FILENAME = f"{STRONG}{MAX_NUM_PERM}_{ANTIMONY_DIR}.txt"
-DATA_PATH = os.path.join(cn.TEST_DIR, FILENAME)
+ANALYSIS_RESULT_PATH = os.path.join(cn.TEST_DIR, FILENAME)
 IS_STRONG = True
 MAX_NUM_PERM = 100
 COLUMN_DCT = {cn.COL_HASH: int, cn.COL_MODEL_NAME: str,
@@ -30,7 +31,7 @@ COLUMN_DCT = {cn.COL_HASH: int, cn.COL_MODEL_NAME: str,
 class TestResultAccessor(unittest.TestCase):
 
     def setUp(self):
-        self.accessor = ResultAccessor(DATA_PATH)
+        self.accessor = ResultAccessor(ANALYSIS_RESULT_PATH)
 
     def testConstructor1(self):
         if IGNORE_TEST:
@@ -69,6 +70,23 @@ class TestResultAccessor(unittest.TestCase):
         #
         missing_dct = ResultAccessor.isClusterSubset(subset_dir, superset_dir)
         self.assertGreater(len(missing_dct[cn.COL_ANTIMONY_DIR]), 0)
+
+    def testGetAntimonyFromModelname(self):
+        if IGNORE_TEST:
+            return
+        antimony_dir = "Oscillators_June_12_2024_8193"
+        antimony_str = self.accessor.getAntimonyFromModelname("MqCUzoSy_k7iNe0A_1313_9")
+        self.assertTrue(isinstance(antimony_str, str))
+        rr = te.loada(antimony_str)
+        self.assertTrue("RoadRunner" in str(type(rr)))
+
+    def testGetAntimonyFromCollectionidx(self):
+        if IGNORE_TEST:
+            return
+        df = self.accessor.df.loc[0, :]
+        antimony1_str = self.accessor.getAntimonyFromCollectionidx(df[cn.COL_COLLECTION_IDX])[0]
+        antimony2_str = self.accessor.getAntimonyFromModelname(df[cn.COL_MODEL_NAME])
+        self.assertEqual(antimony1_str, antimony2_str)
 
 
 if __name__ == '__main__':

@@ -218,8 +218,6 @@ class TestPMatrix(unittest.TestCase):
                 if expected_result:
                     self.assertTrue(result or result.is_excessive_perm)
                 else:
-                    if result:
-                        import pdb; pdb.set_trace()
                     self.assertFalse(result)
         #
         test(size=200, expected_result=False)
