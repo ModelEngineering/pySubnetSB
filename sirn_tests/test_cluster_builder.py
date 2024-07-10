@@ -2,6 +2,7 @@ from sirn import constants as cn  # type: ignore
 from sirn.network import Network # type: ignore
 from sirn.pmatrix import PMatrix # type: ignore
 from sirn.network_collection import NetworkCollection # type: ignore
+from sirn.clustered_network import ClusteredNetwork # type: ignore
 from sirn.cluster_builder import ClusterBuilder # type: ignore
 
 import copy
@@ -127,8 +128,8 @@ class TestClusterBuilder(unittest.TestCase):
         test(num_network=10, array_size=10)
 
     def testMaxLogPermutations(self):
-        #if IGNORE_TEST:
-        #    return
+        if IGNORE_TEST:
+            return
         # Construct a collection of two sets of permutably identical matrices
         def test(max_num_perm=100, num_collection=2, num_network=5, num_row=10, num_column=10,
                  structural_identity_type=cn.STRUCTURAL_IDENTITY_TYPE_STRONG,
@@ -163,6 +164,18 @@ class TestClusterBuilder(unittest.TestCase):
                         num_row=100, num_column=100,
                         structural_identity_type=cn.STRUCTURAL_IDENTITY_TYPE_STRONG,
                         is_verify=False)
+            
+    def testMakeNetworkCollection(self):
+        if IGNORE_TEST:
+            return
+        ARRAY_SIZE = 5
+        network_collection = NetworkCollection.makeRandomCollection(array_size=ARRAY_SIZE,
+              num_network=COLLECTION_SIZE)
+        clustered_networks = [ClusteredNetwork(network) for network in network_collection.networks]
+        builder = ClusterBuilder(network_collection, is_report=IS_PLOT)
+        for idx, clustered_network in enumerate(clustered_networks):
+            network = builder.makeNetworkFromClusteredNetwork(clustered_network)
+            self.assertTrue(network == network_collection.networks[idx])
 
 if __name__ == '__main__':
     unittest.main()

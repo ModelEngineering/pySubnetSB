@@ -1,7 +1,6 @@
 
-from sirn import constants as cnn
-from analysis.result_accessor import ResultAccessor
-from analysis import constants as cn
+from sirn import constants as cnn # type: ignore
+from analysis.result_accessor import ResultAccessor  # type: ignore
 
 import collections
 import numpy as np  # type: ignore

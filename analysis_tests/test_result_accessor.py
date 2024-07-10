@@ -88,6 +88,14 @@ class TestResultAccessor(unittest.TestCase):
         antimony2_str = self.accessor.getAntimonyFromModelname(df[cn.COL_MODEL_NAME])
         self.assertEqual(antimony1_str, antimony2_str)
 
+    def testGetClusterResultPath(self):
+        if IGNORE_TEST:
+            return
+        path = self.accessor.getClusterResultPath(ANTIMONY_DIR)
+        self.assertTrue(os.path.exists(path))
+        accessor = ResultAccessor(path)
+        self.assertGreater(len(accessor.df), 0)
+
 
 if __name__ == '__main__':
     unittest.main()

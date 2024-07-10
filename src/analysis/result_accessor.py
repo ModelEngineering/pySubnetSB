@@ -1,4 +1,4 @@
-'''Provides access to results of checking for structural identity.'''
+'''Provides access to a single cluster result file for a single Antimony Directory.'''
 """
 Concepts
 1. Cluster result file. A *.txt file produced by cluster_builder.py.
@@ -27,11 +27,11 @@ class ResultAccessor(object):
     def __init__(self, cluster_result_path:str)->None:
         """
         Args:
-            dir_path: Path to the directory with analysis results from sirn.ClusterBuilder
+            cluster_result_path: Path to the directory with analysis results from sirn.ClusterBuilder
         """
         self.cluster_result_path = cluster_result_path
         datafile_structure = self.parseDirPath()
-        self.antimony_dir = datafile_structure.antimony_dir
+        self.oscillator_dir = datafile_structure.antimony_dir
         self.is_strong = datafile_structure.is_strong
         self.max_num_perm = datafile_structure.max_num_perm
         #
@@ -91,7 +91,7 @@ class ResultAccessor(object):
         df = pd.DataFrame(dct)
         df.attrs[cn.META_IS_STRONG] = self.is_strong
         df.attrs[cn.META_MAX_NUM_PERM] = self.max_num_perm
-        df.attrs[cn.META_ANTIMONY_DIR] = self.antimony_dir
+        df.attrs[cn.COL_OSCILLATOR_DIR] = self.oscillator_dir
         return df
 
     @staticmethod 
@@ -111,7 +111,7 @@ class ResultAccessor(object):
         for file in ffiles:
             full_path = os.path.join(dir_path, file)
             accessor = ResultAccessor(full_path)
-            yield accessor.antimony_dir, accessor.df
+            yield accessor.oscillator_dir, accessor.df
 
     @classmethod
     def isClusterSubset(cls, superset_dir:str, subset_dir:str)->dict:
@@ -127,7 +127,7 @@ class ResultAccessor(object):
                 antimony_dir
                 model_name (file name)
         """
-        missing_dct:dict = {cn.COL_ANTIMONY_DIR: [], cn.COL_MODEL_NAME: []}
+        missing_dct:dict = {cn.COL_OSCILLATOR_DIR: [], cn.COL_MODEL_NAME: []}
         # Make dataframe pairs
         superset_iter = cls.iterateDir(superset_dir)
         superset_dct = {directory: df for directory, df in superset_iter}
@@ -154,7 +154,7 @@ class ResultAccessor(object):
                     collection_idx = superset_df[superset_df[
                           cn.COL_MODEL_NAME] == model_name][cn.COL_COLLECTION_IDX].values[0]
                     if collection_idx != superset_collection_idx:
-                        missing_dct[cn.COL_ANTIMONY_DIR].append(antimony_dir)
+                        missing_dct[cn.COL_OSCILLATOR_DIR].append(antimony_dir)
                         missing_dct[cn.COL_MODEL_NAME].append(model_name)
         #
         return missing_dct
@@ -173,7 +173,7 @@ class ResultAccessor(object):
             names = zip.namelist()
         candidates = [n for n in names if model_name in n]
         if len(candidates) != 1:
-            raise ValueError(f"Model name {model_name} not uniquely found in {self.antimony_dir}")
+            raise ValueError(f"Model name {model_name} not uniquely found in {self.oscillator_dir}")
         antimony_str = ""
         with ZipFile(cn.OSCILLATOR_ZIP, 'r') as zip:
             fd = zip.open(candidates[0])
@@ -193,3 +193,37 @@ class ResultAccessor(object):
         model_names = self.df[self.df[cn.COL_COLLECTION_IDX] == collection_idx][cn.COL_MODEL_NAME]
         antimony_strs = [self.getAntimonyFromModelname(n) for n in model_names]
         return antimony_strs
+    
+    @staticmethod 
+    def getClusterResultPath(oscillator_dir:str="", is_strong:bool=True,
+                             is_sirn=True, max_num_perm:int=10000)->str:
+        """
+        Constructs the path to the cluster results.
+
+        Args:
+            oscillator_dir (str): Name of the oscillator directory or "" if not specified
+            is_strong (bool, optional): True for strong, False for weak. Defaults to True.
+            is_sirn (bool, optional): True for SIRN, False for naive. Defaults to True.
+            max_num_perm (int, optional): Maximum number of permutations. Defaults to 10000.
+
+        Returns:
+            str: path to directory with the cluster results
+
+        Usage:
+            # Provide a complete path to the cluster results
+            ResultAccessor.getClusterResultPath(oscillator_dir="Oscillators_June_10",
+                is_strong=True, is_sirn=True, max_num_perm=10000)
+            >> "/Users/jlheller/home/Technical/repos/OscillatorDatabase/sirn_analysis/strong10000/Oscillators_June_10.txt"
+            # Provide only the condition path
+            ResultAccessor.getClusterResultPath("Oscillators_June_10",
+                is_strong=True, is_sirn=True, max_num_perm=10000)
+            >> "/Users/jlheller/home/Technical/repos/OscillatorDatabase/sirn_analysis/strong10000"
+        """
+        prefix = cn.STRONG if is_strong else cn.WEAK
+        maxperm_condition = f"{prefix}{max_num_perm}"
+        parent_dir = cn.SIRN_DIR if is_sirn else cn.NAIVE_DIR
+        filename = f"{maxperm_condition}_{oscillator_dir}.txt"
+        if len(oscillator_dir) == 0:
+            return os.path.join(parent_dir, maxperm_condition)
+        else:
+            return os.path.join(parent_dir, maxperm_condition, filename)

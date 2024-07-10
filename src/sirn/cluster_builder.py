@@ -189,3 +189,15 @@ class ClusterBuilder(object):
         """
         return [ClusteredNetworkCollection.makeFromRepr(repr_str)
                                          for repr_str in df.clustered_network_repr.values]
+    
+    def makeNetworkFromClusteredNetwork(self, clustered_network:ClusteredNetwork)->Network:
+        """
+        Makes a Network from a ClusteredNetwork
+
+        Args:
+            clustered_network (ClusteredNetwork): _description_
+
+        Returns:
+            Network: _description_
+        """
+        return self.network_collection.network_dct[clustered_network.network_name]  

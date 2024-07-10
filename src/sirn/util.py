@@ -56,7 +56,7 @@ def isInt(val: str)->bool:
     except ValueError:
         return False
 
-Statistics = collections.namedtuple("Statistics", "mean std min_val max_val count total") 
+Statistics = collections.namedtuple("Statistics", "mean std min max count total") 
 def calculateSummaryStatistics(arr: Union[list, np.ndarray, pd.Series])->Statistics:
     """Calculates basic statistics for an array.
 
@@ -69,9 +69,9 @@ def calculateSummaryStatistics(arr: Union[list, np.ndarray, pd.Series])->Statist
     arr = np.array(arr)
     mean = np.mean(arr)
     std = np.std(arr)
-    min_val = np.min(arr)
-    max_val = np.max(arr)
+    min = float(np.min(arr))
+    max = float(np.max(arr))
     count = len(arr)
     total = np.sum(arr)
-    return Statistics(mean=mean, std=std, min_val=min_val, max_val=max_val,
+    return Statistics(mean=mean, std=std, min=min, max=max,
                       count=count, total=total)

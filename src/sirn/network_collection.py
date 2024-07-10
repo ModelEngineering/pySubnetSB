@@ -1,7 +1,7 @@
 '''Container of networks. Can serialize and deserialize to a DataFrame. Construct from Antimony files. '''
 
 
-from sirn import constants as cn
+from sirn import constants as cn   # type: ignore
 from sirn.network import Network   # type: ignore
 from sirn.pmatrix import PMatrix   # type: ignore
 
@@ -26,7 +26,7 @@ SERIALIZATION_NAMES = [MODEL_NAME, REACTANT_ARRAY_STR, PRODUCT_ARRAY_STR, ROW_NA
 
 ArrayContext = collections.namedtuple('ArrayContext', "string, num_row, num_column")
 
-# FIXME: Handle is_sirn
+
 ####################################
 class NetworkCollection(object):
         
