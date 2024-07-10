@@ -113,53 +113,6 @@ class SummaryStatistics(object):
             statistics = cls(full_path)
             yield statistics.series
 
-    # FIXME: Deprecate?
-    @classmethod
-    def plotConditionByOscillatorDirectory(cls, condition_dirs:List[str], metric:str,
-            max_num_perms:List[int],
-            oscillator_dirs:List[str]=cnn.OSCILLATOR_DIRS,
-            title:Optional[str]=None):
-        """
-          Does grouped bar plots between directories that have the oscillator analysis result files.
-          Uses the mean value of the metric.
-
-        Args:
-            condition_dirs (List[str]): List of directories with conditions for comparison.
-                Each condition directory has a file for each Oscillator Directory
-            metric [str]: metrics in cn.STATISTICS_COLUMNS. Calculate mean values
-            max_num_perms: maximum number of permutations
-        """
-        # Create the plot DataFrame
-        max_num_perm_strs = [str(i) for i in max_num_perms]
-        # Construct a dictionary whose key are oscillator directories and the
-        # values correspond to the condition_dirs
-        dct:dict = {}
-        for condition_dir in condition_dirs:
-            iter = cls.iterateOverOscillatorDirectories(condition_dir)
-            for ser in iter:
-                oscillator_dir = ser.attrs[cn.COL_OSCILLATOR_DIR]
-                if not oscillator_dir in dct.keys():
-                    dct[oscillator_dir] = [] 
-                dct[oscillator_dir].append(ser[metric].values[0])
-        plot_df = pd.DataFrame(dct, columns=oscillator_dirs, index=max_num_perm_strs)
-        plot_df = plot_df.transpose()
-        # Plot the data
-        ax = plot_df.plot.bar()
-        labels = []
-        for directory in oscillator_dirs:
-            label = directory.replace("Oscillators_", "")
-            num_underscore = label.count("_")
-            if num_underscore > 0:
-                pos = 0
-                for _ in range(num_underscore):
-                    pos = label.find("_", pos+1)
-                label = label[:pos]
-            labels.append(label)
-        ax.set_xticklabels(labels, rotation = -50)
-        if title is not None:
-            ax.set_title(title)
-        return ax
-
     @classmethod 
     def plotMetricByConditions(cls, metric:str,
                              identity_types:List[bool]=[False, True],
@@ -170,6 +123,7 @@ class SummaryStatistics(object):
                              is_plot=True,
                              ylim:Optional[List[float]]=None,
                              legends:Optional[List[str]]=None,
+                             ylabel:Optional[str]= None,
                              **barplot_opts)->Tuple[plt.Axes, pd.DataFrame]:
         """
         Plots a single metric for combinations of conditions:
@@ -187,6 +141,7 @@ class SummaryStatistics(object):
             is_log: True if y-axis is log scale
             ylim: y-axis limits
             is_plot: True if plot is to be displayed
+            ylabel: y-axis label
             barplot_opts: options for the bar plot
         """
         # Create the DataFrame to plot
@@ -221,7 +176,10 @@ class SummaryStatistics(object):
             unit += " sec"
         if len(unit) > 0:
             unit = f" ({unit})"
-        ax.set_ylabel(f"{metric} per network {unit}")
+        if ylabel is None:
+            ax.set_ylabel(f"{metric} per network {unit}")
+        else:
+            ax.set_ylabel(ylabel)
         ax.set_xlabel("Oscillator Directory")
         if legends is not None:
             ax.legend(legends)
@@ -229,36 +187,6 @@ class SummaryStatistics(object):
             ax.set_ylim(ylim)
         if is_plot:
             plt.show()
-        return ax, plot_df
-
-    # FIXME: Deprecate?
-    @classmethod
-    def plotMetricsByOscillatorDirectory(cls, condition_dir:str, metrics:List[str],
-            data_dir:str=cn.DATA_DIR)->pd.DataFrame:
-        """
-        Plot multiple metrics for a single condition grouped by oscillator directory.
-
-        Args:
-            condition_dir (str): Directory with results for comparison
-            metrics (List[str]): Metric 
-            indices: names of the rows (what is being compared)
-        """
-        # Create the plot DataFrame
-        iter = cls.iterateOverOscillatorDirectories(condition_dir)
-        dct:dict = {}
-        for ser in iter:
-            oscillator_directory = ser.attrs[cn.COL_OSCILLATOR_DIR]
-            for metric in metrics:
-                if not oscillator_directory in dct.keys():
-                    dct[oscillator_directory] = []
-                dct[oscillator_directory].append(ser[metric])
-        #
-        plot_df = pd.DataFrame(dct, columns=cnn.OSCILLATOR_DIRS, index=metrics)
-        plot_df = plot_df.transpose()
-        # Plot
-        ax = plot_df.plot.bar()
-        labels = cls._cleanOscillatorLabels(cnn.OSCILLATOR_DIRS)
-        ax.set_xticklabels(labels, rotation = -50)
         return ax, plot_df
     
     @staticmethod

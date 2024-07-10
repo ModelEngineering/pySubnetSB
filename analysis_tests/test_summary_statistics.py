@@ -11,11 +11,11 @@ import unittest
 
 IGNORE_TEST = False
 IS_PLOT = False
-ANTIMONY_DIR = "Oscillators_May_28_2024_8898"
+OSCILLATOR_DIR = "Oscillators_May_28_2024_8898"
 STRONG = "strong"
 MAX_NUM_PERM = 100
 CONDITION_DIR = f"{cn.SIRN_DIR}/{STRONG}{MAX_NUM_PERM}"
-FILENAME = f"{STRONG}{MAX_NUM_PERM}_{ANTIMONY_DIR}.txt"
+FILENAME = f"{STRONG}{MAX_NUM_PERM}_{OSCILLATOR_DIR}.txt"
 DATA_PATH = os.path.join(CONDITION_DIR, FILENAME)
 IS_STRONG = True
 MAX_NUM_PERM = 100
@@ -35,28 +35,7 @@ class TestSummaryStatistics(unittest.TestCase):
     def testConstructor1(self):
         if IGNORE_TEST:
             return
-        self.assertEqual(self.statistics.series.attrs[cn.META_ANTIMONY_DIR], ANTIMONY_DIR)
-        import pdb; pdb.set_trace()
-
-    def testPlotConditionsByOscillatorDirectory(self):
-        if IGNORE_TEST:
-            return
-        root_dir = os.path.join(cn.DATA_DIR, "sirn_analysis")
-        condition_dirs = [os.path.join(root_dir, f"weak{n}") for n in cn.MAX_NUM_PERMS]
-        self.statistics.plotConditionByOscillatorDirectory(condition_dirs,
-                    [cn.COL_PROCESSING_TIME_MEAN], cn.MAX_NUM_PERMS)
-        if IS_PLOT:
-            plt.show()
-        self.statistics.plotConditionByOscillatorDirectory(condition_dirs,
-                    [cn.COL_IS_INDETERMINATE_MEAN], cn.MAX_NUM_PERMS)
-        if IS_PLOT:
-            plt.show()
-
-    def testPlotConditionMetrics(self):
-        if IGNORE_TEST:
-            return
-        for metric in [cn.COL_PROCESSING_TIME, cn.COL_IS_INDETERMINATE, cn.COL_NUM_PERM]:
-            self.statistics.plotConditionMetrics(metric, is_plot=IS_PLOT) 
+        self.assertEqual(self.statistics.series.attrs[cn.COL_OSCILLATOR_DIR], OSCILLATOR_DIR)
         
     def testIterateOverOscillatorDirectories(self):
         if IGNORE_TEST:
@@ -79,12 +58,12 @@ class TestSummaryStatistics(unittest.TestCase):
                 max_num_perms = [1000, 100000],
                 sirn_types = [True, False],
                 is_log=is_log,
+                ylabel="y label",
                 legends=["SIRN1000", "SIRN100000", "Naive1000", "Naive100000"],
+                is_plot=IS_PLOT,
                 )
             self.assertTrue(isinstance(ax, plt.Axes))
             self.assertTrue(isinstance(df, pd.DataFrame))
-            if IS_PLOT:
-                plt.show()
 
 
 
