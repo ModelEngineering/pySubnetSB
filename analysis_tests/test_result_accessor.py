@@ -13,10 +13,10 @@ import unittest
 
 IGNORE_TEST = False
 IS_PLOT = False
-ANTIMONY_DIR = "Oscillators_May_28_2024_8898"
+OSCILLATOR_DIR = "Oscillators_May_28_2024_8898"
 STRONG = "strong"
 MAX_NUM_PERM = 100
-FILENAME = f"{STRONG}{MAX_NUM_PERM}_{ANTIMONY_DIR}.txt"
+FILENAME = f"{STRONG}{MAX_NUM_PERM}_{OSCILLATOR_DIR}.txt"
 ANALYSIS_RESULT_PATH = os.path.join(cn.TEST_DIR, FILENAME)
 IS_STRONG = True
 MAX_NUM_PERM = 100
@@ -36,7 +36,7 @@ class TestResultAccessor(unittest.TestCase):
     def testConstructor1(self):
         if IGNORE_TEST:
             return
-        self.assertEqual(self.accessor.antimony_dir, ANTIMONY_DIR)
+        self.assertEqual(self.accessor.oscillator_dir, OSCILLATOR_DIR)
         self.assertEqual(self.accessor.is_strong, IS_STRONG)
         self.assertEqual(self.accessor.max_num_perm, MAX_NUM_PERM)
 
@@ -66,15 +66,16 @@ class TestResultAccessor(unittest.TestCase):
         subset_dir = os.path.join(cn.DATA_DIR, "sirn_analysis", "strong10000")
         superset_dir = os.path.join(cn.DATA_DIR, "sirn_analysis", "weak10000")
         missing_dct = ResultAccessor.isClusterSubset(superset_dir, subset_dir)
-        self.assertEqual(len(missing_dct[cn.COL_ANTIMONY_DIR]), 0)
+        self.assertEqual(len(missing_dct[cn.COL_OSCILLATOR_DIR]), 0)
         #
         missing_dct = ResultAccessor.isClusterSubset(subset_dir, superset_dir)
-        self.assertGreater(len(missing_dct[cn.COL_ANTIMONY_DIR]), 0)
+        self.assertGreater(len(missing_dct[cn.COL_OSCILLATOR_DIR]), 0)
 
     def testGetAntimonyFromModelname(self):
         if IGNORE_TEST:
             return
-        antimony_dir = "Oscillators_June_12_2024_8193"
+        if not cn.IS_OSCILLATOR_ZIP:
+            return
         antimony_str = self.accessor.getAntimonyFromModelname("MqCUzoSy_k7iNe0A_1313_9")
         self.assertTrue(isinstance(antimony_str, str))
         rr = te.loada(antimony_str)
@@ -82,6 +83,8 @@ class TestResultAccessor(unittest.TestCase):
 
     def testGetAntimonyFromCollectionidx(self):
         if IGNORE_TEST:
+            return
+        if not cn.IS_OSCILLATOR_ZIP:
             return
         df = self.accessor.df.loc[0, :]
         antimony1_str = self.accessor.getAntimonyFromCollectionidx(df[cn.COL_COLLECTION_IDX])[0]
@@ -91,7 +94,7 @@ class TestResultAccessor(unittest.TestCase):
     def testGetClusterResultPath(self):
         if IGNORE_TEST:
             return
-        path = self.accessor.getClusterResultPath(ANTIMONY_DIR)
+        path = self.accessor.getClusterResultPath(OSCILLATOR_DIR)
         self.assertTrue(os.path.exists(path))
         accessor = ResultAccessor(path)
         self.assertGreater(len(accessor.df), 0)

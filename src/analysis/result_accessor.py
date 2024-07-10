@@ -124,7 +124,7 @@ class ResultAccessor(object):
 
         Returns:
             dict: keys
-                antimony_dir
+                oscillator_dir
                 model_name (file name)
         """
         missing_dct:dict = {cn.COL_OSCILLATOR_DIR: [], cn.COL_MODEL_NAME: []}

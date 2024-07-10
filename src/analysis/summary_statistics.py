@@ -113,6 +113,7 @@ class SummaryStatistics(object):
             statistics = cls(full_path)
             yield statistics.series
 
+    # FIXME: Deprecate?
     @classmethod
     def plotConditionByOscillatorDirectory(cls, condition_dirs:List[str], metric:str,
             max_num_perms:List[int],
@@ -166,7 +167,10 @@ class SummaryStatistics(object):
                              sirn_types:List[bool]=[False, True],
                              oscillator_dirs:List[str]=cnn.OSCILLATOR_DIRS,
                              is_log:bool=False,
-                             is_plot=True, ylim:Optional[List[float]]=None, **plot_opts)->None:
+                             is_plot=True,
+                             ylim:Optional[List[float]]=None,
+                             legends:Optional[List[str]]=None,
+                             **barplot_opts)->Tuple[plt.Axes, pd.DataFrame]:
         """
         Plots a single metric for combinations of conditions:
             - identity_types: weak, strong
@@ -183,6 +187,7 @@ class SummaryStatistics(object):
             is_log: True if y-axis is log scale
             ylim: y-axis limits
             is_plot: True if plot is to be displayed
+            barplot_opts: options for the bar plot
         """
         # Create the DataFrame to plot
         dct:dict = {n: [] for n in oscillator_dirs}
@@ -205,22 +210,28 @@ class SummaryStatistics(object):
         plot_df = pd.DataFrame(dct, columns=oscillator_dirs, index=labels)
         plot_df = plot_df.transpose()
         # Do the plot
-        ax = plot_df.plot.bar(**plot_opts)
+        ax = plot_df.plot.bar(**barplot_opts)
         concise_dirs = cls._cleanOscillatorLabels(oscillator_dirs)
         ax.set_xticklabels(concise_dirs, rotation = -50)
         # y axis units
         unit = ""
         if is_log:
-            unit = "log"
+            unit = "log10"
         if "time" in metric:
             unit += " sec"
         if len(unit) > 0:
             unit = f" ({unit})"
         ax.set_ylabel(f"{metric} per network {unit}")
         ax.set_xlabel("Oscillator Directory")
+        if legends is not None:
+            ax.legend(legends)
+        if ylim is not None:
+            ax.set_ylim(ylim)
         if is_plot:
             plt.show()
+        return ax, plot_df
 
+    # FIXME: Deprecate?
     @classmethod
     def plotMetricsByOscillatorDirectory(cls, condition_dir:str, metrics:List[str],
             data_dir:str=cn.DATA_DIR)->pd.DataFrame:

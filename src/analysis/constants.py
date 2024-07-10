@@ -9,6 +9,10 @@ DATA_DIR = os.path.join(PROJECT_DIR, 'data')
 SIRN_DIR = os.path.join(DATA_DIR, "sirn_analysis")
 NAIVE_DIR = os.path.join(DATA_DIR, "naive_analysis")
 OSCILLATOR_ZIP = os.path.join(DATA_DIR, "oscillators.zip")
+if os.path.isfile(OSCILLATOR_ZIP):
+    IS_OSCILLATOR_ZIP = True
+else:
+    IS_OSCILLATOR_ZIP = False
 SIRN = "sirn"
 NAIVE = "naive"
 

@@ -9,8 +9,8 @@ import numpy as np  # type: ignore
 import unittest
 
 
-IGNORE_TEST = True
-IS_PLOT = True
+IGNORE_TEST = False
+IS_PLOT = False
 ANTIMONY_DIR = "Oscillators_May_28_2024_8898"
 STRONG = "strong"
 MAX_NUM_PERM = 100
@@ -20,8 +20,8 @@ DATA_PATH = os.path.join(CONDITION_DIR, FILENAME)
 IS_STRONG = True
 MAX_NUM_PERM = 100
 COLUMN_DCT = {cn.COL_HASH: int, cn.COL_MODEL_NAME: str,
-                 cn.COL_PROCESSING_TIME: float, cn.COL_NUM_PERM: int,
-           cn.COL_IS_INDETERMINATE: np.bool_, cn.COL_COLLECTION_IDX: int}
+              cn.COL_PROCESSING_TIME: float, cn.COL_NUM_PERM: int,
+              cn.COL_IS_INDETERMINATE: np.bool_, cn.COL_COLLECTION_IDX: int}
 
 
 #############################
@@ -57,14 +57,6 @@ class TestSummaryStatistics(unittest.TestCase):
             return
         for metric in [cn.COL_PROCESSING_TIME, cn.COL_IS_INDETERMINATE, cn.COL_NUM_PERM]:
             self.statistics.plotConditionMetrics(metric, is_plot=IS_PLOT) 
-
-    def testPlotWithMaxNumPerms(self):
-        if IGNORE_TEST:
-            return
-        SummaryStatistics.plotConditionMetrics(cn.COL_PROCESSING_TIME, is_sirn=False,
-                max_num_perms=[100, 1000, 10000, 100000],
-                identity_types=["strong"], is_plot=IS_PLOT, ylim=[0, 4],
-                title="Strong Identity With Naive Algorithm")
         
     def testIterateOverOscillatorDirectories(self):
         if IGNORE_TEST:
@@ -74,27 +66,25 @@ class TestSummaryStatistics(unittest.TestCase):
             self.assertTrue(isinstance(series, pd.Series))
             self.assertTrue(series.attrs[cn.COL_OSCILLATOR_DIR] in cnn.OSCILLATOR_DIRS)
 
-        
-    def testBug1(self):
+    def testPlotMetricByCondition(self):
         if IGNORE_TEST:
             return
-        SummaryStatistics.plotConditionMetrics(cn.M_CLUSTER_SIZE_EQ1, is_sirn=True,
-        identity_types=["strong"], max_num_perms=[10000], ylim=[0,1],
-        title="Strong Identity with SIRN Algorithm")
-
-    def testPlotMetricByCondition(self):
-        #if IGNORE_TEST:
-        #    return
-        ax, df = self.statistics.plotMetricByConditions(cn.COL_PROCESSING_TIME_TOTAL,
+        for metric in [cn.COL_PROCESSING_TIME_TOTAL, cn.COL_IS_INDETERMINATE_MEAN, cn.COL_NUM_PERM_MAX]:
+            if "indeterminate" in metric:
+                is_log = False
+            else:
+                is_log = True
+            ax, df = self.statistics.plotMetricByConditions(metric,
                 identity_types = [True],
-                max_num_perms = [100, 1000],
+                max_num_perms = [1000, 100000],
                 sirn_types = [True, False],
-                is_log=True,
+                is_log=is_log,
+                legends=["SIRN1000", "SIRN100000", "Naive1000", "Naive100000"],
                 )
-        self.assertTrue(isinstance(ax, plt.Axes))
-        self.assertTrue(isinstance(df, pd.DataFrame))
-        if IS_PLOT:
-            plt.show()
+            self.assertTrue(isinstance(ax, plt.Axes))
+            self.assertTrue(isinstance(df, pd.DataFrame))
+            if IS_PLOT:
+                plt.show()
 
 
 
