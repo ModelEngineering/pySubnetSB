@@ -48,7 +48,7 @@ class SummaryStatistics(object):
         self.data_dir = data_dir
         self.result_accessor = ResultAccessor(os.path.join(data_dir, sub_dir))
         self.df = self.result_accessor.df
-        self.cluster_dct = self.df.groupby(cn.COL_MODEL_NAME).groups
+        self.cluster_dct = self.df.groupby(cn.COL_COLLECTION_IDX).groups
         #
         self.num_model = util.calculateSummaryStatistics(np.repeat(1, len(self.df)))
         self.num_perm = util.calculateSummaryStatistics(self.df[cn.COL_NUM_PERM])
@@ -62,7 +62,7 @@ class SummaryStatistics(object):
         self.cluster_size_eq1 = util.calculateSummaryStatistics(
                 [1 if v == 1 else 0 for v in cluster_sizes])
         self.cluster_size_gt1 = util.calculateSummaryStatistics(
-                [1 if v > 1 else 0 for v in cluster_sizes])
+                [v for v in cluster_sizes if v > 1])
         self.series = self.makeSeries()
 
     def makeSeries(self)->pd.DataFrame:

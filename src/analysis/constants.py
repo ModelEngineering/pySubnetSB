@@ -72,13 +72,3 @@ META_ANTIMONY_DIR = "antimony_dir"
 WEAK = "weak"
 STRONG = "strong"
 MAX_NUM_PERMS = [100, 1000, 10000, 100000, 1000000]
-# Metrics
-M_NUM_MODEL = "num_model"
-M_NUM_PERM = "num_perm"
-M_INDETERMINATE = "indeterminate"
-M_PROCESSING_TIME = "processing_time"
-M_CLUSTER_SIZE = "cluster_size"
-M_CLUSTER_SIZE_EQ1 = "cluster_size_eq1"
-M_CLUSTER_SIZE_GT1 = "cluster_size_gt1"
-METRICS = [M_NUM_MODEL, M_NUM_PERM, M_INDETERMINATE, M_PROCESSING_TIME, M_CLUSTER_SIZE,
-           M_CLUSTER_SIZE_EQ1, M_CLUSTER_SIZE_GT1]
