@@ -29,7 +29,8 @@ class TestArrayCollection(unittest.TestCase):
     def testClassifyArray(self):
         if IGNORE_TEST:
             return
-        self.assertTrue(np.allclose(self.collection.encoding_arr, np.array([1002000, 2001000])))
+        sorted_mat = np.array([[0, 0, 1], [0, 0, 1], [0, 1, 1]])
+        self.assertTrue(np.allclose(self.collection.sorted_mat, sorted_mat))
 
     def testEncode2(self):
         # Test random sequences

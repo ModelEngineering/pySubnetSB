@@ -172,8 +172,10 @@ class ResultAccessor(object):
         with ZipFile(cn.OSCILLATOR_ZIP, 'r') as zip:
             names = zip.namelist()
         candidates = [n for n in names if model_name in n]
-        if len(candidates) != 1:
+        if len(candidates) > 1:
             raise ValueError(f"Model name {model_name} not uniquely found in {self.oscillator_dir}")
+        if len(candidates) == 0:
+            raise ValueError(f"Model name {model_name} not found in {self.oscillator_dir}")
         antimony_str = ""
         with ZipFile(cn.OSCILLATOR_ZIP, 'r') as zip:
             fd = zip.open(candidates[0])

@@ -8,15 +8,21 @@ Terminology:
 - ArrayCollection: A collection of arrays.
 - Encoding: A single number that represents the array, a homomorphism (and so is not unique).
 """
-import sirn.constants as cn
+import sirn.constants as cn # type: ignore
 
+import collections
 import itertools
 import numpy as np
 import scipy  # type: ignore
 import scipy.special  # type: ignore
 from typing import Dict
 
-SEPARATOR = 1000 # Separates the counts in a single numbera
+SEPARATOR = 1000 # Separates the counts in a single number
+VALUE_SEPARATOR = ','  # Separates the values in a string encoding
+
+EncodingResult = collections.namedtuple('EncodingResult', ['index_dct', 'sorted_mat'])
+    #  index_dct: dict: key is a string representation of the sorted array, value is a list of indexes
+    #  sorted_mat: np.ndarray: The columns as sorted array
 
 
 class ArrayCollection(object):
@@ -35,7 +41,9 @@ class ArrayCollection(object):
         if (self.length > SEPARATOR):
             raise ValueError("Matrix is too large to classify. Maximum number of rows, columns is 1000.")
         # Outputs
-        self.encoding_dct = self.encode()
+        encoding_result = self.encode()
+        self.sorted_mat = encoding_result.sorted_mat # Sorted array associated with each encoding
+        self.encoding_dct = encoding_result.index_dct
         encodings = list(self.encoding_dct.keys())
         encodings.sort()
         self.encoding_arr = np.array(encodings)   # Encodings of the arrays
@@ -75,51 +83,46 @@ class ArrayCollection(object):
         Returns:
             bool: _description_
         """
-        if len(self.encoding_arr) != len(other.encoding_arr):
+        if not np.allclose(self.sorted_mat.shape, other.sorted_mat.shape):
             return False
-        result = np.allclose(self.encoding_arr, other.encoding_arr)
-        return result
-
-    # This method can be overridden to provide alternative encodings
-    def deprecatedEncode(self)->Dict[int, np.ndarray]:
-        """Constructs an encoding for an ArrayCollection.
-
-        Args:
-            arr (np.ndarray): _description_
-
-        Returns:
-            np.ndarray: key: encoding, values: indexes of arrays with the same encoding
-        """
-        dct: dict = {}
-        for idx, arr in enumerate(self.collection):
-            this_encoding = np.sum(arr < 0) + np.sum(arr == 0) * SEPARATOR + np.sum(arr > 0)*SEPARATOR**2
-            if not this_encoding in dct.keys():
-                dct[this_encoding] = []
-            dct[this_encoding].append(idx)
-        return dct
+        return np.allclose(self.sorted_mat, other.sorted_mat)
     
     # This method can be overridden to provide alternative encodings
-    def encode(self)->Dict[int, np.ndarray]:
-        """Constructs an encoding for an ArrayCollection.
+    def encode(self)->EncodingResult:
+        """Constructs an encoding for an ArrayCollection. The encoding is
+        a string representation of the sorted array. The encoding is the value
+        separated by ".".
 
         Args:
             arr (np.ndarray): _description_
 
-        Returns:
-            np.ndarray: key: encoding, values: indexes of arrays with the same encoding
+        Returns: EncodingResult
+            index_dct: dict: key is a string representation of the sorted array, value is a list of indexes
+            array_dct np.ndarray: The sorted array
+            
         """
-        dct: dict = {}
-        if self.is_weighted:
-            weight_arr = np.abs(self.collection).sum(axis=0)
-        else:
-            weight_arr = np.ones(self.length)
-        for idx, arr in enumerate(self.collection):
-            new_arr = arr*weight_arr
-            this_encoding = np.sum(new_arr < 0) + np.sum(new_arr == 0)*SEPARATOR + np.sum(new_arr > 0)*SEPARATOR**2
-            if not this_encoding in dct.keys():
-                dct[this_encoding] = []
-            dct[this_encoding].append(idx)
-        return dct
+        index_dct: dict = {}
+        array_dct: dict = {}
+        for idx, matrix in enumerate(self.collection):
+            sorted_arr = np.sort(matrix)
+            this_encoding = str(sorted_arr)
+            this_encoding = this_encoding.replace('[', '')
+            this_encoding = this_encoding.replace(']', '')
+            this_encoding = this_encoding.replace(' ', VALUE_SEPARATOR)
+            if not this_encoding in index_dct.keys():
+                index_dct[this_encoding] = []
+                array_dct[this_encoding] = []
+            index_dct[this_encoding].append(idx)
+            array_dct[this_encoding].append(sorted_arr)
+        # Construct the sorted array
+        encodings = list(index_dct.keys())
+        encodings.sort()
+        lst = []
+        for encoding in encodings:
+            lst.extend(array_dct[encoding])
+        sorted_mat = np.array(lst)
+        #
+        return EncodingResult(index_dct=index_dct, sorted_mat=sorted_mat)
     
     def partitionPermutationIterator(self, max_num_perm:int=cn.MAX_NUM_PERM):
         """
@@ -129,8 +132,8 @@ class ArrayCollection(object):
         returns:
             np.array-int: A permutation of the arrays.
         """
-        iter_dct = {e: None for e, v in self.encoding_dct.items()}  # Iterators for each partition
-        permutation_dct = {e: None for e, v in self.encoding_dct.items()}  # Iterators for each partition
+        iter_dct = {e: None for e in self.encoding_dct.keys()}  # Iterators for each partition
+        permutation_dct = {e: None for e in self.encoding_dct.keys()}  # Iterators for each partition
         idx = 0  # Index of the partition processed in an iteration
         count = 0
         max_count = np.prod([scipy.special.factorial(len(v)) for v in self.encoding_dct.values()])

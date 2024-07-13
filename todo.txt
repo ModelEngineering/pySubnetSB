@@ -1,3 +1,5 @@
+DSIRN
+1. Change the OIE. Use a matrix of individually sorted arrays. Very detailed. Fast comparisons. Easy to construct.
 Analysis
   1. Plot indeterminant vs. max_num_perm; do for naive algorith as well
   2. Provide statistics on structurally identicaly by type and dataset
@@ -9,3 +11,5 @@ Analysis
      sirn is cluster superset of naive
   5. Statistics for clusters: cluster_size, clustereq1, clustergt1_size
   6. Examine strong clusters to see differences. Simulate.
+Subset detection
+1. Is there a fast way to determine if one array is a subset of another?
