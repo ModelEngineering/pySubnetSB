@@ -17,6 +17,8 @@ MAT = np.array([[1, 0, 0], [0, 1, 0], [0, 1, 1]])
 class TestArrayCollection(unittest.TestCase):
 
     def setUp(self):
+        if IGNORE_TEST:
+            return
         self.collection = ArrayCollection(MAT)
 
     def testConstructor(self):
@@ -24,7 +26,7 @@ class TestArrayCollection(unittest.TestCase):
             return
         self.assertTrue(np.all(self.collection.collection == MAT))
         self.assertTrue(isinstance(self.collection, ArrayCollection))
-        self.assertGreater(self.collection.encoding_arr[-1], self.collection.encoding_arr[0])
+        self.assertGreater(self.collection.encodings[-1], self.collection.encodings[0])
 
     def testClassifyArray(self):
         if IGNORE_TEST:
@@ -49,21 +51,21 @@ class TestArrayCollection(unittest.TestCase):
                 new_encoding = 0
                 for idx in range(3):
                     new_encoding += counts[idx]*1000**idx
-                self.assertGreaterEqual(size, len(collection.encoding_arr))
+                self.assertGreaterEqual(size, collection.num_partition)
         #
         test()
         test(prob0=2/3)
         test(prob0=1/5)
 
-    def testPartitionPermutationIteratorSimple(self):
-        # Test random sequences
+    def testConstrainedPermutationIteratorSimple(self):
         if IGNORE_TEST:
             return
-        permutations = list(self.collection.partitionPermutationIterator())
+        self.collection = ArrayCollection(MAT)
+        permutations = list(self.collection.constrainedPermutationIterator())
         for permutation in [ [0, 1, 2], [1, 0, 2]]:
             self.assertTrue(any([ np.allclose(permutation, p) for p in permutations]))
     
-    def testPartitionPermutationIteratorComplicated(self):
+    def testConstrainedPermutationIteratorComplicated(self):
         if IGNORE_TEST:
             return
         def test(size=3, num_iteration=10, max_num_perm=int(1e3)):
@@ -71,7 +73,7 @@ class TestArrayCollection(unittest.TestCase):
                 mat = Matrix.makeTrinaryMatrix(size, size)
                 collection = ArrayCollection(mat)
                 #print(collection.num_partition/size)
-                permutations = list(collection.partitionPermutationIterator(max_num_perm=max_num_perm))
+                permutations = list(collection.constrainedPermutationIterator(max_num_perm=max_num_perm))
                 # Check that each permutation is unique
                 for idx, permutation in enumerate(permutations):
                     checks = list(permutations)
@@ -81,6 +83,23 @@ class TestArrayCollection(unittest.TestCase):
         test(size=5)
         test(size=15)
         test(size=20)
+
+    def testSubsetIterator(self):
+        if IGNORE_TEST:
+            return
+        if False:
+            mat = np.array([[1, 0], [1, 1]])
+            collection = ArrayCollection(mat)
+            subsets = list(collection.subsetIterator(self.collection))
+            self.assertTrue(len(subsets) == 1)
+            self.assertTrue(len(subsets[0]) == len(mat))
+        #
+        mat = np.array([[1, 0], [0, 1]])
+        collection = ArrayCollection(mat)
+        subsets = list(collection.subsetIterator(self.collection))
+        self.assertTrue(len(subsets) == 2)
+        import pdb; pdb.set_trace()
+        self.assertTrue(len(subsets[0]) == len(mat))
 
 
 if __name__ == '__main__':

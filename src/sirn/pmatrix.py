@@ -98,7 +98,9 @@ class PMatrix(Matrix):
         self.row_collection = ArrayCollection(self.array)
         column_arr = np.transpose(self.array)
         self.column_collection = ArrayCollection(column_arr)
-        hash_arr = np.concatenate((self.row_collection.encoding_arr, self.column_collection.encoding_arr))
+        row_encoding = np.concatenate([e.sorted_arr for e in self.row_collection.sorted_encodings])
+        column_encoding = np.concatenate([e.sorted_arr for e in self.column_collection.sorted_encodings])
+        hash_arr = np.concatenate([row_encoding, column_encoding])
         self.hash_val = hashArray(hash_arr)
         # log10 of the estimated number of permutations of rows and columns
         self.log_estimate = self.row_collection.log_estimate + self.column_collection.log_estimate
@@ -137,11 +139,11 @@ class PMatrix(Matrix):
             return False
         if not all([s == o] for s, o in zip(self.column_names, other.column_names)):
             return False
-        if not all([s == o] for s, o in zip(self.row_collection.encoding_arr,
-                other.row_collection.encoding_arr)):
+        if not all([s == o] for s, o in zip(self.row_collection.index_dct.keys(),
+                other.row_collection.index_dct.keys())):
             return False
-        if not all([s == o] for s, o in zip(self.column_collection.encoding_arr,
-                other.column_collection.encoding_arr)):
+        if not all([s == o] for s, o in zip(self.column_collection.index_dct.keys(),
+                other.column_collection.index_dct.keys())):
             return False
         return True
 
@@ -204,11 +206,11 @@ class PMatrix(Matrix):
             return PermutablyIdenticalResult(False)
         # The matrices have the same shape and partitions
         #  Order the other PMatrix to align the partitions of the two matrices
-        other_row_perm =  list(other.row_collection.partitionPermutationIterator())[0]
-        other_column_perm = list(other.column_collection.partitionPermutationIterator())[0]
+        other_row_perm =  list(other.row_collection.constrainedPermutationIterator())[0]
+        other_column_perm = list(other.column_collection.constrainedPermutationIterator())[0]
         other_array = self.permuteArray(other.array, other_row_perm, other_column_perm)
         # Search all partition constrained permutations of this matrix to match the other matrix
-        row_itr = self.row_collection.partitionPermutationIterator()
+        row_itr = self.row_collection.constrainedPermutationIterator()
         num_perm = 0
         # Find all permutations that result in equality
         this_row_perms: list = []
@@ -219,7 +221,7 @@ class PMatrix(Matrix):
             if is_done:
                 break
             # There may be a large number of column permutations
-            column_itr = self.column_collection.partitionPermutationIterator()
+            column_itr = self.column_collection.constrainedPermutationIterator()
             for column_perm in column_itr:
                 if num_perm >= max_num_perm:
                     is_excessive_perm = True
@@ -227,7 +229,8 @@ class PMatrix(Matrix):
                     break
                 num_perm += 1
                 this_array = self.permuteArray(self.array, row_perm, column_perm)
-                if np.all(this_array == other_array):
+                #if np.all(this_array == other_array):
+                if np.allclose(this_array,other_array):
                     this_row_perms.append(row_perm)
                     this_column_perms.append(column_perm)
                     if not is_find_all_perms:

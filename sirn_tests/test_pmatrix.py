@@ -16,6 +16,8 @@ MAT = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 class TestPMatrix(unittest.TestCase):
 
     def setUp(self):
+        if IGNORE_TEST:
+            return
         array = MAT.copy()
         self.pmatrix = PMatrix(array)
 
@@ -134,9 +136,9 @@ class TestPMatrix(unittest.TestCase):
                 else:
                     self.assertFalse(result)
         #
-        test(200, expected_result=False)
-        test(3)
-        test(10)
+        test(size=3)
+        test(size=200, expected_result=False)
+        test(size=10)
     
     def testIsPermutablyIdentical4(self):
         # Test not permutably identical matrices

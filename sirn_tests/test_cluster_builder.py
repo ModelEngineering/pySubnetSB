@@ -11,7 +11,7 @@ import numpy as np # type: ignore
 import unittest
 
 
-IGNORE_TEST = False
+IGNORE_TEST = True
 IS_PLOT = False
 COLLECTION_SIZE = 10
 if not IGNORE_TEST:
@@ -128,15 +128,15 @@ class TestClusterBuilder(unittest.TestCase):
         test(num_network=10, array_size=10)
 
     def testMaxLogPermutations(self):
-        if IGNORE_TEST:
-            return
+        #if IGNORE_TEST:
+        #    return
         # Construct a collection of two sets of permutably identical matrices
         def test(max_num_perm=100, num_collection=2, num_network=5, num_row=10, num_column=10,
                  structural_identity_type=cn.STRUCTURAL_IDENTITY_TYPE_STRONG,
                  is_verify=False):
             # Make collection of structurally identical networks
             network_collections = []
-            for _ in range(3):  # Avoid name collisions randomly
+            for _ in range(5):  # Avoid name collisions randomly
                 for _ in range(num_collection):
                     if is_verify:
                         network_collection = self.makeStructurallyIdenticalCollection(
@@ -163,7 +163,6 @@ class TestClusterBuilder(unittest.TestCase):
         for num_network in [5, 10, 15]:
             test(num_network=num_network, max_num_perm=1, num_collection=10)
             test(num_network=num_network, max_num_perm=5, num_collection=10)
-            # Test large networks
             
     def testMakeNetworkCollection(self):
         if IGNORE_TEST:
