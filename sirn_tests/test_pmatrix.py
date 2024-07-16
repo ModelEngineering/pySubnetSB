@@ -293,6 +293,64 @@ class TestPMatrix(unittest.TestCase):
         test(1)
         test(4)
 
+    def testIsPermutablyIdenticalSubset1(self):
+        # Test permutably identical matrices and calculation limits
+        if IGNORE_TEST:
+            return
+        def test(size=3, num_iteration=10, subset_size=2):
+            if subset_size > size:
+                raise ValueError("subset_size must be less than size")
+            for _ in range(num_iteration):
+                arr1 = PMatrix.makeTrinaryMatrix(size, size)
+                arr2 = arr1.copy()
+                for _ in range(10):
+                    perm =  np.random.permutation(range(size))
+                    if np.sum(np.diff(perm)) != size - 1:  # Avoid the identity permutation
+                        break
+                arr2 = arr2[perm, :]
+                arr2 = arr2[:, perm]
+                arr2 = arr2[:subset_size, :subset_size]
+                pmatrix1 = PMatrix(arr1)
+                pmatrix2 = PMatrix(arr2)
+                result = pmatrix2.isPermutablyIdenticalSubset(pmatrix1, 
+                        max_num_perm=10000)
+                self.assertTrue(result)
+        #
+        test(size=20, subset_size=3, num_iteration=2)
+        test(size=3, subset_size=2)
+        test(size=10, subset_size=3)
+
+    def testIsPermutablyIdenticalSubsetNot(self):
+        # Test not permutably identical subset
+        if IGNORE_TEST:
+            return
+        def test(size=3, num_iteration=10, subset_size=2):
+            if subset_size > size:
+                raise ValueError("subset_size must be less than size")
+            for _ in range(num_iteration):
+                arr1 = PMatrix.makeTrinaryMatrix(size, size)
+                arr2 = arr1.copy()
+                for _ in range(10):
+                    perm =  np.random.permutation(range(size))
+                    if np.sum(np.diff(perm)) != size - 1:  # Avoid the identity permutation
+                        break
+                arr2 = arr2[perm, :]
+                arr2 = arr2[:, perm]
+                arr2 = arr2[:subset_size, :subset_size]
+                # Randomly change a value
+                irow = np.random.randint(subset_size)
+                icol = np.random.randint(subset_size)
+                arr2[irow, icol] = 2
+                #  Construct the ordered matrices
+                pmatrix1 = PMatrix(arr1)
+                pmatrix2 = PMatrix(arr2)
+                result = pmatrix2.isPermutablyIdenticalSubset(pmatrix1, 
+                        max_num_perm=10000)
+                self.assertFalse(result)
+        #
+        test(3)
+        test(250, 5)
+
 
 if __name__ == '__main__':
     unittest.main()

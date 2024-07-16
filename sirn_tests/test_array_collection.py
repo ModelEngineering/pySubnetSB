@@ -84,22 +84,23 @@ class TestArrayCollection(unittest.TestCase):
         test(size=15)
         test(size=20)
 
-    def testSubsetIterator(self):
+    def testSubsetIterator1(self):
         if IGNORE_TEST:
             return
-        if False:
-            mat = np.array([[1, 0], [1, 1]])
-            collection = ArrayCollection(mat)
-            subsets = list(collection.subsetIterator(self.collection))
-            self.assertTrue(len(subsets) == 1)
-            self.assertTrue(len(subsets[0]) == len(mat))
-        #
         mat = np.array([[1, 0], [0, 1]])
         collection = ArrayCollection(mat)
         subsets = list(collection.subsetIterator(self.collection))
-        self.assertTrue(len(subsets) == 2)
-        import pdb; pdb.set_trace()
         self.assertTrue(len(subsets[0]) == len(mat))
+        self.assertTrue(len(subsets) == len(MAT)*(len(MAT)-1))
+
+    def testSubsetIterator2(self):
+        if IGNORE_TEST:
+            return
+        mat = np.array([[2, 0], [0, 1]])
+        collection = ArrayCollection(mat)
+        subsets = list(collection.subsetIterator(self.collection))
+        import pdb; pdb.set_trace()
+        self.assertTrue(len(subsets) == 0)
 
 
 if __name__ == '__main__':

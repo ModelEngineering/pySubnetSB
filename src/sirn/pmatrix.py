@@ -15,7 +15,6 @@ import numpy as np
 from typing import List, Optional
 
 
-
 ####################################
 RandomizeResult = collections.namedtuple('RandomizeResult', ['pmatrix', 'row_perm', 'column_perm'])    
 
@@ -63,6 +62,28 @@ class PermutablyIdenticalResult(object):
     def __bool__(self)->bool:
         return self.is_permutably_identical
 
+
+class PermutablyIdenticalSusbsetResult(object):
+
+    def __init__(self, permutably_identical_result: PermutablyIdenticalResult,
+                 rows:Optional[List[int]]=None, columns:Optional[List[int]]=None,
+                 num_perm:int=0):
+        """
+        Args:
+            permutably_identical_result (PermutablyIdenticalResult): Result of the test
+            rows (Optional[List[int]], optional): Rows in large matrix that are permutably identical. Defaults to None.
+            columns (Optional[List[int]], optional): Columns n large matrix that are permutably identical. Defaults to None.
+            num_perm (int): Number of permutations explored
+        """
+        self.permutably_identical_result = permutably_identical_result
+        self.rows = rows
+        self.columns = columns
+        self.num_perm = num_perm
+
+    # Boolean value is the result of the test
+    def __bool__(self)->bool:
+        return self.permutably_identical_result.is_permutably_identical
+    
 
 class PMatrix(Matrix):
         
@@ -148,7 +169,7 @@ class PMatrix(Matrix):
         return True
 
     def __repr__(self)->str:
-        return str(self.array) + '\n' + str(self.row_collection) + '\n' + str(self.column_collection)
+        return str(self.array)
 
     @staticmethod 
     def permuteArray(array:np.ndarray, row_perm:np.ndarray[int],
@@ -199,9 +220,8 @@ class PMatrix(Matrix):
             max_num_perm (int): Maximum number of permutations to search
             is_find_all_perms (bool): If True, find all permutations that make the matrices equal
         Returns:
-            bool
+            PermutablyIdenticalResult
         """
-        # Check compatibility
         if not self.isCompatible(other):
             return PermutablyIdenticalResult(False)
         # The matrices have the same shape and partitions
@@ -242,6 +262,42 @@ class PMatrix(Matrix):
                             other_row_perm=other_row_perm, other_column_perm=other_column_perm,
                             is_excessive_perm=is_excessive_perm, num_perm=num_perm)
         return permutably_identical_result
+    
+    def isPermutablyIdenticalSubset(self, other:'PMatrix', max_num_perm:int=cn.MAX_NUM_PERM,
+                              is_find_all_perms:bool=True) -> PermutablyIdenticalSusbsetResult:
+        """
+        Check if this permutably identical to a subset of the other matrix.
+
+        Args:
+            other (PMatrix)
+            max_num_perm (int): Maximum number of permutations to search
+            is_find_all_perms (bool): If True, find all permutations that make the matrices equal
+        Returns:
+            PermutablyIdenticalSubsetResult
+        """
+        row_itr = self.row_collection.subsetIterator(other.row_collection)
+        row_name_arr = np.array(other.row_names)
+        column_name_arr = np.array(other.column_names)
+        count_perm = 0
+        for row_arr in row_itr:
+            column_itr = self.column_collection.subsetIterator(other.column_collection)
+            for column_arr in column_itr:
+                subset_arr = other.array[row_arr, :]
+                subset_arr = subset_arr[:, column_arr]
+                row_names = list(row_name_arr[row_arr])
+                column_names = list(column_name_arr[column_arr])
+                subset_other = PMatrix(subset_arr, row_names=row_names, column_names=column_names)
+                result = self.isPermutablyIdentical(subset_other, max_num_perm-count_perm, is_find_all_perms)
+                count_perm += result.num_perm
+                if result:
+                    return PermutablyIdenticalSusbsetResult(permutably_identical_result=result,
+                            rows=row_arr, columns=column_arr, num_perm=count_perm)
+                if result.num_perm >= max_num_perm:
+                    break
+        #
+        final_result = PermutablyIdenticalSusbsetResult(PermutablyIdenticalResult(False), rows=None, columns=None,
+                                               num_perm=count_perm)
+        return final_result
      
     def _isPermutablyIdenticalNotSirn(self, other:'PMatrix', max_num_perm:int=cn.MAX_NUM_PERM,
                               is_find_all_perms:bool=True) -> PermutablyIdenticalResult:
