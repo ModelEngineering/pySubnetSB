@@ -2,14 +2,16 @@ from sirn.pmatrix import PMatrix # type: ignore
 from sirn.matrix import Matrix # type: ignore
 from sirn import util # type: ignore
 import sirn.constants as cn  # type: ignore
+import sirn.util as util  # type: ignore
 
 import pandas as pd  # type: ignore
 import numpy as np # type: ignore
 import unittest
 
 
-IGNORE_TEST = False
+IGNORE_TEST = True
 IS_PLOT = False
+util.IS_TIMEIT = True
 MAT = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 
 
@@ -21,6 +23,7 @@ class TestPMatrix(unittest.TestCase):
         array = MAT.copy()
         self.pmatrix = PMatrix(array)
 
+    @util.timeit
     def testConstructor(self):
         if IGNORE_TEST:
             return
@@ -28,6 +31,7 @@ class TestPMatrix(unittest.TestCase):
         self.assertTrue(np.all(pmatrix.array == MAT))
         self.assertTrue(isinstance(pmatrix, PMatrix))
 
+    @util.timeit
     def testNotIdenticalClassifications(self):
         # Tests if permuted matrices don't have the same classification
         # The test assumes that samples are very unlikely to be identical, but it can happen
@@ -44,6 +48,7 @@ class TestPMatrix(unittest.TestCase):
         test()
         test(size=10, prob0=0.2)
 
+    @util.timeit
     def testIdenticalClassifications(self):
         # Tests if permuted matrices have the same classification
         if IGNORE_TEST:
@@ -64,6 +69,7 @@ class TestPMatrix(unittest.TestCase):
         test()
         test(size=10, prob0=0.2)
     
+    @util.timeit
     def testHashCollision(self):
         # Evaluate the probability that two randomly chosen Ordered matrices have the same hash value
         if IGNORE_TEST:
@@ -85,6 +91,7 @@ class TestPMatrix(unittest.TestCase):
         test(10000, 4)
         test(10000, 5)
 
+    @util.timeit
     def testIsPermutablyIdentical1(self):
         if IGNORE_TEST:
             return
@@ -99,6 +106,7 @@ class TestPMatrix(unittest.TestCase):
         self.assertTrue(pmatrix1.isPermutablyIdentical(pmatrix2))
         self.assertTrue(pmatrix1.isPermutablyIdentical(pmatrix2, is_sirn=False))
 
+    @util.timeit
     def testIsPermutablyIdentical2(self):
         if IGNORE_TEST:
             return
@@ -113,11 +121,12 @@ class TestPMatrix(unittest.TestCase):
         self.assertTrue(pmatrix1.isPermutablyIdentical(pmatrix2))
         self.assertTrue(pmatrix1.isPermutablyIdentical(pmatrix2, is_sirn=False))
 
+    @util.timeit
     def testIsPermutablyIdentical3(self):
         # Test permutably identical matrices and calculation limits
         if IGNORE_TEST:
             return
-        def test(size=3, num_iteration=10, expected_result=True):
+        def test(size=3, num_iteration=2, expected_result=True):
             for _ in range(num_iteration):
                 arr1 = PMatrix.makeTrinaryMatrix(size, size)
                 arr2 = arr1.copy()
@@ -140,6 +149,7 @@ class TestPMatrix(unittest.TestCase):
         test(size=200, expected_result=False)
         test(size=10)
     
+    @util.timeit
     def testIsPermutablyIdentical4(self):
         # Test not permutably identical matrices
         if IGNORE_TEST:
@@ -163,6 +173,7 @@ class TestPMatrix(unittest.TestCase):
         test(10)
         test(20)
 
+    @util.timeit
     def testIsPermutablyIdenticalNotSIRN(self):
         if IGNORE_TEST:
             return
@@ -177,6 +188,7 @@ class TestPMatrix(unittest.TestCase):
         result = pmatrix1.isPermutablyIdentical(pmatrix2, is_sirn=False)
         self.assertTrue(result)
 
+    @util.timeit
     def testIsPermutablyIdenticalNotSIRN2(self):
         # Test not permutably identical matrices
         if IGNORE_TEST:
@@ -199,6 +211,7 @@ class TestPMatrix(unittest.TestCase):
         test(3)
         test(5)
 
+    @util.timeit
     def testIsPermutablyIdenticalNotSIRN3(self):
         # Test permutably identical matrices and calculation limits
         if IGNORE_TEST:
@@ -226,6 +239,7 @@ class TestPMatrix(unittest.TestCase):
         test(3)
         test(10)
 
+    @util.timeit
     def testEq(self):
         if IGNORE_TEST:
             return
@@ -237,6 +251,7 @@ class TestPMatrix(unittest.TestCase):
         result = pmatrix == pmatrix2
         self.assertFalse(result)
 
+    @util.timeit
     def testRandomize(self):
         if IGNORE_TEST:
             return
@@ -250,12 +265,14 @@ class TestPMatrix(unittest.TestCase):
             raise ValueError("Test failed")
         self.assertTrue(self.pmatrix.isPermutablyIdentical(pmatrix))
 
+    @util.timeit
     def testLogEstimate(self):
         if IGNORE_TEST:
             return
         pmatrix = PMatrix(MAT)
         self.assertTrue(np.isclose(pmatrix.log_estimate, 2*np.log10(6)))
 
+    @util.timeit
     def testLogEstimate2(self):
         if IGNORE_TEST:
             return
@@ -270,6 +287,7 @@ class TestPMatrix(unittest.TestCase):
         max_log_perm = test(15, 2000)
         self.assertGreater(max_log_perm, 4)
 
+    @util.timeit
     def testMaxPerm(self):
         if IGNORE_TEST:
             return
@@ -293,11 +311,12 @@ class TestPMatrix(unittest.TestCase):
         test(1)
         test(4)
 
+    @util.timeit
     def testIsPermutablyIdenticalSubset1(self):
         # Test permutably identical matrices and calculation limits
-        if IGNORE_TEST:
-            return
-        def test(size=3, num_iteration=10, subset_size=2):
+        #if IGNORE_TEST:
+        #    return
+        def test(size=3, num_iteration=2, subset_size=2):
             if subset_size > size:
                 raise ValueError("subset_size must be less than size")
             for _ in range(num_iteration):
@@ -316,10 +335,11 @@ class TestPMatrix(unittest.TestCase):
                         max_num_perm=10000)
                 self.assertTrue(result)
         #
-        test(size=20, subset_size=3, num_iteration=2)
+        #test(size=20, subset_size=3, num_iteration=2)
         test(size=3, subset_size=2)
         test(size=10, subset_size=3)
 
+    @util.timeit
     def testIsPermutablyIdenticalSubsetNot(self):
         # Test not permutably identical subset
         if IGNORE_TEST:

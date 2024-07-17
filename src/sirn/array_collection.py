@@ -48,14 +48,14 @@ class ArrayCollection(object):
         self.encodings = encoding_result.encodings
         self.sorted_encodings = sorted(self.encodings, key=lambda x: x.encoding_val)
         self.num_partition = len(set([str(e) for e in self.encodings]))  # Number of partitions 
-        self.log_estimate = self.logEstimateNumPermutations()  # log10 of the estimated number of permutations
 
     def __repr__(self)->str:
         return str(self.encodings)
-    
-    def logEstimateNumPermutations(self)->float:
+
+    @property 
+    def log_estimate(self)->float:
         """
-        Estimates the number of permutations of the ArrayCollection in log units. Uses the
+        Estimates the number of permutations of the ArrayCollection in log10 units. Uses the
         continuous approximation, which is more accurate for large numbers of permutations.
 
         Returns:

@@ -1,6 +1,7 @@
 from sirn import util  # type: ignore
 
 import numpy as np
+import time
 import unittest
 
 
@@ -57,6 +58,16 @@ class TestFunctions(unittest.TestCase):
         array = np.array(range(10))
         test(array)
         test(np.reshape(array, (2,5)))
+
+    def testTimeit(self):
+        if IGNORE_TEST:
+            return
+        util.IS_TIMEIT = IGNORE_TEST
+        @util.timeit
+        def test():
+            time.sleep(1)
+        test()
+        util.IS_TIMEIT = False
 
 
 if __name__ == '__main__':

@@ -5,10 +5,13 @@ from sirn.pmatrix import PMatrix  # type: ignore
 from sirn.util import hashArray  # type: ignore
 from sirn import constants as cn  # type: ignore
 
+import collections
 import os
 import numpy as np
-from typing import Optional, Union
+from typing import Optional, Union, List, Tuple
 
+StrongStructuralIdentityResult = collections.namedtuple('StrongStructuralIdentityResult',
+        ['row_perm', 'column_perm', 'num_perm']) 
 
 class StructurallyIdenticalResult(object):
     # Auxiliary object returned by isStructurallyIdentical
@@ -19,19 +22,31 @@ class StructurallyIdenticalResult(object):
                  is_structural_identity_strong:bool=False,
                  is_excessive_perm:bool=False,
                  num_perm:int=0,
-                 ):
+                 this_row_perm:Optional[np.ndarray[int]]=None,
+                 this_column_perm:Optional[np.ndarray[int]]=None,
+                 other_row_perm:Optional[np.ndarray[int]]=None,
+                 other_column_perm:Optional[np.ndarray[int]]=None)->None:
         """
         Args:
             is_compatible (bool): has the same shapes and row/column encodings
             is_structural_identity_weak (bool)
             is_structural_identity_strong (bool)
             is_excessive_perm (bool): the number of permutations exceeds a threshold
+            num_perm (int): number of permutations
+            this_row_perm (np.ndarray[int]): permutation for the rows to make the matrices equal
+            this_column_perm (np.ndarray[int]): column permutations to make the matrices equal
+            other_row_perm (np.ndarray[int]): row permutation of other to make the matrices equal
+            other_column_perm (np.ndarray[int]): column permutations of other to make the matrices equal
         """
         self.is_excessive_perm = is_excessive_perm
         self.is_compatible = is_compatible
         self.is_structural_identity_weak = is_structural_identity_weak
         self.is_structural_identity_strong = is_structural_identity_strong
         self.num_perm = num_perm
+        self.this_row_perm = this_row_perm
+        self.this_column_perm = this_column_perm
+        self.other_row_perm = other_row_perm
+        self.other_column_perm = other_column_perm
         #
         if self.is_structural_identity_strong:
             self.is_structural_identity_weak = True
@@ -103,6 +118,41 @@ class Network(object):
         if self.product_pmatrix != other.product_pmatrix:
             return False
         return True
+
+    def _isStrongStructurallyIdentical(self, other_array:np.ndarray,
+            this_row_perms:List[np.ndarray[int]], this_column_perms:List[np.ndarray[int]],
+             max_num_perm:int=cn.MAX_NUM_PERM)->StrongStructuralIdentityResult:
+        """
+        Does the checking necessary to determine strong structural identity of the product matrices.
+
+        Args:
+            other (Network)
+            this_row_perms (List[np.ndarray[int]]): Permutations for this network
+            this_column_perms (List[np.ndarray[int]]): Permutations for this network
+            other_row_perm (np.ndarray[int]): Permutation for the other network
+            other_column_perm (np.ndarray[int]): Permutation for the other network
+            max_num_perm (int, optional): Maximum number of permutations to consider.
+
+        Returns:
+            StructurallyIdenticalResult
+        """
+        # Look at each permutation that makes the stoichiometry matrices equal
+        num_perm = 0
+        for this_row_perm, this_column_perm in zip(this_row_perms, this_column_perms):
+            if num_perm >= max_num_perm:
+                strong_structural_identity_result = StrongStructuralIdentityResult(
+                    row_perm=None, column_perm=None, num_perm=num_perm)    
+                return strong_structural_identity_result
+            this_array = PMatrix.permuteArray(self.product_pmatrix.array,
+                    this_row_perm, this_column_perm)
+            num_perm += 1
+            if np.allclose(this_array, other_array):
+                strong_structural_identity_result = StrongStructuralIdentityResult(
+                    row_perm=this_row_perm, column_perm=this_column_perm, num_perm=num_perm)    
+                return strong_structural_identity_result
+        strong_structural_identity_result = StrongStructuralIdentityResult(
+            row_perm=None, column_perm=None, num_perm=num_perm)    
+        return strong_structural_identity_result
     
     def isStructurallyIdentical(self, other:'Network', is_report:bool=False,
             max_num_perm:int=cn.MAX_NUM_PERM, is_sirn:bool=True,
@@ -131,6 +181,8 @@ class Network(object):
         num_perm += weak_identity.num_perm
         if num_perm >= max_num_perm:
             return StructurallyIdenticalResult(num_perm=num_perm, is_excessive_perm=True)
+        if not weak_identity:
+            return StructurallyIdenticalResult(is_compatible=weak_identity.is_compatible, num_perm=num_perm)
         if is_structural_identity_weak:
             return StructurallyIdenticalResult(is_compatible=weak_identity.is_compatible,
                     is_structural_identity_weak=weak_identity.is_permutably_identical,
@@ -154,22 +206,24 @@ class Network(object):
         other_array = PMatrix.permuteArray(other.product_pmatrix.array,
                      all_weak_identities.other_row_perm,     # type: ignore
                      all_weak_identities.other_column_perm)  # type: ignore
-        # Look at each permutation that makes the stoichiometry matrices equal
-        for idx, this_row_perm in enumerate(all_weak_identities.this_row_perms):
-            if num_perm >= max_num_perm:
-                return StructurallyIdenticalResult(is_structural_identity_weak=True,
-                                                   num_perm=num_perm,
-                                                   is_excessive_perm=True)
-            this_column_perm = all_weak_identities.this_column_perms[idx]
-            this_array = PMatrix.permuteArray(self.product_pmatrix.array,
-                                              this_row_perm, this_column_perm)
-            num_perm += 1
-            if bool(np.all([x == y for x, y in zip(this_array, other_array)])):
-                return StructurallyIdenticalResult(is_structural_identity_strong=True,
-                                                   num_perm=num_perm)
-        # Has weak structurally identity but not strong
-        return StructurallyIdenticalResult(is_structural_identity_weak=True,
-                                           num_perm=num_perm)
+        #
+        strong_structurally_identical_result = self._isStrongStructurallyIdentical(other_array,
+            all_weak_identities.this_row_perms, all_weak_identities.this_column_perms,
+            max_num_perm=cn.MAX_NUM_PERM-num_perm)
+        num_perm += strong_structurally_identical_result.num_perm
+        if strong_structurally_identical_result.row_perm is None:
+            # Wasn't able to match the product matrices
+            return StructurallyIdenticalResult(is_structural_identity_weak=True,
+                    num_perm=num_perm, this_row_perm=all_weak_identities.this_row_perms[0],
+                    this_column_perm=all_weak_identities.this_column_perms[0],
+                    other_row_perm=all_weak_identities.other_row_perm,
+                    other_column_perm=all_weak_identities.other_column_perm)
+        else:
+            return StructurallyIdenticalResult(is_structural_identity_strong=True,
+                    num_perm=num_perm, this_row_perm=strong_structurally_identical_result.row_perm,
+                    this_column_perm=strong_structurally_identical_result.column_perm,
+                    other_row_perm=all_weak_identities.other_row_perm,
+                    other_column_perm=all_weak_identities.other_column_perm)
     
     def randomize(self, structural_identity_type:str=cn.STRUCTURAL_IDENTITY_TYPE_STRONG,
                   num_iteration:int=10, is_verify=True)->'Network':
