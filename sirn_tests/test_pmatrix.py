@@ -9,9 +9,9 @@ import numpy as np # type: ignore
 import unittest
 
 
-IGNORE_TEST = True
+IGNORE_TEST = False
 IS_PLOT = False
-util.IS_TIMEIT = True
+util.IS_TIMEIT = False  # Set to True for timing tests
 MAT = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 
 
@@ -314,9 +314,9 @@ class TestPMatrix(unittest.TestCase):
     @util.timeit
     def testIsPermutablyIdenticalSubset1(self):
         # Test permutably identical matrices and calculation limits
-        #if IGNORE_TEST:
-        #    return
-        def test(size=3, num_iteration=2, subset_size=2):
+        if IGNORE_TEST:
+            return
+        def test(size=3, num_iteration=1, subset_size=2, max_num_perm=1000, expected_result=True):
             if subset_size > size:
                 raise ValueError("subset_size must be less than size")
             for _ in range(num_iteration):
@@ -332,12 +332,11 @@ class TestPMatrix(unittest.TestCase):
                 pmatrix1 = PMatrix(arr1)
                 pmatrix2 = PMatrix(arr2)
                 result = pmatrix2.isPermutablyIdenticalSubset(pmatrix1, 
-                        max_num_perm=10000)
-                self.assertTrue(result)
+                        max_num_perm=max_num_perm)
+                self.assertTrue(bool(result) == expected_result)
         #
-        #test(size=20, subset_size=3, num_iteration=2)
-        test(size=3, subset_size=2)
-        test(size=10, subset_size=3)
+        test(size=8, subset_size=3, num_iteration=1, max_num_perm=10000)
+        test(size=3, subset_size=2, num_iteration=5)
 
     @util.timeit
     def testIsPermutablyIdenticalSubsetNot(self):

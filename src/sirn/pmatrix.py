@@ -68,15 +68,12 @@ class PermutablyIdenticalSusbsetResult(object):
     SubmatrixResult = collections.namedtuple("SubmatrixResult",
                 ['permutably_identical_result', 'rows', 'columns', 'num_perm'])
 
-    def __init__(self, submatrix_results: List[SubmatrixResult], num_submatrices:int=0):
+    def __init__(self, submatrix_results: List[SubmatrixResult]):
         """
         Args:
             submatrix_results (List[SubmatrixResult]): results that found a permutably identical submarix
-            num_perm (int): Number of permutations explored
-            num_submatrices (int): Number of submatrices considered
         """
         self.submatrix_results = submatrix_results
-        self.num_submatrices = num_submatrices
 
     # Boolean value is the result of the test
     def __bool__(self)->bool:
@@ -283,9 +280,11 @@ class PMatrix(Matrix):
         row_name_arr = np.array(other.row_names)
         column_name_arr = np.array(other.column_names)
         num_perm = 0
-        num_subset = 0
         submatrix_results: List[PermutablyIdenticalSusbsetResult.SubmatrixResult] = []
+        is_done = False
         for row_arr in row_itr:
+            if is_done:
+                break
             column_itr = self.column_collection.subsetIterator(other.column_collection)
             for column_arr in column_itr:
                 subset_arr = other.array[row_arr, :]
@@ -294,8 +293,7 @@ class PMatrix(Matrix):
                 column_names = list(column_name_arr[column_arr])
                 subset_other = PMatrix(subset_arr, row_names=row_names, column_names=column_names)
                 permutably_identical_result = self.isPermutablyIdentical(subset_other, max_num_perm-num_perm, is_find_all_perms)
-                num_perm += permutably_identical_result.num_perm
-                num_subset += 1
+                num_perm += max(1, permutably_identical_result.num_perm)
                 subset_result = PermutablyIdenticalSusbsetResult.SubmatrixResult(
                      permutably_identical_result=permutably_identical_result,
                      rows=row_arr,
@@ -303,11 +301,13 @@ class PMatrix(Matrix):
                      num_perm=permutably_identical_result.num_perm)
                 submatrix_results.append(subset_result)
                 if permutably_identical_result and (not is_find_all_perms):
+                    is_done = True
                     break
-                if permutably_identical_result.num_perm >= max_num_perm:
+                if num_perm >= max_num_perm:
+                    is_done = True
                     break
         #
-        result = PermutablyIdenticalSusbsetResult(submatrix_results=submatrix_results, num_submatrices=num_subset)
+        result = PermutablyIdenticalSusbsetResult(submatrix_results=submatrix_results)
         return result
      
     def _isPermutablyIdenticalNotSirn(self, other:'PMatrix', max_num_perm:int=cn.MAX_NUM_PERM,
