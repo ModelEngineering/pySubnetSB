@@ -18,8 +18,6 @@ MAT = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 class TestPMatrix(unittest.TestCase):
 
     def setUp(self):
-        if IGNORE_TEST:
-            return
         array = MAT.copy()
         self.pmatrix = PMatrix(array)
 
@@ -50,7 +48,7 @@ class TestPMatrix(unittest.TestCase):
 
     @util.timeit
     def testIdenticalClassifications(self):
-        # Tests if permuted matrices have the same classification
+        # Tests if permuted matrices have the same encodings
         if IGNORE_TEST:
             return
         def test(num_iteration=100, size=5, prob0=1/3):
@@ -372,4 +370,4 @@ class TestPMatrix(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(failfast=True)

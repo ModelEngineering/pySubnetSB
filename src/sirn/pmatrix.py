@@ -120,9 +120,8 @@ class PMatrix(Matrix):
         self.row_collection = ArrayCollection(self.array)
         column_arr = np.transpose(self.array)
         self.column_collection = ArrayCollection(column_arr)
-        row_encoding = np.concatenate([e.sorted_arr for e in self.row_collection.sorted_encodings])
-        column_encoding = np.concatenate([e.sorted_arr for e in self.column_collection.sorted_encodings])
-        hash_arr = np.concatenate([row_encoding, column_encoding])
+        hash_arr = np.sort(np.concatenate([self.row_collection.encoding.encodings,
+                                   self.column_collection.encoding.encodings]))
         self.hash_val = hashArray(hash_arr)
         # log10 of the estimated number of permutations of rows and columns
         self.log_estimate = self.row_collection.log_estimate + self.column_collection.log_estimate
@@ -161,13 +160,7 @@ class PMatrix(Matrix):
             return False
         if not all([s == o] for s, o in zip(self.column_names, other.column_names)):
             return False
-        if not all([s == o] for s, o in zip(self.row_collection.index_dct.keys(),
-                other.row_collection.index_dct.keys())):
-            return False
-        if not all([s == o] for s, o in zip(self.column_collection.index_dct.keys(),
-                other.column_collection.index_dct.keys())):
-            return False
-        return True
+        return bool(np.all(self.array == other.array))
 
     def __repr__(self)->str:
         return str(self.array)

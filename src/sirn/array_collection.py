@@ -9,14 +9,13 @@ Terminology:
 - Encoding: A single number that represents the array, a homomorphism (and so is not unique).
 """
 import sirn.constants as cn # type: ignore
-from sirn.encoding import Encoding  # type: ignore
+from src.sirn.encoding import Encoding  # type: ignore
 
 import collections
 import itertools
 import numpy as np
 import scipy  # type: ignore
 import scipy.special  # type: ignore
-from typing import Dict
 
 SEPARATOR = 1000 # Separates the counts in a single number
 VALUE_SEPARATOR = ','  # Separates the values in a string encoding
@@ -37,20 +36,10 @@ class ArrayCollection(object):
                 elements in the i-th position.
         """
         self.collection = collection
-        self.narr, self.length = np.shape(collection)
-        #
-        if (self.length > SEPARATOR):
-            raise ValueError("Matrix is too large to classify. Maximum number of rows, columns is 1000.")
-        # Outputs
-        encoding_result = self.encode()
-        self.sorted_mat = encoding_result.sorted_mat # Sorted array associated with each encoding
-        self.index_dct = encoding_result.index_dct
-        self.encodings = encoding_result.encodings
-        self.sorted_encodings = sorted(self.encodings, key=lambda x: x.encoding_val)
-        self.num_partition = len(set([str(e) for e in self.encodings]))  # Number of partitions 
+        self.encoding = Encoding(collection)
 
     def __repr__(self)->str:
-        return str(self.encodings)
+        return str(self.encoding.encodings)
 
     @property 
     def log_estimate(self)->float:
@@ -69,7 +58,7 @@ class ArrayCollection(object):
             else:
                 return n*np.log10(n) - n
         #
-        lengths = [len(v) for v in self.index_dct.values()]
+        lengths = [len(v) for v in self.encoding.encoding_dct.values()]
         log_estimate = np.sum([factorial(v) for v in lengths])
         return np.sum(log_estimate)
     
@@ -83,46 +72,40 @@ class ArrayCollection(object):
         Returns:
             bool: _description_
         """
-        if not np.allclose(self.sorted_mat.shape, other.sorted_mat.shape):
+        this_arr = np.array(self.encoding.encodings)
+        this_arr = np.sort(this_arr)
+        other_arr = np.array(other.encoding.encodings)
+        other_arr = np.sort(this_arr)
+        if len(this_arr) != len(other_arr):
             return False
-        return np.allclose(self.sorted_mat, other.sorted_mat)
-    
-    # This method can be overridden to provide alternative encodings
-    def encode(self)->EncodingResult:
-        """Constructs an encoding for an ArrayCollection. The encoding is
-        a string representation of the sorted array. The encoding is the value
-        separated by ".".
+        return np.allclose(this_arr, other_arr)
+
+    @staticmethod
+    def _findCompatibleRows(subset_mat:np.array, superset_mat:np.array)->list:
+        """
+        Finds for each row in subset, the collection of rows in subset such the row in subset <= row in superset.
 
         Args:
-            arr (np.ndarray): _description_
+            subset_mat: np.ndarray (subset_num_row, num_col)
+            superset_mat: np.ndarray (superset_num_row, num_col)
 
-        Returns: EncodingResult
-            index_dct: dict: key is a string representation of the sorted array, value is a list of indexes
-            array_dct np.ndarray: The sorted array
-            
+        Returns:
+            List[np.ndarry]: list of the rows in subset <= row in superset
         """
-        index_dct: dict = {}
-        array_dct: dict = {}
-        encodings:list = []
-        for idx, arr in enumerate(self.collection):
-            encoding = Encoding(arr)
-            encoding_val = encoding.encoding_val
-            if not encoding_val in index_dct.keys():
-                index_dct[encoding_val] = []
-                array_dct[encoding_val] = []
-            index_dct[encoding_val].append(idx)
-            array_dct[encoding_val].append(encoding.sorted_arr)
-            encodings.append(encoding)
-        # Construct the sorted array
-        encoding_strs = list(index_dct.keys())
-        encoding_strs.sort()
-        lst = []
-        for encoding in encoding_strs:
-            lst.extend(array_dct[encoding])
-        sorted_mat = np.array(lst)
-        #
-        return EncodingResult(index_dct=index_dct, sorted_mat=sorted_mat, encodings=encodings)
-    
+        num_row_subset, _ = np.shape(subset_mat)
+        num_row_superset, _ = np.shape(superset_mat)
+        # Expand the matrices
+        xsubset_mat:np.ndarray = np.repeat(subset_mat, num_row_superset, axis=0)
+        xsuperset_mat:np.ndarray = np.concatenate([superset_mat for _ in range(num_row_subset)])
+        # Do the comparisons. Rows are the rows in superset; columns are rows in subset.
+        # We want the indices of rows in superset for each column (row in subset)
+        comparison_arr = np.all(xsubset_mat <= xsuperset_mat, axis=1)
+        index_arr = np.array(range(num_row_superset))  # All superset rows
+        # For each row n in subset (column in comparison_arr), select those rows in superset
+        # that satisfy the inequality.
+        compatibles = [index_arr[comparison_arr[n*num_row_superset:(n+1)*num_row_superset]] for n in range(num_row_subset)]
+        return compatibles
+     
     def constrainedPermutationIterator(self, max_num_perm:int=cn.MAX_NUM_PERM):
         """
         Iterates through all permutations of arrays in the ArrayCollection
@@ -131,27 +114,27 @@ class ArrayCollection(object):
         returns:
             np.array-int: A permutation of the arrays.
         """
-        iter_dct = {e: None for e in self.index_dct.keys()}  # Iterators for each partition
-        permutation_dct = {e: None for e in self.index_dct.keys()}  # Iterators for each partition
+        iter_dct = {e: None for e in self.encoding.unique_encodings}  # Iterators for each partition
+        permutation_dct = {e: None for e in self.encoding.unique_encodings}  # Iterators for each partition
         idx = 0  # Index of the partition processed in an iteration
-        partitions = list(self.index_dct.keys())  # Encodings for the partitions
-        partitions.sort() # Sort the partitions by the encoding representation
+        partitions = list(self.encoding.unique_encodings)  # Encodings for the partitions
         perm_count = 0  # Number of permutations returned
-        perm_upper_bound = np.prod([scipy.special.factorial(len(v)) for v in self.index_dct.values()])
+        perm_upper_bound = np.prod([scipy.special.factorial(len(v))
+                for v in self.encoding.encoding_dct.values()])
         # Limit the number of permutations
         perm_upper_bound = min(perm_upper_bound, max_num_perm)
         # Return the permutations
         while perm_count < perm_upper_bound:
-            encoding_str = str(partitions[idx])
+            cur_encoding = partitions[idx]
             # Try to get the next permutation for the current partition
-            if permutation_dct[encoding_str] is not None:
-                permutation_dct[encoding_str] = next(iter_dct[encoding_str], None)  # type: ignore
+            if permutation_dct[cur_encoding] is not None:
+                permutation_dct[cur_encoding] = next(iter_dct[cur_encoding], None)  # type: ignore
             # Handle the case of a missing or exhaustive iterator
-            if permutation_dct[encoding_str] is None:
+            if permutation_dct[cur_encoding] is None:
                 # Get a valid iterator and permutation for this partition
-                iter_dct[encoding_str] = itertools.permutations(self.index_dct[encoding_str])  # type: ignore
-                permutation_dct[encoding_str] = next(iter_dct[encoding_str])  # type: ignore
-                if idx < self.num_partition - 1:
+                iter_dct[cur_encoding] = itertools.permutations(self.encoding.encoding_dct[cur_encoding])  # type: ignore
+                permutation_dct[cur_encoding] = next(iter_dct[cur_encoding])  # type: ignore
+                if idx < self.encoding.num_partition - 1:
                     idx += 1  # Move to the next partition to get a valid iterator
                     continue
             # Have a valid iterator and permutations for all partitions
@@ -159,14 +142,14 @@ class ArrayCollection(object):
             idx = 0  # Reset the partition index
             permutation_idxs:list = []
             for encoding in partitions:
-                permutation_idxs.extend(permutation_dct[str(encoding)])  # type: ignore
+                permutation_idxs.extend(permutation_dct[encoding])  # type: ignore
             permutation_arr = np.array(permutation_idxs)
             perm_count += 1
             yield permutation_arr
     
     def subsetIterator(self, other):
         """
-        Iterates iterates over subsets of the other ArrayCollection that are compatible with the current ArrayCollection.
+        Iterates iterates over subsets of arrays in other that are compatible with the current ArrayCollection.
 
         Args:
             other: ArrayCollection
@@ -176,11 +159,8 @@ class ArrayCollection(object):
         """
         # Find the sets of compatible arrays
          # For each index, the list of indices in other that are compatible with the corresponding index in self.
-        collection_candidates = [ [] for _ in self.collection]
-        for self_idx, _ in enumerate(self.collection):
-            for other_idx in range(len(other.collection)):
-                if self.encodings[self_idx].isCompatibleSubset(other.encodings[other_idx]):
-                    collection_candidates[self_idx].append(other_idx)
+        collection_candidates = self._findCompatibleRows(self.encoding.encoding_mat,
+                other.encoding.encoding_mat)
         # Get the subsets
         iter = itertools.product(*collection_candidates)
         for subset in iter:

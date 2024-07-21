@@ -2,7 +2,6 @@ from sirn.array_collection import ArrayCollection # type: ignore
 from sirn.matrix import Matrix # type: ignore
 
 import numpy as np
-import scipy  # type: ignore
 import unittest
 
 
@@ -26,36 +25,8 @@ class TestArrayCollection(unittest.TestCase):
             return
         self.assertTrue(np.all(self.collection.collection == MAT))
         self.assertTrue(isinstance(self.collection, ArrayCollection))
-        self.assertGreater(self.collection.encodings[-1], self.collection.encodings[0])
-
-    def testClassifyArray(self):
-        if IGNORE_TEST:
-            return
-        sorted_mat = np.array([[0, 0, 1], [0, 0, 1], [0, 1, 1]])
-        self.assertTrue(np.allclose(self.collection.sorted_mat, sorted_mat))
-
-    def testEncode2(self):
-        # Test random sequences
-        if IGNORE_TEST:
-            return
-        def test(num_iteration=10, size=10, prob0=1/3):
-            # Makes a trinary matrix and checks the encodings
-            for _ in range(num_iteration):
-                matrix = Matrix.makeTrinaryMatrix(size, size, prob0=prob0)
-                arr = matrix[1,:]
-                counts = []
-                counts.append(np.sum(arr < 0))
-                counts.append(np.sum(arr == 0))
-                counts.append(np.sum(arr > 0))
-                collection = ArrayCollection(matrix)
-                new_encoding = 0
-                for idx in range(3):
-                    new_encoding += counts[idx]*1000**idx
-                self.assertGreaterEqual(size, collection.num_partition)
-        #
-        test()
-        test(prob0=2/3)
-        test(prob0=1/5)
+        self.assertTrue(np.all(self.collection.encoding.encoding_mat[0, :]  \
+                               == self.collection.encoding.encoding_mat[1, :]))
 
     def testConstrainedPermutationIteratorSimple(self):
         if IGNORE_TEST:
@@ -72,7 +43,6 @@ class TestArrayCollection(unittest.TestCase):
             for _ in range(num_iteration):
                 mat = Matrix.makeTrinaryMatrix(size, size)
                 collection = ArrayCollection(mat)
-                #print(collection.num_partition/size)
                 permutations = list(collection.constrainedPermutationIterator(max_num_perm=max_num_perm))
                 # Check that each permutation is unique
                 for idx, permutation in enumerate(permutations):
@@ -84,7 +54,7 @@ class TestArrayCollection(unittest.TestCase):
         test(size=15)
         test(size=20)
 
-    def testSubsetIterator1(self):
+    def testSubsetIteratorTrue(self):
         if IGNORE_TEST:
             return
         mat = np.array([[1, 0], [0, 1]])
@@ -93,14 +63,31 @@ class TestArrayCollection(unittest.TestCase):
         self.assertTrue(len(subsets[0]) == len(mat))
         self.assertTrue(len(subsets) == len(MAT)*(len(MAT)-1))
 
-    def testSubsetIterator2(self):
+    def testSubsetIteratorFalse(self):
         if IGNORE_TEST:
             return
+        self.collection = ArrayCollection(MAT)
         mat = np.array([[2, 0], [0, 1]])
         collection = ArrayCollection(mat)
         subsets = list(collection.subsetIterator(self.collection))
-        import pdb; pdb.set_trace()
         self.assertTrue(len(subsets) == 0)
+
+    def testSubsetIteratorComplicated(self):
+        if IGNORE_TEST:
+            return
+        def test(size=3, num_iteration=5):
+            for _ in range(num_iteration):
+                mat = Matrix.makeTrinaryMatrix(size, size)
+                submat = mat[1:, 1:]
+                collection = ArrayCollection(mat)
+                subcollection = ArrayCollection(submat)
+                subsets = list(subcollection.subsetIterator(collection))
+                expected_arr = np.array(range(1, size))
+                self.assertTrue(np.any([np.allclose(s, expected_arr) for s in subsets]))
+        #
+        test(size=5)
+        test(size=15)
+        test(size=20)
 
 
 if __name__ == '__main__':
