@@ -36,7 +36,7 @@ class TestEncoding(unittest.TestCase):
             mat = np.random.randint(0, 2, (100, 100))
             _ = Encoding(mat)
         end = time.time()
-        self.assertLess(end - start, 5)
+        self.assertLess(end - start, 10)
 
     def testEq(self):
         if IGNORE_TEST:

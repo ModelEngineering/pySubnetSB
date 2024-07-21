@@ -1,5 +1,7 @@
 DSIRN
-1. Change the OIE. Use a matrix of individually sorted arrays. Very detailed. Fast comparisons. Easy to construct.
+1. Encoding includes pairs of arrays
+2. Use this encoding in iterating over subsets
+3. Network.isSubset
 Analysis
   1. Plot indeterminant vs. max_num_perm; do for naive algorith as well
   2. Provide statistics on structurally identicaly by type and dataset

@@ -1,4 +1,4 @@
-'''Describes a set of arrays and their partition constrained permutations.'''
+'''Provides iterators for a collection of arrays.'''
 
 """
 Arrays are classified based on the number of values that are less than 0, equal to 0, and greater than 0.
@@ -18,7 +18,6 @@ import scipy  # type: ignore
 import scipy.special  # type: ignore
 
 SEPARATOR = 1000 # Separates the counts in a single number
-VALUE_SEPARATOR = ','  # Separates the values in a string encoding
 
 EncodingResult = collections.namedtuple('EncodingResult', ['index_dct', 'sorted_mat', 'encodings'])
     #  index_dct: dict: key is encoding_str, value is a list of indexes
