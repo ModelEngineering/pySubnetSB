@@ -13,7 +13,7 @@ MAT = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 #############################
 # Tests
 #############################
-class TestMatrixClassifier(unittest.TestCase):
+class TestMatrix(unittest.TestCase):
 
     def setUp(self):
         self.array = copy.copy(MAT)

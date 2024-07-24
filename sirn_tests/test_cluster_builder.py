@@ -11,7 +11,7 @@ import numpy as np # type: ignore
 import unittest
 
 
-IGNORE_TEST = True
+IGNORE_TEST = False
 IS_PLOT = False
 COLLECTION_SIZE = 10
 if not IGNORE_TEST:
@@ -127,9 +127,9 @@ class TestClusterBuilder(unittest.TestCase):
         test(is_structural_identity_strong=True)
         test(num_network=10, array_size=10)
 
-    def testMaxLogPermutations(self):
-        #if IGNORE_TEST:
-        #    return
+    def testExceedPermutationCount(self):
+        if IGNORE_TEST:
+            return
         # Construct a collection of two sets of permutably identical matrices
         def test(max_num_perm=100, num_collection=2, num_network=5, num_row=10, num_column=10,
                  structural_identity_type=cn.STRUCTURAL_IDENTITY_TYPE_STRONG,
@@ -157,6 +157,7 @@ class TestClusterBuilder(unittest.TestCase):
                 if count > 0:
                     self.assertTrue(True)
                     return
+            import pdb; pdb.set_trace()
             self.assertTrue(False)
             
         #

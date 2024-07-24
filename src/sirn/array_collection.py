@@ -9,7 +9,7 @@ Terminology:
 - Encoding: A single number that represents the array, a homomorphism (and so is not unique).
 """
 import sirn.constants as cn # type: ignore
-from src.sirn.encoding import Encoding  # type: ignore
+from src.sirn.encoding import Encoding, INDEX_SEPARATOR  # type: ignore
 
 import collections
 import itertools
@@ -35,6 +35,7 @@ class ArrayCollection(object):
                 elements in the i-th position.
         """
         self.collection = collection
+        self.num_row, self.num_column = np.shape(collection)
         self.encoding = Encoding(collection)
 
     def __repr__(self)->str:
@@ -145,7 +146,50 @@ class ArrayCollection(object):
             permutation_arr = np.array(permutation_idxs)
             perm_count += 1
             yield permutation_arr
-    
+
+    def _makePairwiseCompatibilityMatrix(self, other)->np.ndarray:
+        """
+        Constructs a matrix that indicates which arrays in other are compatible with the self.collection
+        in terms of pairwise values in adjacent rows.
+        The result compatible_mat[i, j, k] is True if the count of criteria pair for row pair i, i+1 in self.collection
+        have counts that are no larger than the counts of the row pair j, k in other.collection.
+
+        Args:
+            other: ArrayCollection that is being evaluated as a superset of self.collection
+
+        Returns:
+            np.ndarray: 3 dimensional array
+               dim 1: index of the current ArrayCollection in self
+               dim 2: previously selected index of other
+               dim 3: candidate for next index of other
+            values: bool
+        """
+        # Initialize
+        compat_mat = np.repeat(False, (self.num_row-1)*other.num_row*(other.num_row-1))
+        compat_mat = compat_mat.reshape(self.num_row-1, other.num_row, other.num_row-1)
+        # Construct the comparison matrices
+        missing_criteria = set(self.encoding.adjacent_pair_encoding_df.columns)  \
+            - set(self.encoding.all_pair_encoding_df.columns)
+        if len(missing_criteria) > 0:
+            # other is not compatible since it lacks a required sequence of values
+            return compat_mat
+        # Construct matrices
+        reduced_all_pair_df = self.encoding.all_pair_encoding_df[self.encoding.adjacent_pair_encoding_df.columns].copy()
+        all_pair_index_arr = np.array(reduced_all_pair_df.index)
+        adjacent_pair_mat = self.encoding.adjacent_pair_encoding_df.values
+        all_pair_mat = reduced_all_pair_df.values
+        # Find the sets of compatible arrays
+        for adjacent_idx in range(self.num_row-1):
+            self_arr = adjacent_pair_mat[adjacent_idx, :]
+            for all_idx in range(len(all_pair_index_arr)):
+                other_arr = all_pair_mat[all_idx, :]
+                # Check if the adjacent pair is compatible with the all pair
+                if np.all(self_arr <= other_arr):
+                    i, j = all_pair_index_arr[all_idx]
+                    compat_mat[adjacent_idx, i, j] = True
+        #
+        return compat_mat
+
     def subsetIterator(self, other):
         """
         Iterates iterates over subsets of arrays in other that are compatible with the current ArrayCollection.
@@ -156,6 +200,7 @@ class ArrayCollection(object):
         Yields:
             np.ndarray: indices of other that are compatible with the current ArrayCollection.
         """
+        pairwise_compat_mat = self._makePairwiseCompatibilityMatrix(other)
         # Find the sets of compatible arrays
          # For each index, the list of indices in other that are compatible with the corresponding index in self.
         collection_candidates = self._findCompatibleRows(self.encoding.encoding_mat,
@@ -163,6 +208,15 @@ class ArrayCollection(object):
         # Get the subsets
         iter = itertools.product(*collection_candidates)
         for subset in iter:
+            # Check that subset is a permutation
+            if len(set(subset)) < len(subset):
+                continue
+            # Check for pairwise comptability
+            is_pariwise_compatible = True
+            for ipos, ival in enumerate(subset):
+                if not pairwise_compat_mat(ipos, ival, subset[ipos+1]):
+                    is_pariwise_compatible = False
+                    break
             # Use this array if element of other is present at most once
-            if len(set(subset)) == len(subset):
+            if is_pariwise_compatible:
                 yield np.array(subset)

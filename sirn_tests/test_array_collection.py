@@ -5,7 +5,7 @@ import numpy as np
 import unittest
 
 
-IGNORE_TEST = False
+IGNORE_TEST = True
 IS_PLOT = False
 MAT = np.array([[1, 0, 0], [0, 1, 0], [0, 1, 1]])
 
@@ -16,8 +16,6 @@ MAT = np.array([[1, 0, 0], [0, 1, 0], [0, 1, 1]])
 class TestArrayCollection(unittest.TestCase):
 
     def setUp(self):
-        if IGNORE_TEST:
-            return
         self.collection = ArrayCollection(MAT)
 
     def testConstructor(self):
@@ -88,6 +86,14 @@ class TestArrayCollection(unittest.TestCase):
         test(size=5)
         test(size=15)
         test(size=20)
+
+    def testMakePairwiseCompatibilityMatrix(self):
+        #if IGNORE_TEST:
+        #    return
+        mat = np.array([[1, 0], [0, 1]])
+        collection = ArrayCollection(mat)
+        compat_mat = collection._makePairwiseCompatibilityMatrix(self.collection)
+        import pdb; pdb.set_trace()
 
 
 if __name__ == '__main__':
