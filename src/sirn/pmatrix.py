@@ -220,8 +220,8 @@ class PMatrix(Matrix):
             return PermutablyIdenticalResult(False)
         # The matrices have the same shape and partitions
         #  Order the other PMatrix to align the partitions of the two matrices
-        other_row_perm =  list(other.row_collection.constrainedPermutationIterator())[0]
         other_column_perm = list(other.column_collection.constrainedPermutationIterator())[0]
+        other_row_perm =  list(other.row_collection.constrainedPermutationIterator())[0]
         other_array = self.permuteArray(other.array, other_row_perm, other_column_perm)
         # Search all partition constrained permutations of this matrix to match the other matrix
         row_itr = self.row_collection.constrainedPermutationIterator()
@@ -243,7 +243,6 @@ class PMatrix(Matrix):
                     break
                 num_perm += 1
                 this_array = self.permuteArray(self.array, row_perm, column_perm)
-                #if np.all(this_array == other_array):
                 if np.allclose(this_array,other_array):
                     this_row_perms.append(row_perm)
                     this_column_perms.append(column_perm)
@@ -252,6 +251,7 @@ class PMatrix(Matrix):
         #
         is_permutably_identical = len(this_row_perms) > 0
         permutably_identical_result = PermutablyIdenticalResult(is_permutably_identical,
+                            is_compatible=True,
                             this_row_perms=this_row_perms, this_column_perms=this_column_perms,
                             other_row_perm=other_row_perm, other_column_perm=other_column_perm,
                             is_excessive_perm=is_excessive_perm, num_perm=num_perm)

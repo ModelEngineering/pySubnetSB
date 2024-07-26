@@ -4,8 +4,7 @@ from sirn.matrix import Matrix # type: ignore
 import numpy as np
 import unittest
 
-
-IGNORE_TEST = True
+IGNORE_TEST = False
 IS_PLOT = False
 MAT = np.array([[1, 0, 0], [0, 1, 0], [0, 1, 1]])
 
@@ -21,10 +20,10 @@ class TestArrayCollection(unittest.TestCase):
     def testConstructor(self):
         if IGNORE_TEST:
             return
-        self.assertTrue(np.all(self.collection.collection == MAT))
+        self.assertTrue(np.all(self.collection.array== MAT))
         self.assertTrue(isinstance(self.collection, ArrayCollection))
-        self.assertTrue(np.all(self.collection.encoding.encoding_mat[0, :]  \
-                               == self.collection.encoding.encoding_mat[1, :]))
+        self.assertTrue(np.all(self.collection.encoding.encoding_nm.matrix[0, :]  \
+                               == self.collection.encoding.encoding_nm.matrix[1, :]))
 
     def testConstrainedPermutationIteratorSimple(self):
         if IGNORE_TEST:
@@ -55,11 +54,11 @@ class TestArrayCollection(unittest.TestCase):
     def testSubsetIteratorTrue(self):
         if IGNORE_TEST:
             return
-        mat = np.array([[1, 0], [0, 1]])
+        mat = np.array([[1, 1], [0, 1]])
         collection = ArrayCollection(mat)
         subsets = list(collection.subsetIterator(self.collection))
-        self.assertTrue(len(subsets[0]) == len(mat))
-        self.assertTrue(len(subsets) == len(MAT)*(len(MAT)-1))
+        self.assertTrue(len(subsets) == 1)   # One subset is compatible
+        self.assertTrue(len(subsets[0]) == mat.shape[0])  # The subset has the same number of arrays as mat
 
     def testSubsetIteratorFalse(self):
         if IGNORE_TEST:
@@ -71,8 +70,8 @@ class TestArrayCollection(unittest.TestCase):
         self.assertTrue(len(subsets) == 0)
 
     def testSubsetIteratorComplicated(self):
-        if IGNORE_TEST:
-            return
+        #if IGNORE_TEST:
+        #    return
         def test(size=3, num_iteration=5):
             for _ in range(num_iteration):
                 mat = Matrix.makeTrinaryMatrix(size, size)
@@ -87,14 +86,5 @@ class TestArrayCollection(unittest.TestCase):
         test(size=15)
         test(size=20)
 
-    def testMakePairwiseCompatibilityMatrix(self):
-        #if IGNORE_TEST:
-        #    return
-        mat = np.array([[1, 0], [0, 1]])
-        collection = ArrayCollection(mat)
-        compat_mat = collection._makePairwiseCompatibilityMatrix(self.collection)
-        import pdb; pdb.set_trace()
-
-
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(failfast=True)

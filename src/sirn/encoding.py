@@ -14,6 +14,7 @@ To do
 2. Add isSubsetCompatible method that uses row pairs.
 3. Integrate into ArrayCollection iterators.
 """
+from sirn.named_matrix import NamedMatrix  # type: ignore
 
 import collections
 import itertools
@@ -22,7 +23,7 @@ import numpy as np
 from typing import List, Tuple
 
 VALUE_SEPARATOR = ','  # Separates the values in a string encoding
-INDEX_SEPARATOR = '-'  # Separates the indexes in a string encoding
+INDEX_SEPARATOR = '_'  # Separates the indexes in a string encoding
 BOUNDARY_VALUES = [-1, 0, 1]
  # Values that are counted are in the ranges [-inf, -1), [-1, -1], (-1, 0), [0, 0], (0, 1), [1, 1], [1, inf)]
 # Index of the predicate is its encoding
@@ -48,10 +49,6 @@ EncodingResult = collections.namedtuple('EncodingResult', ['index_dct', 'sorted_
     #  index_dct: dict: key is encoding_str, value is a list of indexes
     #  sorted_mat: np.ndarray: The columns as sorted array
     #  encodings: list-encoding: indexed by position in the collection, value is the encoding for the indexed array
-NamedMatrix = collections.namedtuple('NamedMatrix', ['matrix', 'row_names', 'column_names'])
-    #  array: np.ndarray: matrix of values
-    #  row_names: list: names of the rows, typically a tuple of int.
-    #  column_names: list: names of the columns, typically an int (CRITERIA_PAIRED_VALUES)
 
 
 class Encoding(object):
@@ -67,26 +64,25 @@ class Encoding(object):
         self.num_row, self.num_column = np.shape(collection)
         #
         # Outputs
-        #  encoding_mat: matrix of encodings (column) for each array in the collection (row).
-        #  encodings: list of encodings for each array in the collection.
-        self.encoding_mat, self.encodings = self._makeEncodingMat()
+        #  encoding_nm: matrix of encodings (column) for each array in the collection (row).
+        #  encodings: list of encodings index by position of array in the collection.
+        self.encoding_nm, self.encodings = self._makeEncoding()
+        # Sorted encodings of criteria for each array
+        self.sorted_encoding_arr = np.sort(np.array(self.encodings))
         # Sorted list of unique encodings
         self.unique_encodings = list(set(self.encodings))
         self.unique_encodings.sort()
-        # Indices of arrays with the same encoding
-        self.index_dct = {self.encodings[n]: n for n in range(len(self.encodings))}
-        # Construct the dictionary of encodings
-        self.encoding_dct:dict = {k: [] for k in set(self.encodings)}
-        # encoding_dct: key is encoding, value is a list of indexes with that encoding
-        {self.encoding_dct[self.encodings[i]].append(i) for i in range(len(self.encodings))}
+        # Construct the dictionary of array indices with the same enoding.
+        self.encoding_dct:dict = {k: [] for k in self.unique_encodings}
+        {self.encoding_dct[e].append(i) for i, e in enumerate(self.encodings)}
         #
         self.num_partition = len(self.encoding_dct)
         # Encodings for pairs of arrays
-        self.adjacent_pair_encoding_df = self._makeAdjacentPairEncodingDataFrame()
-        self.all_pair_encoding_df = self._makeAllPairEncodingDataFrame()
+        self.adjacent_pair_encoding_nm = self._makeAdjacentPairEncodingNamedMatrix()
+        self.all_pair_encoding_nm = self._makeAllPairEncodingNamedMatrix()
 
     def __repr__(self)->str:
-        return str(self.encoding_mat)
+        return self.encoding_nm.__repr__()
     
     def _encodeCollection(self)->np.ndarray:
         """
@@ -104,7 +100,7 @@ class Encoding(object):
             result += matrix   # This works because criteria are mutually exclusive
         return result - 1  # Eliminate offset by 1
     
-    def _makeEncodingMat(self)->Tuple[np.ndarray, List[int]]:
+    def _DeprecatedmakeEncodingMat(self)->Tuple[np.ndarray, List[int]]:
         """
         Constructs the encoding matrix and the encodings.
         encoding_mat: matrix of the count of criteria satisfied by values for the array;
@@ -127,36 +123,32 @@ class Encoding(object):
         encoding_mat = np.transpose(np.array(matrix_rows))
         return encoding_mat, encodings
     
-    def _makePairEncodingDataFrame(self, pairs: List[Tuple[int, int]])->pd.DataFrame:
-        """Creates a dataframe that describes the encoding of pairs of arrays.
-
-        Args:
-            pairs
+    def _makeEncoding(self)->Tuple[NamedMatrix, list]:
+        """
+        Constructs a matrix that is a table of counts of criteria for each row.
 
         Returns:
-            pd.DataFrame:
-                index: pairs of indicies in the collection
-                columns: string "x-y", where x, y are indices of criteria pair
-                values: count of criteria pairs that are satisfied for the pair of arrays for that index
+            NamedMatrix
         """
         fundamental_mat = self._encodeCollection()
-        _, num_col = np.shape(fundamental_mat)
-        dct = {p: ENCODING_VAL*fundamental_mat[p[0], :] + fundamental_mat[p[1], :] for p in pairs}
-        index_arr = np.array([np.repeat(p[0]*ENCODING_VAL+p[1], num_col) for p in pairs]).flatten()
-        criteria_arr = np.array(list(dct.values())).flatten()
-        criteria_arr = np.array([str(v//ENCODING_VAL - 1) + INDEX_SEPARATOR + str(v%ENCODING_VAL - 1) for v in criteria_arr])
-        count_arr = np.repeat(1, len(criteria_arr))
-        df = pd.DataFrame([criteria_arr, index_arr, count_arr])
-        df = df.transpose()
-        df.columns = ['criteria', 'index', 'count']
-        table_df = df.pivot_table(columns='criteria', index='index', values='count', aggfunc='sum')
-        table_df[table_df != table_df] = 0   # Set nans to 0
-        indices = [(v//ENCODING_VAL, v%ENCODING_VAL) for v in table_df.index.values]
-        table_df.index = indices
-        table_df.sort_index(inplace=True)
-        return table_df
+        encoding_value_arr = np.repeat(CRITERIA_VALUES, self.num_row)
+        encoding_value_mat = np.reshape(encoding_value_arr, (NUM_CRITERIA, self.num_row)).T
+        adj_fundamental_mat = np.concatenate([encoding_value_mat, fundamental_mat], axis=1)
+        # Calculate the criteria counts for each array
+        rows = []
+        for row in adj_fundamental_mat:
+            _, counts = np.unique(row, return_counts=True)
+            rows.append(counts)
+        table_mat = np.array(rows)
+        table_mat -= 1  # Account for adding CRITERIA_VALUES
+        named_matrix = NamedMatrix(table_mat, range(self.num_row), CRITERIA_VALUES,
+                                   column_labels=CRITERIA_NAMES)
+        # Encodings for each row
+        encoding_powers = np.array([ENCODING_VAL**i for i in range(NUM_CRITERIA)])
+        encodings = list(table_mat.dot(encoding_powers))
+        return named_matrix, encodings
     
-    def _makePairEncodingMatrix(self, pairs: List[Tuple[int, int]])->NamedMatrix:
+    def _makePairEncodingNamedMatrix(self, pairs: List[Tuple[int, int]])->NamedMatrix:
         """Creates a matrix that describes the encoding of pairs of arrays in self.collection.
            Rows correspond to the pairs provided. Columns correspond to the encoding of the pairs
            in CRITERIA_PAIRED_VALUES.
@@ -179,21 +171,10 @@ class Encoding(object):
             augmenteds.append(counts)
         mat = np.array(augmenteds)
         mat -= 1  # Account for adding CRITERIA_PAIRED_VALUES
-        named_matrix = NamedMatrix(matrix=mat, row_names=pairs, column_names=CRITERIA_PAIRED_VALUES)
+        named_matrix = NamedMatrix(matrix=mat, row_ids=pairs, column_ids=CRITERIA_PAIRED_VALUES)
         return named_matrix
     
-    def _makeAdjacentPairEncodingDataFrame(self)->pd.DataFrame:
-        """
-        Returns:
-            pd.DataFrame
-                index: pairs of indicies in the collection
-                columns: string "x-y", where x, y are indices of criteria pair
-                values: count of criteria pairs that are satisfied for the pair of arrays for that index
-        """
-        pairs = [(i, i+1) for i in range(self.num_row-1)]
-        return self._makePairEncodingDataFrame(pairs)
-    
-    def _makeAdjacentPairEncodingMatrix(self)->NamedMatrix:
+    def _makeAdjacentPairEncodingNamedMatrix(self)->NamedMatrix:
         """
         Returns:
             NamedMatrix
@@ -201,22 +182,9 @@ class Encoding(object):
                 columns: counts for CRITERIA_PAIRED_VALUES
         """
         pairs = [(i, i+1) for i in range(self.num_row-1)]
-        return self._makePairEncodingMatrix(pairs)
+        return self._makePairEncodingNamedMatrix(pairs)
     
-    def _makeAllPairEncodingDataFrame(self)->pd.DataFrame:
-        """
-        Constructs the encoding dictionary for all pairs of arrays. Results are sorted.
-
-        Returns:
-            dict
-               key: tupe of indices of arrays in collection
-               value: array of pair encodings
-        """
-        iter = itertools.permutations(range(self.num_row), 2)
-        pairs = list(iter)
-        return self._makePairEncodingDataFrame(pairs)   # type: ignore
-    
-    def _makeAllPairEncodingMatrix(self)->NamedMatrix:
+    def _makeAllPairEncodingNamedMatrix(self)->NamedMatrix:
         """
         Constructs the encoding dictionary for all pairs of arrays. Results are sorted.
 
@@ -225,7 +193,7 @@ class Encoding(object):
         """
         iter = itertools.permutations(range(self.num_row), 2)
         pairs = list(iter)
-        return self._makePairEncodingMatrix(pairs)   # type: ignore
+        return self._makePairEncodingNamedMatrix(pairs)   # type: ignore
     
     def __eq__(self, other)->bool:
         """
@@ -237,8 +205,8 @@ class Encoding(object):
         Returns:
             bool: _description_
         """
-        if np.allclose(self.encoding_mat.shape, other.encoding_mat.shape):
-            return np.allclose(self.encoding_mat, other.encoding_mat)
+        if len(self.sorted_encoding_arr) == len(other.sorted_encoding_arr):
+            return np.allclose(self.sorted_encoding_arr, other.sorted_encoding_arr)
         return False
 
     def isSubsetCompatible(self, other)->bool:

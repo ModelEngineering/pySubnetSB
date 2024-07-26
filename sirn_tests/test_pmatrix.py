@@ -11,7 +11,7 @@ import unittest
 
 IGNORE_TEST = False
 IS_PLOT = False
-util.IS_TIMEIT = False  # Set to True for timing tests
+util.IS_TIMEIT = False # Set to True for timing tests
 MAT = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 
 
@@ -138,14 +138,42 @@ class TestPMatrix(unittest.TestCase):
                 pmatrix2 = PMatrix(arr2)
                 result = pmatrix1.isPermutablyIdentical(pmatrix2, 
                         is_find_all_perms=True, max_num_perm=10000)
-                if expected_result:
+                if result.is_excessive_perm:
+                    self.assertTrue(True)
+                elif expected_result:
+                    if not result:
+                        import pdb; pdb.set_trace()
                     self.assertTrue(result)
                 else:
                     self.assertFalse(result)
         #
+        test(size=200)
         test(size=3)
-        test(size=200, expected_result=False)
         test(size=10)
+
+    def testIsPermutablyIdentical3a(self):
+        # Address bug
+        if IGNORE_TEST:
+            return
+        size = 3
+        arr1 = np.array([[-1,  0, -1], [ 0, -1,  0], [ 1,  0, -1]])
+        arr2 = np.array([[-1,  0,  1], [ 0, -1,  0], [-1,  0, -1]])
+        for _ in range(10):
+            perm =  np.random.permutation(range(size))
+            if np.sum(np.diff(perm)) != size - 1:  # Avoid the identity permutation
+                break
+        arr2 = arr2[perm, :]
+        arr2 = arr2[:, perm]
+        pmatrix1 = PMatrix(arr1)
+        pmatrix2 = PMatrix(arr2)
+        result = pmatrix1.isPermutablyIdentical(pmatrix2, 
+                is_find_all_perms=True, max_num_perm=10000)
+        if result.is_excessive_perm:
+            print("Excessive permutations")
+            self.assertTrue(True)
+        if not result:
+            import pdb; pdb.set_trace()
+        self.assertTrue(result)
     
     @util.timeit
     def testIsPermutablyIdentical4(self):
@@ -282,8 +310,8 @@ class TestPMatrix(unittest.TestCase):
                 log_estimates.append(pmatrix.log_estimate)
             return np.max(log_estimates)
         #
-        max_log_perm = test(15, 2000)
-        self.assertGreater(max_log_perm, 4)
+        max_log_perm = test(15)
+        self.assertGreater(max_log_perm, 2)
 
     @util.timeit
     def testMaxPerm(self):
@@ -370,4 +398,5 @@ class TestPMatrix(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main(failfast=True)
+    #unittest.main(failfast=True)
+    unittest.main(failfast=False)

@@ -6,7 +6,7 @@ import numpy as np
 from typing import Optional, Tuple
 
 
-SubsetResult = collections.namedtuple('SubsetResult', ['matrix', 'row_indices', 'column_indices'])
+SubsetResult = collections.namedtuple('SubsetResult', ['matrix', 'row_idxs', 'column_idxs'])
 
 
 class NamedMatrix(object):
@@ -23,13 +23,14 @@ class NamedMatrix(object):
             column_labels (Optional[np.ndarray[str]], optional): Human readable labels for columns. Defaults to None.
         """
         self.matrix = matrix
-        self.num_row, num_column = self.matrix.shape
+        self.shape = self.matrix.shape
+        self.num_row, self.num_column = self.matrix.shape
         self.row_ids = np.array(row_ids)
-        if len(row_ids) != self.num_row:
-            raise ValueError("Number of row names must be equal to the number of rows in the matrix")
+        if (row_ids is not None) and (len(row_ids) != self.num_row):
+            raise ValueError("Number of row ids must be equal to the number of rows in the matrix")
         self.column_ids = np.array(column_ids)
-        if len(column_ids) != num_column:
-            raise ValueError("Number of column names must be equal to the number of columns in the matrix")
+        if (column_ids is not None) and (len(column_ids) != self.num_column):
+            raise ValueError("Number of column ids must be equal to the number of columns in the matrix")
         if row_labels is None:
             row_labels = np.array([str(n) for n in row_ids])  # type: ignore
         if column_labels is None:
@@ -47,21 +48,21 @@ class NamedMatrix(object):
         def findIndices(matrix: np.ndarray)->np.ndarray[int]:
             # Finds inidices of non-zero rows
             indices = []   # Indices to delete
-            for idx, array in enumerate(self.matrix):
+            for idx, array in enumerate(matrix):
                 if not np.allclose(array, 0):
                     indices.append(idx)
             return np.array(indices)
         #
-        row_indices = findIndices(self.matrix)
-        column_indices = findIndices(self.matrix.T)
+        row_idxs = findIndices(self.matrix)
+        column_idxs = findIndices(self.matrix.T)
         matrix = self.matrix.copy()
-        matrix = matrix[row_indices, :]
-        transpose_matrix = matrix.T[column_indices, :]
-        row_ids = self.row_ids[row_indices]
-        column_ids = self.column_ids[column_indices]
-        row_labels = self.row_labels[row_indices]
-        column_labels = self.column_labels[column_indices]
-        return NamedMatrix(transpose_matrix.T, row_ids, column_ids,
+        matrix = matrix[row_idxs, :]
+        matrix = matrix[:, column_idxs]
+        row_ids = self.row_ids[row_idxs]
+        column_ids = self.column_ids[column_idxs]
+        row_labels = self.row_labels[row_idxs]
+        column_labels = self.column_labels[column_idxs]
+        return NamedMatrix(matrix, row_ids, column_ids,
                            row_labels=row_labels, column_labels=column_labels)
     
     def template(self, matrix:Optional[np.ndarray]=None)->'NamedMatrix':
@@ -92,7 +93,7 @@ class NamedMatrix(object):
         reduced_named_matrix = self._deleteZeroRowsColumns()
         df = pd.DataFrame(reduced_named_matrix.matrix, index=reduced_named_matrix.row_labels,
                           columns=reduced_named_matrix.column_labels)
-        return df.__repr__()
+        return str(df.__repr__())
     
     def __eq__(self, other):
         """
@@ -135,12 +136,17 @@ class NamedMatrix(object):
                 raise ValueError("Not all names were found in the other names!")
             return np.array(indices)
         #
-        row_indices = findIndices(np.array(row_ids), self.row_ids)
-        column_indices = findIndices(np.array(column_ids), self.column_ids)
-        new_matrix = self.matrix[row_indices, :].copy()
-        new_matrix = new_matrix[:, column_indices]
-        return SubsetResult(matrix=new_matrix[:, column_indices],
-                            row_indices=row_indices, column_indices=column_indices)
+        if row_ids is None:
+            row_idxs = np.array(range(self.num_row))
+        else:
+            row_idxs = findIndices(np.array(row_ids), self.row_ids)
+        if column_ids is None:
+            column_idxs = np.array(range(self.num_column))
+        else:
+            column_idxs = findIndices(np.array(column_ids), self.column_ids)  # type: ignore
+        new_matrix = self.matrix[row_idxs, :].copy()
+        new_matrix = new_matrix[:, column_idxs]
+        return SubsetResult(matrix=new_matrix, row_idxs=row_idxs, column_idxs=column_idxs)
     
     def getSubNamedMatrix(self, row_ids:Optional[list]=None, column_ids:Optional[list]=None)->'NamedMatrix':
         """
@@ -153,10 +159,15 @@ class NamedMatrix(object):
         Returns:
             SubsetResult (readonly values)
         """
+        def get(array, idxs):
+            if idxs is None:
+                return array
+            return array[idxs]
+        #
         subset_result = self.getSubMatrix(row_ids=row_ids, column_ids=column_ids)
         mat = subset_result.matrix.copy()
-        row_ids = self.row_ids[subset_result.row_indices]
-        column_ids = self.column_ids[subset_result.column_indices]
-        row_labels = self.row_labels[subset_result.row_indices]
-        column_labels = self.column_labels[subset_result.column_indices]
+        row_ids = get(self.row_ids, subset_result.row_idxs)
+        column_ids = get(self.column_ids, subset_result.column_idxs)
+        row_labels = get(self.row_labels, subset_result.row_idxs)
+        column_labels = get(self.column_labels, subset_result.column_idxs)
         return NamedMatrix(mat, row_ids, column_ids, row_labels=row_labels, column_labels=column_labels)  # type: ignore
