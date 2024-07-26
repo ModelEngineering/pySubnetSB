@@ -140,12 +140,8 @@ class TestPMatrix(unittest.TestCase):
                         is_find_all_perms=True, max_num_perm=10000)
                 if result.is_excessive_perm:
                     self.assertTrue(True)
-                elif expected_result:
-                    if not result:
-                        import pdb; pdb.set_trace()
-                    self.assertTrue(result)
                 else:
-                    self.assertFalse(result)
+                    self.assertTrue(result)
         #
         test(size=200)
         test(size=3)
@@ -171,8 +167,6 @@ class TestPMatrix(unittest.TestCase):
         if result.is_excessive_perm:
             print("Excessive permutations")
             self.assertTrue(True)
-        if not result:
-            import pdb; pdb.set_trace()
         self.assertTrue(result)
     
     @util.timeit

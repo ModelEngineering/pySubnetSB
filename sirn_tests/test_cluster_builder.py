@@ -157,7 +157,6 @@ class TestClusterBuilder(unittest.TestCase):
                 if count > 0:
                     self.assertTrue(True)
                     return
-            import pdb; pdb.set_trace()
             self.assertTrue(False)
             
         #
