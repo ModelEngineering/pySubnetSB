@@ -29,6 +29,7 @@ class TestNamedMatrix(unittest.TestCase):
         self.assertTrue(np.all(named_matrix.matrix == MAT2))
         self.assertTrue("(1, 0)" in str(named_matrix))
         self.assertFalse("(0, 3)" in str(named_matrix))
+        self.assertTrue("e" in str(named_matrix))
 
     def testEq(self):
         if IGNORE_TEST:
@@ -69,11 +70,12 @@ class TestNamedMatrix(unittest.TestCase):
     def testGetSubMatrix(self):
         if IGNORE_TEST:
             return
+        row_ids = np.array([(0, 0), (0, 1)])
+        subset_result = self.named_matrix.getSubMatrix(row_ids=row_ids, column_ids=['d', 'e'])
+        self.assertTrue(np.all(subset_result.matrix == row_ids))
+        #
         subset_result = self.named_matrix.getSubMatrix(row_ids=[(1, 0), (0, 1)], column_ids=['d', 'e'])
         self.assertTrue(np.all(subset_result.matrix == np.array([[1, 0], [0, 1]])))
-        #
-        subset_result = self.named_matrix.getSubMatrix(row_ids=[(0, 0), (0, 1)], column_ids=['d', 'e'])
-        self.assertTrue(np.all(subset_result.matrix == np.array([[0, 1], [0, 0]])))
         #
         with self.assertRaises(ValueError):
             subset_result = self.named_matrix.getSubMatrix(row_ids=[(1, 1), (0, 1)], column_ids=['d', 'e', 'f'])

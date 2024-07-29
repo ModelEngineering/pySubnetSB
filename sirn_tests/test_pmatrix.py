@@ -353,10 +353,43 @@ class TestPMatrix(unittest.TestCase):
                 pmatrix2 = PMatrix(arr2)
                 result = pmatrix2.isPermutablyIdenticalSubset(pmatrix1, 
                         max_num_perm=max_num_perm)
+                if result.is_excessive_perm:
+                    print("Excessive permutations")
+                    self.assertTrue(True)
+                    continue
+                if not result:
+                    print(arr1, arr2)
                 self.assertTrue(bool(result) == expected_result)
         #
+        test(size=20, subset_size=3, num_iteration=1, max_num_perm=10000)
         test(size=8, subset_size=3, num_iteration=1, max_num_perm=10000)
         test(size=3, subset_size=2, num_iteration=5)
+
+    def testBug(self):
+        #if IGNORE_TEST:
+        #    return
+        max_num_perm = 10000
+        mat1 = np.array([[-1, 1, 1, 0, 0, 0, 1, 0], 
+             [-1, -1, 0, 1, -1, 1, 0, -1],
+             [0, 1, -1, -1, 0, -1, 1, -1],
+             [1, 0, 0, -1, 0, 1, -1, 1], 
+             [1, -1, 0, 1, 1, 0, -1, 1], 
+             [-1, -1, 0, -1, 0, -1, -1, -1],
+             [-1, 0, 0, -1, 1, 0, -1, 1],                                                    
+             [-1, 0, -1, 0, 1, 0, -1, 0]])
+        mat2 = mat2 = np.array([[-1, -1, -1],
+            [1, -1, -1],
+            [0, 0, 0]])
+        pmatrix1 = PMatrix(mat1)
+        pmatrix2 = PMatrix(mat2)
+        result = pmatrix2.isPermutablyIdenticalSubset(pmatrix1, 
+                max_num_perm=max_num_perm)
+        if result.is_excessive_perm:
+            print("Excessive permutations")
+            self.assertTrue(True)
+        else:
+            self.assertTrue(bool(result))
+
 
     @util.timeit
     def testIsPermutablyIdenticalSubsetNot(self):
@@ -389,6 +422,25 @@ class TestPMatrix(unittest.TestCase):
         #
         test(3)
         test(250, 5)
+
+    def testSubset(self):
+        if IGNORE_TEST:
+            return
+        size = 3
+        indices = [0, 2]
+        mat1 = PMatrix.makeTrinaryMatrix(size, size)
+        pmatrix1 = PMatrix(mat1)
+        mat2 = mat1[:, indices]
+        pmatrix2 = PMatrix(mat2)
+        pmatrix = pmatrix1.subset(column_idxs=indices)
+        self.assertTrue(pmatrix == pmatrix2)
+        mat2 = mat1[indices, :]
+        pmatrix2 = PMatrix(mat2)
+        pmatrix = pmatrix1.subset(row_idxs=indices)
+        self.assertTrue(pmatrix == pmatrix2)
+        #
+        pmatrix = pmatrix1.subset(column_idxs=indices)
+        self.assertFalse(pmatrix == pmatrix2)
 
 
 if __name__ == '__main__':

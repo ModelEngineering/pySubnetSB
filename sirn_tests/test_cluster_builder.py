@@ -158,7 +158,6 @@ class TestClusterBuilder(unittest.TestCase):
                     self.assertTrue(True)
                     return
             self.assertTrue(False)
-            
         #
         for num_network in [5, 10, 15]:
             test(num_network=num_network, max_num_perm=1, num_collection=10)

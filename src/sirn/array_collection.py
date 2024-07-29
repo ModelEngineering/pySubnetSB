@@ -159,12 +159,16 @@ class ArrayCollection(object):
                 other.encoding.encoding_nm.matrix)
         # Get the subsets
         iter = itertools.product(*collection_candidates)
-        for subset in iter:
+        subsets = list(iter)
+        for subset in subsets:
             # Check that subset is a permutation
             if len(set(subset)) < len(subset):
                 continue
             # Construct the column pairs impplied by this permuation
             pairs = [(subset[i], subset[i+1]) for i in range(len(subset)-1)]
             other_sub_nm = other.encoding.all_pair_encoding_nm.getSubNamedMatrix(row_ids=pairs)
+            df = self.encoding.adjacent_pair_encoding_nm.template(
+               other_sub_nm.matrix - self.encoding.adjacent_pair_encoding_nm.matrix
+            )
             if np.all(self.encoding.adjacent_pair_encoding_nm.matrix <= other_sub_nm.matrix):
                 yield np.array(subset)

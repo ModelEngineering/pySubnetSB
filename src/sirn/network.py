@@ -10,8 +10,10 @@ import os
 import numpy as np
 from typing import Optional, Union, List, Tuple
 
+
 StrongStructuralIdentityResult = collections.namedtuple('StrongStructuralIdentityResult',
         ['row_perm', 'column_perm', 'num_perm']) 
+
 
 class StructurallyIdenticalResult(object):
     # Auxiliary object returned by isStructurallyIdentical
@@ -55,6 +57,44 @@ class StructurallyIdenticalResult(object):
         if is_excessive_perm:
             self.is_structural_identity_weak = False
             self.is_structural_identity_strong = False
+
+
+class StructurallyIdenticalSubsetResult(object):
+
+    def __init__(self, structurally_identical_results:List[StructurallyIdenticalResult],
+                 num_perm:int)->None:
+        """Describes results from a search for a structurally identifiable subset.
+
+        Args:
+            structurally_identical_results (List[StructurallyIdenticalResult]): _description_
+            num_perm (int, optional): _description_. Defaults to 0.
+        """
+        self.structurally_identical_results = structurally_identical_results
+        self.num_perm = num_perm
+    
+    @property
+    def is_excessive_perm(self)->bool:
+        if len(self.structurally_identical_results) == 0:
+            return False
+        return all([v.is_excessive_perm for v in self.structurally_identical_results])
+    
+    @property
+    def is_compatible(self)->bool:
+        if len(self.structurally_identical_results) == 0:
+            return False
+        return any([v.is_compatible for v in self.structurally_identical_results])
+    
+    @property
+    def is_structural_identity_weak(self)->bool:
+        if len(self.structurally_identical_results) == 0:
+            return False
+        return any([v.is_structural_identity_weak for v in self.structurally_identical_results])
+    
+    @property
+    def is_structural_identity_strong(self)->bool:
+        if len(self.structurally_identical_results) == 0:
+            return False
+        return any([v.is_structural_identity_strong for v in self.structurally_identical_results])
 
 
 class Network(object):
@@ -173,12 +213,11 @@ class Network(object):
         Returns:
             StructurallyIdenticalResult
         """
-        num_perm = 0
         # Check for weak structural identity
         weak_identity = self.stoichiometry_pmatrix.isPermutablyIdentical(
             other.stoichiometry_pmatrix, is_find_all_perms=False, max_num_perm=max_num_perm,
             is_sirn=is_sirn)
-        num_perm += weak_identity.num_perm
+        num_perm = weak_identity.num_perm
         if num_perm >= max_num_perm:
             return StructurallyIdenticalResult(num_perm=num_perm, is_excessive_perm=True)
         if not weak_identity:
@@ -224,6 +263,85 @@ class Network(object):
                     this_column_perm=strong_structurally_identical_result.column_perm,
                     other_row_perm=all_weak_identities.other_row_perm,
                     other_column_perm=all_weak_identities.other_column_perm)
+        
+    # FIXME: Should I iterte across subsets here, constructing subnetworks, rather than in pmatrix?
+    def isStructurallyIdenticalSubset(self, other:'Network', is_report:bool=False,
+          max_num_perm:int=cn.MAX_NUM_PERM,
+          #is_structural_identity_weak:bool=False)->StructurallyIdenticalSubsetResult:
+          is_structural_identity_weak:bool=False):
+        """
+        Determines if the current network is structurally identical to a subnetwork of other.
+        The notions of weak and strong structural identity apply as before. The approach is to
+        iterate across possible subnetworks of other to look for structural identity. A subnetwork
+        is specified by a subset of the reactions of the network. These are identified based on
+        the reactants and product of the reactions. We do this by forming a matrix that is
+        the vertical concatenation of the negative of the reactant matrix and the product matrix. This
+        is referred to as the network definition matrix.
+
+        Args:
+            other (Network)
+            max_num_perm (int, optional): Maximum number of permutations to consider.
+            is_report (bool, optional): Report on analysis progress. Defaults to False.
+            is_structural_identity_type_weak (bool, optional): _description_. Defaults to False.
+
+        Returns:
+            StructurallyIdenticalSubsetResult
+        """
+        # FIXME: (1) validate the iterators; (2) combine their construction into a function; (3) draw a picture
+        # Construct the network definition matrices for other. Rows are species. Columns are reactions.
+        self_network_definition_mat = np.vstack([-self.reactant_pmatrix.array,
+                                                    self.product_pmatrix.array])
+        self_network_definition_pmatrix = PMatrix(self_network_definition_mat)
+        other_network_column_definition_mat = np.vstack([-other.reactant_pmatrix.array,
+                                                     other.product_pmatrix.array])
+        other_network_column_definition_pmatrix = PMatrix(other_network_column_definition_mat)
+        column_iter = self_network_definition_pmatrix.column_collection.subsetIterator(
+              other_network_column_definition_pmatrix.column_collection)
+        column_subsets = list(column_iter)
+        #
+        self_network_definition_mat = np.hstack([-self.reactant_pmatrix.array,
+                                                    self.product_pmatrix.array])
+        self_network_definition_pmatrix = PMatrix(self_network_definition_mat)
+        other_network_row_definition_mat = np.hstack([-other.reactant_pmatrix.array,
+                                                     other.product_pmatrix.array])
+        other_network_row_definition_pmatrix = PMatrix(other_network_row_definition_mat)
+        row_iter = self_network_definition_pmatrix.row_collection.subsetIterator(
+              other_network_row_definition_pmatrix.row_collection)
+        # Iterate over subsets of reactions in other
+        is_done = False
+        row_subsets = list(row_iter)
+        for row_subset in row_subsets:
+            if is_done:
+                break
+            column_iter = self_network_definition_pmatrix.column_collection.subsetIterator(
+                other_network_column_definition_pmatrix.column_collection)
+            column_subsets = list(column_iter)
+            subnetwork_results: List[StructurallyIdenticalResult] = []
+            num_perm = 0
+            for column_subset in column_subsets:
+                # Construct the subnetwork
+                other_reactant_matrix = other.reactant_pmatrix.getSubMatrix(column_idxs=column_subset,
+                      row_idxs=row_subset)
+                other_product_matrix = other.product_pmatrix.getSubMatrix(column_idxs=column_subset,
+                      row_idxs=row_subset)
+                other_subnetwork = Network(other_reactant_matrix, other_product_matrix)
+                import pdb; pdb.set_trace()
+                structurally_identical_result = self.isStructurallyIdentical(other_subnetwork,
+                        max_num_perm=max_num_perm-num_perm, is_report=is_report,
+                        is_structural_identity_weak=is_structural_identity_weak)
+                num_perm += max(1, structurally_identical_result.num_perm)
+                subnetwork_results.append(structurally_identical_result)
+                if num_perm >= max_num_perm:
+                    is_done = True
+                    break
+                if is_structural_identity_weak and structurally_identical_result.is_structural_identity_weak:
+                    is_done = True
+                    break
+                if (not is_structural_identity_weak) and structurally_identical_result.is_structural_identity_strong:
+                    is_done = True
+                    break
+            #
+        return StructurallyIdenticalSubsetResult(subnetwork_results, num_perm)
     
     def randomize(self, structural_identity_type:str=cn.STRUCTURAL_IDENTITY_TYPE_STRONG,
                   num_iteration:int=10, is_verify=True)->'Network':

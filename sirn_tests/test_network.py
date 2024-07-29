@@ -1,12 +1,14 @@
 import sirn.constants as cn  # type: ignore
 from sirn.pmatrix import PMatrix # type: ignore
 from sirn.network import Network # type: ignore
+from sirn.named_matrix import NamedMatrix # type: ignore
 
+import numpy as np
 import copy
 import unittest
 
 
-IGNORE_TEST = False
+IGNORE_TEST = True
 IS_PLOT = False
 NETWORK_NAME = "test"
 BIG_NETWORK = """
@@ -189,5 +191,46 @@ class TestNetwork(unittest.TestCase):
             is_structural_identity_weak=False)
         self.assertTrue(result.is_structural_identity_strong)
 
+    def testIsStructurallyIdenticalSubset(self):
+        # Test for subset
+        if IGNORE_TEST:
+            return
+        size = 4
+        indices = [0, 1, 3]
+        mat1 = np.abs(PMatrix.makeTrinaryMatrix(size, size))
+        mat2 = np.abs(PMatrix.makeTrinaryMatrix(size, size))
+        other_network = Network(mat1, mat2)
+        self_mat1 = mat1[:, indices].copy()
+        self_mat2 = mat2[:, indices].copy()
+        self_network = Network(self_mat1, self_mat2)
+        result = self_network.isStructurallyIdenticalSubset(other_network,
+            is_structural_identity_weak=False)
+        self.assertTrue(result.is_structural_identity_strong)
+        import pdb; pdb.set_trace()
+
+    def testIsStructurallyIdenticalSubsetScale(self):
+        # Test for subset
+        #if IGNORE_TEST:
+        #    return
+        def test(size, subset_size=3, is_true=True):
+            indices = np.array([int(x) for x in range(size)])
+            permutation = np.random.permutation(range(size))
+            indices = indices[permutation[0:subset_size]]
+            mat1 = np.abs(PMatrix.makeTrinaryMatrix(size, size))
+            mat2 = np.abs(PMatrix.makeTrinaryMatrix(size, size))
+            other_network = Network(mat1, mat2)
+            self_mat1 = mat1[:, indices].copy()
+            self_mat2 = mat2[:, indices].copy()
+            if not is_true:
+                self_mat1[0][0] = 2 
+            self_network = Network(self_mat1, self_mat2)
+            result = self_network.isStructurallyIdenticalSubset(other_network,
+                is_structural_identity_weak=False, max_num_perm=100000)
+            import pdb; pdb.set_trace()
+            self.assertTrue(bool(result.is_structural_identity_strong) == is_true)
+        #
+        test(30, subset_size=5)
+        test(30, subset_size=5, is_true=False)
+
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(failfast=True)

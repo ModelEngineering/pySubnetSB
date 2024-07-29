@@ -75,6 +75,11 @@ class PermutablyIdenticalSusbsetResult(object):
         """
         self.submatrix_results = submatrix_results
 
+    @property
+    def is_excessive_perm(self)->bool:
+        return any([r.permutably_identical_result.is_excessive_perm for r in self.submatrix_results])  \
+            and not self.__bool__()
+
     # Boolean value is the result of the test
     def __bool__(self)->bool:
         return len(self.getSuccessfulResults()) > 0
@@ -125,6 +130,29 @@ class PMatrix(Matrix):
         self.hash_val = hashArray(hash_arr)
         # log10 of the estimated number of permutations of rows and columns
         self.log_estimate = self.row_collection.log_estimate + self.column_collection.log_estimate
+
+    def subset(self, row_idxs:Optional[List[int]]=None, column_idxs:Optional[List[int]]=None)->'PMatrix':
+        """
+        Return a PMatrix that is a subset of the matrix
+
+        Args:
+            row_idxs (List[int]): Row indices
+            column_idxs (List[int]): Column indices
+
+        Returns:
+            PMatrix: Subset of the matrix
+        """
+        if row_idxs is None:
+            row_idxs = list(range(self.num_row))
+        if column_idxs is None:
+            column_idxs = list(range(self.num_column))
+        #
+        subset_array = self.array[row_idxs, :]
+        subset_array = subset_array[:, column_idxs]
+        row_names = [self.row_names[i] for i in row_idxs]
+        column_names = [self.column_names[i] for i in column_idxs]
+        #
+        return PMatrix(subset_array, row_names=row_names, column_names=column_names)
 
     def randomize(self)->RandomizeResult:
         """Randomly permutes the rows and columns of the matrix.
@@ -258,7 +286,7 @@ class PMatrix(Matrix):
         return permutably_identical_result
     
     def isPermutablyIdenticalSubset(self, other:'PMatrix', max_num_perm:int=cn.MAX_NUM_PERM,
-            is_find_all_perms:bool=True) -> PermutablyIdenticalSusbsetResult:
+            is_find_all_perms:bool=False) -> PermutablyIdenticalSusbsetResult:
         """
         Check if this permutably identical to a subset of the other matrix.
 
@@ -285,7 +313,8 @@ class PMatrix(Matrix):
                 row_names = list(row_name_arr[row_arr])
                 column_names = list(column_name_arr[column_arr])
                 subset_other = PMatrix(subset_arr, row_names=row_names, column_names=column_names)
-                permutably_identical_result = self.isPermutablyIdentical(subset_other, max_num_perm-num_perm, is_find_all_perms)
+                permutably_identical_result = self.isPermutablyIdentical(subset_other, max_num_perm-num_perm,
+                      is_find_all_perms)
                 num_perm += max(1, permutably_identical_result.num_perm)
                 subset_result = PermutablyIdenticalSusbsetResult.SubmatrixResult(
                      permutably_identical_result=permutably_identical_result,
