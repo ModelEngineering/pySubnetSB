@@ -96,6 +96,7 @@ class PMatrix(Matrix):
     def __init__(self, array: np.ndarray,
                  row_names:Optional[List[str]]=None,
                  column_names:Optional[List[str]]=None,
+                 multiplier:float=1.0,
                  ):
         """
         Abstraction for a permutable matrix
@@ -110,7 +111,8 @@ class PMatrix(Matrix):
             ValueError: _description_
         """
         # Inputs
-        super().__init__(array)
+        self.multiplier = multiplier
+        super().__init__(self.multiplier*array)
         if row_names is None:
             row_names = [str(i) for i in range(self.num_row)]  # type: ignore
         if column_names is None:

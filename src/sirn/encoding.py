@@ -57,8 +57,6 @@ class Encoding(object):
         """
         Args:
             arrays (np.array): A collection of arrays.
-            is_weighted (bool): Weight the value of the i-th element in an array by the sum of non-zero
-                elements in the i-th position.
         """
         self.collection = collection
         self.num_row, self.num_column = np.shape(collection)

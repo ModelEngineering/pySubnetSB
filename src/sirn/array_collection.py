@@ -31,8 +31,6 @@ class ArrayCollection(object):
         """
         Args:
             arrays (np.array): A collection of arrays.
-            is_weighted (bool): Weight the value of the i-th element in an array by the sum of non-zero
-                elements in the i-th position.
         """
         self.array = array
         self.num_row, self.num_column = np.shape(array)
@@ -77,7 +75,7 @@ class ArrayCollection(object):
         return np.allclose(self.encoding.sorted_encoding_arr, other.encoding.sorted_encoding_arr)
 
     @staticmethod
-    def _findCompatibleRows(subset_mat:np.array, superset_mat:np.array)->list:
+    def findCompatibleRows(subset_mat:np.array, superset_mat:np.array)->list:
         """
         Finds for each row in subset, the collection of rows in subset such the row in subset <= row in superset.
 
@@ -142,7 +140,8 @@ class ArrayCollection(object):
             permutation_arr = np.array(permutation_idxs)
             perm_count += 1
             yield permutation_arr
-    
+
+    # FIXME: Does not consider OIE for the array transpose 
     def subsetIterator(self, other):
         """
         Iterates iterates over subsets of arrays in other that are compatible with the current ArrayCollection.
@@ -155,7 +154,7 @@ class ArrayCollection(object):
         """
         # Find the sets of compatible arrays
          # For each index, the list of indices in other that are compatible with the corresponding index in self.
-        collection_candidates = self._findCompatibleRows(self.encoding.encoding_nm.matrix,
+        collection_candidates = self.findCompatibleRows(self.encoding.encoding_nm.matrix,
                 other.encoding.encoding_nm.matrix)
         # Get the subsets
         iter = itertools.product(*collection_candidates)
@@ -167,8 +166,5 @@ class ArrayCollection(object):
             # Construct the column pairs impplied by this permuation
             pairs = [(subset[i], subset[i+1]) for i in range(len(subset)-1)]
             other_sub_nm = other.encoding.all_pair_encoding_nm.getSubNamedMatrix(row_ids=pairs)
-            df = self.encoding.adjacent_pair_encoding_nm.template(
-               other_sub_nm.matrix - self.encoding.adjacent_pair_encoding_nm.matrix
-            )
             if np.all(self.encoding.adjacent_pair_encoding_nm.matrix <= other_sub_nm.matrix):
                 yield np.array(subset)

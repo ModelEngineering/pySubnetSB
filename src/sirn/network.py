@@ -1,11 +1,19 @@
 '''Abstraction for a reaction network. This is represented by a reactant PMatrix and product PMatrix.'''
 
+"""
+Subnets.
+
+1. Don't create an expanded stoichiometry matrix. Instead, have two matrices for reactants and products.
+2. Use row encodings for species and column encodings for reactions.
+"""
+
 from sirn.stoichometry import Stoichiometry  # type: ignore
 from sirn.pmatrix import PMatrix  # type: ignore
 from sirn.util import hashArray  # type: ignore
 from sirn import constants as cn  # type: ignore
 
 import collections
+import itertools
 import os
 import numpy as np
 from typing import Optional, Union, List, Tuple
@@ -13,6 +21,11 @@ from typing import Optional, Union, List, Tuple
 
 StrongStructuralIdentityResult = collections.namedtuple('StrongStructuralIdentityResult',
         ['row_perm', 'column_perm', 'num_perm']) 
+StackedCriteriaCountMatrices = collections.namedtuple('StackedCriteriaCountMatrices',
+        ['self_adjacent_pair_species_mat',
+         'other_all_pair_species_mat',
+         'self_adjacent_pair_reaction_mat',
+         'other_all_pair_reaction_mat'])
 
 
 class StructurallyIdenticalResult(object):
@@ -111,25 +124,27 @@ class Network(object):
             product_mat (np.ndarray): Product matrix.
             network_name (str): Name of the network.
         """
-        self.reactant_pmatrix = self._makePMatrix(reactant_mat)
+        # Reactant stoichiometry matrix is negative
+        self.reactant_pmatrix = self._makePMatrix(reactant_mat, multiplier=-1.0)
         self.product_pmatrix = self._makePMatrix(product_mat)
         #
         if network_name is None:
             network_name = str(np.random.randint(0, 10000000))
         self.network_name = network_name
-        stoichiometry_array = self.product_pmatrix.array - self.reactant_pmatrix.array
+        stoichiometry_array = self.product_pmatrix.array + self.reactant_pmatrix.array
         self.stoichiometry_pmatrix = PMatrix(stoichiometry_array)
         # Hash values for simple stoichiometry (only stoichiometry matrix) and non-simple stoichiometry
         self.nonsimple_hash = hashArray(np.array([self.reactant_pmatrix.hash_val,
                                                   self.product_pmatrix.hash_val]))
         self.simple_hash = self.stoichiometry_pmatrix.hash_val
 
-    def _makePMatrix(self, matrix:Union[np.ndarray, PMatrix])->PMatrix:
+    def _makePMatrix(self, matrix:Union[np.ndarray, PMatrix], multiplier:float=1.0)->PMatrix:
         """
         Handles having a matrix or a PMatrix.
 
         Args:
             matrix (Union[np.ndarray, PMatrix])
+            multiplier (float, optional): Multiplier for the matrix. Defaults to 1.0.
 
         Returns:
             PMatrix
@@ -141,7 +156,7 @@ class Network(object):
         else:
             row_names = None
             column_names = None
-        return PMatrix(matrix, row_names=row_names, column_names=column_names)
+        return PMatrix(matrix, row_names=row_names, column_names=column_names, multiplier=multiplier)
 
     def copy(self)->'Network':
         return Network(self.reactant_pmatrix.array.copy(), self.product_pmatrix.array.copy(),
@@ -263,8 +278,47 @@ class Network(object):
                     this_column_perm=strong_structurally_identical_result.column_perm,
                     other_row_perm=all_weak_identities.other_row_perm,
                     other_column_perm=all_weak_identities.other_column_perm)
+
+    def _makeStackedCriteriaCountMatrices(self, other:'Network')->StackedCriteriaCountMatrices:
+        """
+        Creates matrices that stack the criteria counts for reactant on top of products.
+
+        Args:
+            other (Network): _description_
+
+        Raises:
+            ValueError: _description_
+
+        Returns:
+            StackedCriteriaCountMatrices
+        """
+        self_adjacent_pair_species_mat = np.vstack([
+              self.reactant_pmatrix.row_collection.encoding.adjacent_pair_encoding_nm.array,
+              self.product_pmatrix.row_collection.encoding.adjacent_pair_encoding_nm.array])
+        #
+        self_adjacent_pair_reaction_mat = np.vstack([
+              self.reactant_pmatrix.row_collection.encoding.adjacent_pair_encoding_nm.array,
+              self.product_pmatrix.row_collection.encoding.adjacent_pair_encoding_nm.array])
+        #
+        other_all_pair_species_mat = np.vstack([
+              self.reactant_pmatrix.row_collection.encoding.adjacent_pair_encoding_nm.array,
+              self.product_pmatrix.row_collection.encoding.adjacent_pair_encoding_nm.array])
+        #
+        other_all_pair_reaction_mat = np.vstack([
+              self.reactant_pmatrix.row_collection.encoding.adjacent_pair_encoding_nm.array,
+              self.product_pmatrix.row_collection.encoding.adjacent_pair_encoding_nm.array])
+        return StackedCriteriaCountMatrices(
+              self_adjacent_pair_species_mat=self_adjacent_pair_species_mat,
+              self_adjacent_pair_reaction_mat=self_adjacent_pair_reaction_mat,
+              other_all_pair_species_mat=other_all_pair_species_mat,
+              other_all_pair_reaction_mat=other_all_pair_reaction_mat)
         
-    # FIXME: Should I iterte across subsets here, constructing subnetworks, rather than in pmatrix?
+    # FIXME: Should I iterte across subsets here, constructing subnetworks, rath
+    # FIXME: (1) validate the iterators; (2) combine their construction into a function; (3) draw a picture
+    # FIXME: Subset iterator should be NetworkSbusetIterator since it requires knowledge of the networks.
+    #        Both species and reactions must be compatible across both reactants and products
+    #        I'm comparing criteria count matrices, which are encoded arrays.
+    #        Comparisons are done for single arrays and pairs of arrays. .   
     def isStructurallyIdenticalSubset(self, other:'Network', is_report:bool=False,
           max_num_perm:int=cn.MAX_NUM_PERM,
           #is_structural_identity_weak:bool=False)->StructurallyIdenticalSubsetResult:
@@ -287,44 +341,28 @@ class Network(object):
         Returns:
             StructurallyIdenticalSubsetResult
         """
-        # FIXME: (1) validate the iterators; (2) combine their construction into a function; (3) draw a picture
         # Construct the network definition matrices for other. Rows are species. Columns are reactions.
-        self_network_definition_mat = np.vstack([-self.reactant_pmatrix.array,
-                                                    self.product_pmatrix.array])
-        self_network_definition_pmatrix = PMatrix(self_network_definition_mat)
-        other_network_column_definition_mat = np.vstack([-other.reactant_pmatrix.array,
-                                                     other.product_pmatrix.array])
-        other_network_column_definition_pmatrix = PMatrix(other_network_column_definition_mat)
-        column_iter = self_network_definition_pmatrix.column_collection.subsetIterator(
-              other_network_column_definition_pmatrix.column_collection)
-        column_subsets = list(column_iter)
-        #
-        self_network_definition_mat = np.hstack([-self.reactant_pmatrix.array,
-                                                    self.product_pmatrix.array])
-        self_network_definition_pmatrix = PMatrix(self_network_definition_mat)
-        other_network_row_definition_mat = np.hstack([-other.reactant_pmatrix.array,
-                                                     other.product_pmatrix.array])
-        other_network_row_definition_pmatrix = PMatrix(other_network_row_definition_mat)
-        row_iter = self_network_definition_pmatrix.row_collection.subsetIterator(
-              other_network_row_definition_pmatrix.row_collection)
+        stacked_criteria_count_matrices = self._makeStackedCriteriaCountMatrices(other)
+        species_iter = stacked_criteria_count_matrices.self_adjacent_pair_species_pmat.row_collection.subsetIterator(
+                stacked_criteria_count_matrices.other_all_pair_species_pmat.row_collection)
         # Iterate over subsets of reactions in other
         is_done = False
-        row_subsets = list(row_iter)
-        for row_subset in row_subsets:
+        species_subsets = list(species_iter)
+        for species in species_subsets:
             if is_done:
                 break
-            column_iter = self_network_definition_pmatrix.column_collection.subsetIterator(
-                other_network_column_definition_pmatrix.column_collection)
-            column_subsets = list(column_iter)
+            reaction_iter = stacked_criteria_count_matrices.self_adjacent_pair_reaction_pmat.row_collection.subsetIterator(
+                  stacked_criteria_count_matrices.other_all_pair_reaction_pmat.row_collection)
+            reaction_subsets = list(reaction_iter)
             subnetwork_results: List[StructurallyIdenticalResult] = []
             num_perm = 0
             for column_subset in column_subsets:
                 # Construct the subnetwork
-                other_reactant_matrix = other.reactant_pmatrix.getSubMatrix(column_idxs=column_subset,
+                other_reactant_pmatrix = other.reactant_pmatrix.getSubMatrix(column_idxs=column_subset,
                       row_idxs=row_subset)
-                other_product_matrix = other.product_pmatrix.getSubMatrix(column_idxs=column_subset,
+                other_product_pmatrix = other.product_pmatrix.getSubMatrix(column_idxs=column_subset,
                       row_idxs=row_subset)
-                other_subnetwork = Network(other_reactant_matrix, other_product_matrix)
+                other_subnetwork = Network(other_reactant_pmatrix, other_product_pmatrix)
                 import pdb; pdb.set_trace()
                 structurally_identical_result = self.isStructurallyIdentical(other_subnetwork,
                         max_num_perm=max_num_perm-num_perm, is_report=is_report,
@@ -450,3 +488,70 @@ class Network(object):
         reactant_mat = np.random.randint(-1, 2, (species_array_size, reaction_array_size))
         product_mat = np.random.randint(-1, 2, (species_array_size, reaction_array_size))
         return Network(reactant_mat, product_mat)
+    
+    def subnetIterator(self, other:'Network'):
+        """
+        Iterates iterates over subnets of other that are compatible with self.
+
+        Args:
+            other: Network
+
+        Yields:
+            Network: subnet of other that is compatible with the current Network.
+        """
+        # Find compatible species. These are rows of the reactant and product matrices.
+        self_row_collection = self.reactant_pmatrix.row_collection
+        other_row_collection = other.reactant_pmatrix.row_collection
+        reactant_candidates = self_row_collection.findCompatibleRows(
+            self_row_collection.encoding.encoding_nm.matrix,
+            other_row_collection.encoding.encoding_nm.matrix)
+        self_column_collection = self.product_pmatrix.column_collection
+        other_column_collection = other.product_pmatrix.column_collection
+        product_candidates = self_column_collection.findCompatiblecolumns(
+            self_column_collection.encoding.encoding_nm.matrix,
+            other_column_collection.encoding.encoding_nm.matrix)
+        species_candidates = [set(a).intersection(b) for a, b in zip(reactant_candidates, product_candidates)]
+        # Find compatible species. These are rows of the reactant and product matrices.
+        self_column_collection = self.reactant_pmatrix.column_collection
+        other_column_collection = other.reactant_pmatrix.column_collection
+        reactant_candidates = self_column_collection.findCompatiblecolumns(
+            self_column_collection.encoding.encoding_nm.matrix,
+            other_column_collection.encoding.encoding_nm.matrix)
+        self_column_collection = self.product_pmatrix.column_collection
+        other_column_collection = other.product_pmatrix.column_collection
+        product_candidates = self_column_collection.findCompatiblecolumns(
+            self_column_collection.encoding.encoding_nm.matrix,
+            other_column_collection.encoding.encoding_nm.matrix)
+        reaction_candidates = [set(a).intersection(b) for a, b in zip(reactant_candidates, product_candidates)]
+        # Get the subsets
+        species_iter = itertools.product(*species_candidates)
+        species_subsets = list(species_iter)
+        reaction_iter = itertools.product(*reaction_candidates)
+        reaction_subsets = list(reaction_iter)
+        for species_subset in species_subsets:
+            # Check that subset is a permutation
+            if len(set(species_subset)) < len(species_subset):
+                continue
+            # Handle pairwise constraints
+            species_pairs = [(species_subset[i], species_subset[i+1]) for i in range(len(species_subset)-1)]
+            other_sub_nm = other.encoding.all_pair_encoding_nm.getSubNamedMatrix(row_ids=pairs)
+            # See if all pairwise constraints are satisfied
+            if not np.all(self.encoding.adjacent_pair_encoding_nm.matrix <= other_sub_nm.matrix):
+                continue
+            # Process reactions
+            for reaction_subset in reaction_subsets:
+                # Check that subset is a permutation
+                if len(set(reaction_subset)) < len(reaction_subset):
+                    continue
+                # Handle pairwise constraints
+                reaction_pairs = [(reaction_subset[i], reaction_subset[i+1]) for i in range(len(reaction_subset)-1)]
+                other_sub_nm = other.encoding.all_pair_encoding_nm.getSubNamedMatrix(row_ids=pairs)
+                # See if all pairwise constraints are satisfied
+                if not np.all(self.encoding.adjacent_pair_encoding_nm.matrix <= other_sub_nm.matrix):
+                    continue
+                other_reactant_pmatrix = other.reactant_pmatrix.getSubMatrix(column_idxs=reaction_subset,
+                      row_idxs=species_subset)
+                other_product_pmatrix = other.product_pmatrix.getSubMatrix(column_idxs=reaction_subset,
+                      row_idxs=species_subset)
+                other_subnetwork = Network(other_reactant_pmatrix, other_product_pmatrix)
+                yield other_subnetwork
