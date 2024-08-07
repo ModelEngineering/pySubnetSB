@@ -1,4 +1,4 @@
-'''Representation of a two dimensional array.'''
+'''Generates, Analyzes, and Manipulates Stoichiometry Matrices'''
 
 import numpy as np
 import itertools
@@ -11,22 +11,16 @@ class Matrix(object):
         Args:
             arr (np.array): Stoichiometry matrix. Rows are reactions; columns are species.
         """
-        self.values = array
-        self.shape = np.shape(array)
-        if len(self.shape) == 2:
-            self.num_row, self.num_column = np.shape(array)
-        elif len(self.shape) == 1:
-            self.num_row, self.num_column = len(array), 1
-        else:
-            self.num_row, self.num_column = 0, 0
+        self.array = array
+        self.num_row, self.num_column = np.shape(array)
 
     def __repr__(self)->str:
-        return str(self.values)
+        return str(self.array)
 
     def __eq__(self, other)->bool:
-        if np.shape(self.values) != np.shape(other.array):
+        if np.shape(self.array) != np.shape(other.array):
             return False
-        return np.all(self.values == other.array)  # type: ignore
+        return np.all(self.array == other.array)  # type: ignore
     
     def isPermutablyIdentical(self, other):
         """
@@ -40,7 +34,7 @@ class Matrix(object):
         col_perm = itertools.permutations(range(self.num_column))
         for r in row_perm:
             for c in col_perm:
-                if np.all(self.values[r][:, c] == other.matrix):
+                if np.all(self.array[r][:, c] == other.matrix):
                     return True
         return False
     
@@ -73,7 +67,7 @@ class Matrix(object):
         Returns:
             FixedMatrix
         """
-        array = self.values.copy()
+        array = self.array.copy()
         row_perm = np.random.permutation(self.num_row)
         col_perm = np.random.permutation(self.num_column)
         return Matrix(array[row_perm][:, col_perm])  # type: ignore

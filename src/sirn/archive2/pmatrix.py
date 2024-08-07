@@ -124,8 +124,8 @@ class PMatrix(Matrix):
             raise ValueError(f"Column names {len(column_names)} != {self.num_column}")
         self.column_names = column_names
         # Outputs
-        self.row_collection = ArrayCollection(self.array)
-        column_arr = np.transpose(self.array)
+        self.row_collection = ArrayCollection(self.values)
+        column_arr = np.transpose(self.values)
         self.column_collection = ArrayCollection(column_arr)
         hash_arr = np.sort(np.concatenate([self.row_collection.encoding.encodings,
                                    self.column_collection.encoding.encodings]))
@@ -149,7 +149,7 @@ class PMatrix(Matrix):
         if column_idxs is None:
             column_idxs = list(range(self.num_column))
         #
-        subset_array = self.array[row_idxs, :]
+        subset_array = self.values[row_idxs, :]
         subset_array = subset_array[:, column_idxs]
         row_names = [self.row_names[i] for i in row_idxs]
         column_names = [self.column_names[i] for i in column_idxs]
@@ -162,7 +162,7 @@ class PMatrix(Matrix):
         Returns:
             PMatrix
         """
-        array = self.array.copy()
+        array = self.values.copy()
         for _ in range(10):
             row_perm = np.random.permutation(self.num_row)
             column_perm = np.random.permutation(self.num_column)
@@ -176,7 +176,7 @@ class PMatrix(Matrix):
         
 
     def copy(self)->'PMatrix':
-        return PMatrix(self.array.copy(), self.row_names.copy(), self.column_names.copy())
+        return PMatrix(self.values.copy(), self.row_names.copy(), self.column_names.copy())
 
     def __eq__(self, other)->bool:
         """Check if two PMatrix have the same values
@@ -190,10 +190,10 @@ class PMatrix(Matrix):
             return False
         if not all([s == o] for s, o in zip(self.column_names, other.column_names)):
             return False
-        return bool(np.all(self.array == other.array))
+        return bool(np.all(self.values == other.array))
 
     def __repr__(self)->str:
-        return str(self.array)
+        return str(self.values)
 
     @staticmethod 
     def permuteArray(array:np.ndarray, row_perm:np.ndarray[int],
@@ -252,7 +252,7 @@ class PMatrix(Matrix):
         #  Order the other PMatrix to align the partitions of the two matrices
         other_column_perm = list(other.column_collection.constrainedPermutationIterator())[0]
         other_row_perm =  list(other.row_collection.constrainedPermutationIterator())[0]
-        other_array = self.permuteArray(other.array, other_row_perm, other_column_perm)
+        other_array = self.permuteArray(other.values, other_row_perm, other_column_perm)
         # Search all partition constrained permutations of this matrix to match the other matrix
         row_itr = self.row_collection.constrainedPermutationIterator()
         num_perm = 0
@@ -272,7 +272,7 @@ class PMatrix(Matrix):
                     is_done = True
                     break
                 num_perm += 1
-                this_array = self.permuteArray(self.array, row_perm, column_perm)
+                this_array = self.permuteArray(self.values, row_perm, column_perm)
                 if np.allclose(this_array,other_array):
                     this_row_perms.append(row_perm)
                     this_column_perms.append(column_perm)
@@ -310,7 +310,7 @@ class PMatrix(Matrix):
                 break
             column_itr = self.column_collection.subsetIterator(other.column_collection)
             for column_arr in column_itr:
-                subset_arr = other.array[row_arr, :]
+                subset_arr = other.values[row_arr, :]
                 subset_arr = subset_arr[:, column_arr]
                 row_names = list(row_name_arr[row_arr])
                 column_names = list(column_name_arr[column_arr])
@@ -347,8 +347,8 @@ class PMatrix(Matrix):
             bool
         """
         # Check compatibility
-        this_shape = np.shape(self.array)
-        other_shape = np.shape(other.array)
+        this_shape = np.shape(self.values)
+        other_shape = np.shape(other.values)
         if this_shape != other_shape:
             return PermutablyIdenticalResult(False)
         # 
@@ -357,7 +357,7 @@ class PMatrix(Matrix):
         # Search all permutations of this matrix to match the other matrix
         other_row_perm = np.array(range(num_row))
         other_column_perm = np.array(range(num_column))
-        other_array = self.permuteArray(other.array, other_row_perm, other_column_perm)
+        other_array = self.permuteArray(other.values, other_row_perm, other_column_perm)
         this_row_perms: list = []
         this_column_perms: list = []
         is_done = False
@@ -370,7 +370,7 @@ class PMatrix(Matrix):
             for column_perm in column_itr:
                 if is_done:
                     break
-                this_array = self.permuteArray(self.array, np.array(row_perm), np.array(column_perm))
+                this_array = self.permuteArray(self.values, np.array(row_perm), np.array(column_perm))
                 num_perm += 1
                 if np.all(this_array == other_array):
                     this_row_perms.append(row_perm)

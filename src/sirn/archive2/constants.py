@@ -19,11 +19,11 @@ OSCILLATOR_DIRS = [
         "Oscillators_DOE_JUNE_12_B_41373",
         "Oscillators_DOE_JUNE_12_C_27662",
         ]
-#MAX_NUM_PERM = 1000  # Maximum number of permutations to search
-#STRUCTURAL_IDENTITY_TYPE = "structural_identity_type"
-#STRUCTURAL_IDENTITY_TYPE_NOT = "identity_collection_type_not"
-#STRUCTURAL_IDENTITY_TYPE_WEAK = "identity_collection_type_weak"
-#STRUCTURAL_IDENTITY_TYPE_STRONG = "identity_collection_type_strong"
+MAX_NUM_PERM = 1000  # Maximum number of permutations to search
+STRUCTURAL_IDENTITY_TYPE = "structural_identity_type"
+STRUCTURAL_IDENTITY_TYPE_NOT = "identity_collection_type_not"
+STRUCTURAL_IDENTITY_TYPE_WEAK = "identity_collection_type_weak"
+STRUCTURAL_IDENTITY_TYPE_STRONG = "identity_collection_type_strong"
 UNKNOWN_STRUCTURAL_IDENTITY_NAME = "*" # Used for networks whose structural identity cannot be determined
 NETWORK_NAME_DELIMITER = "---"
 NETWORK_NAME_PREFIX_KNOWN = "!"
@@ -34,5 +34,3 @@ STRUCTURAL_IDENTITY_PREFIX_WEAK = "-"
 NUM_HASH = 'num_hash'
 MAX_HASH = 'max_hash'
 NON_SIRN_HASH = 1
-# Numerical constants
-MAX_PERMUTATIONS = 10000

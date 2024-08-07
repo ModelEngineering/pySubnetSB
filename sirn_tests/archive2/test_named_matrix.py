@@ -3,7 +3,6 @@ from sirn.named_matrix import NamedMatrix  # type: ignore
 import copy
 import numpy as np
 import unittest
-import time
 
 
 IGNORE_TEST = False
@@ -25,16 +24,12 @@ class TestNamedMatrix(unittest.TestCase):
     def testConstructor(self):
         if IGNORE_TEST:
             return
-        row_name = "rows"
-        column_name = "columns"
         named_matrix = NamedMatrix(MAT2.copy(), row_ids=[(1, 0), (0, 1), (0, 0), (0, 3)],
-                                        column_ids=['d', 'e', 'f'],
-                                    row_name=row_name, column_name=column_name)
-        self.assertTrue(np.all(named_matrix.values == MAT2))
-        self.assertTrue("1 0" in str(named_matrix))
+                                        column_ids=['d', 'e', 'f'])
+        self.assertTrue(np.all(named_matrix.matrix == MAT2))
+        self.assertTrue("(1, 0)" in str(named_matrix))
+        self.assertFalse("(0, 3)" in str(named_matrix))
         self.assertTrue("e" in str(named_matrix))
-        self.assertTrue(row_name in str(named_matrix))
-        self.assertTrue(column_name in str(named_matrix))
 
     def testEq(self):
         if IGNORE_TEST:
@@ -72,43 +67,27 @@ class TestNamedMatrix(unittest.TestCase):
         self.assertFalse(named_matrix == self.named_matrix)
         self.assertTrue(named_matrix.isCompatible(self.named_matrix))
 
-    def testGetSubNamedMatrix(self):
-        if IGNORE_TEST:
-            return
-        result = self.named_matrix.getSubNamedMatrix(row_ids=[(1, 0), (0, 1)], column_ids=['d', 'e'])
-        named_matrix = result.named_matrix
-        self.assertTrue(np.all(named_matrix.values == np.array([[1, 0], [0, 1]])))
-        self.assertTrue(np.all(named_matrix.row_ids == np.array([(1, 0), (0, 1)])))
-        self.assertTrue(np.all(named_matrix.column_ids == np.array(['d', 'e'])))
-
     def testGetSubMatrix(self):
         if IGNORE_TEST:
             return
-        matrix = self.named_matrix.getSubMatrix(row_idxs=range(2), column_idxs=range(2))
-        self.assertTrue(np.all(matrix.values == np.array([[1, 0], [0, 1]])))
+        row_ids = np.array([(0, 0), (0, 1)])
+        subset_result = self.named_matrix.getSubMatrix(row_ids=row_ids, column_ids=['d', 'e'])
+        self.assertTrue(np.all(subset_result.matrix == row_ids))
+        #
+        subset_result = self.named_matrix.getSubMatrix(row_ids=[(1, 0), (0, 1)], column_ids=['d', 'e'])
+        self.assertTrue(np.all(subset_result.matrix == np.array([[1, 0], [0, 1]])))
+        #
+        with self.assertRaises(ValueError):
+            subset_result = self.named_matrix.getSubMatrix(row_ids=[(1, 1), (0, 1)], column_ids=['d', 'e', 'f'])
 
-    def testPerformance(self):
+    def testGetSubNamedMatrix(self):
         if IGNORE_TEST:
             return
-        num_row = 100
-        num_column = 100
-        mat = np.random.randint(-10, 10, (num_row, num_column))
-        named_matrix = NamedMatrix(mat)
-        def timeit(num_iteration=1000, is_named_matrix=True):
-            t0 = time.time()
-            for _ in range(num_iteration):
-                if is_named_matrix:
-                    _ = named_matrix.getSubNamedMatrix(row_ids=range(10), column_ids=range(10))
-                else:
-                    _ = named_matrix.getSubMatrix(row_idxs=range(10), column_idxs=range(10))
-            t1 = time.time()
-            return t1 - t0
-        #
-        time_named_matrix = timeit(is_named_matrix=True)
-        time_matrix = timeit(is_named_matrix=False)
-        self.assertTrue(time_named_matrix/time_matrix > 100)
-        #print(f"TimeNamed: {time_named_matrix}", f"TimeMatrix: {time_matrix}")
+        named_matrix = self.named_matrix.getSubNamedMatrix(row_ids=[(1, 0), (0, 1)], column_ids=['d', 'e'])
+        self.assertTrue(np.all(named_matrix.matrix == np.array([[1, 0], [0, 1]])))
+        self.assertTrue(np.all(named_matrix.row_ids == np.array([(1, 0), (0, 1)])))
+        self.assertTrue(np.all(named_matrix.column_ids == np.array(['d', 'e'])))
         
 
 if __name__ == '__main__':
-    unittest.main(failfast=True)
+    unittest.main()

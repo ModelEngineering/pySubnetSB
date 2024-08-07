@@ -1,18 +1,24 @@
 '''Numpy 2 dimensional array with information about rows and columns.'''
+from sirn.matrix import Matrix  # type: ignore
 
 import collections
 import pandas as pd  # type: ignore
 import numpy as np
-from typing import Optional, Tuple
+from typing import Optional, Union
 
 
-SubsetResult = collections.namedtuple('SubsetResult', ['matrix', 'row_idxs', 'column_idxs'])
+SubsetResult = collections.namedtuple('SubsetResult', ['named_matrix', 'row_idxs', 'column_idxs'])
 
 
-class NamedMatrix(object):
+class NamedMatrix(Matrix):
 
-    def __init__(self, matrix: np.ndarray, row_ids: np.ndarray, column_ids: np.ndarray,
-                 row_labels: Optional[np.ndarray[str]] = None, column_labels: Optional[np.ndarray[str]] = None):
+    def __init__(self, array: np.ndarray,
+                 row_ids:Optional[np.ndarray]=None,
+                 column_ids:Optional[np.ndarray]=None,
+                 row_labels: Optional[np.ndarray[str]] = None,
+                 column_labels: Optional[np.ndarray[str]] = None,
+                 row_name:str = "",
+                 column_name:str = ""):
         """
 
         Args:
@@ -21,30 +27,61 @@ class NamedMatrix(object):
             column_ids (np.ndarray): convenient identifier for columns
             row_labels (Optional[np.ndarray[str]], optional): Human readable labels for rows. Defaults to None.
             column_labels (Optional[np.ndarray[str]], optional): Human readable labels for columns. Defaults to None.
+            row_name (str, optional): Name of the row. Defaults to "". Name applied to the rows.
+            column_name (str, optional): Name of the column. Defaults to "". Name applied to the columns.
         """
-        # These initializations are done to handle an empty matrix
-        self.matrix = matrix
-        self.num_row = 0
-        self.num_column = 0
-        self.shape = self.matrix.shape
-        self.row_ids = np.array([])
-        self.column_ids = np.array([])
-        self._dataframe = pd.DataFrame()  # DataFrame representation of the matrix
-        if row_labels is None:
-            row_labels = np.array([str(n) for n in row_ids])  # type: ignore
-        if column_labels is None:
-            column_labels = np.array([str(n) for n in column_ids])  # type: ignore
-        self.row_labels = row_labels
-        self.column_labels = column_labels
-        #
-        if len(self.shape) == 2:
-            self.num_row, self.num_column = self.matrix.shape
-            self.row_ids = np.array(row_ids)
-            if (row_ids is not None) and (len(row_ids) != self.num_row):
-                raise ValueError("Number of row ids must be equal to the number of rows in the matrix")
-            self.column_ids = np.array(column_ids)
-            if (column_ids is not None) and (len(column_ids) != self.num_column):
-                raise ValueError("Number of column ids must be equal to the number of columns in the matrix")
+        # Most properties are assigned on first reference since a NamedMatrix may be used only
+        # as a shallow container for np.ndarray
+        super().__init__(array)
+        self.row_name = row_name
+        self.column_name = column_name
+        self._row_ids:Optional[np.ndarray] = row_ids
+        self._column_ids:Optional[np.ndarray] = column_ids
+        self._row_labels:Optional[np.ndarray] = row_labels
+        self._column_labels:Optional[np.ndarray] = column_labels
+        self._dataframe:Optional[pd.DataFrame] = None
+
+    @property
+    def row_ids(self)->np.ndarray:
+        if not isinstance(self._row_ids, np.ndarray):
+            if self._row_ids is None:
+                self._row_ids = np.array([str(n) for n in range(self.num_row)])
+            else:
+                self._row_ids = np.array(self._row_ids)
+        return self._row_ids  # type: ignore
+    
+    @property
+    def column_ids(self)->np.ndarray:
+        if not isinstance(self._column_ids, np.ndarray):
+            if self._column_ids is None:
+                self._column_ids = np.array([str(n) for n in range(self.num_column)])
+            else:
+                self._column_ids = np.array(self._column_ids)
+        return self._column_ids  # type: ignore
+    
+    @property
+    def row_labels(self)->np.ndarray:
+        if self._row_labels is None:
+            self._row_labels = np.array([str(n) for n in self.row_ids])
+        return self._row_labels
+    
+    @property
+    def column_labels(self)->np.ndarray:
+        if self._column_labels is None:
+            self._column_labels = np.array([str(n) for n in self.column_ids])
+        return self._column_labels
+    
+    @property
+    def dataframe(self)->pd.DataFrame:
+        if self._dataframe is None:
+            reduced_named_matrix = self._deleteZeroRowsColumns()
+            if len(reduced_named_matrix.values) == 0:
+                return pd.DataFrame()
+            self._dataframe = pd.DataFrame(reduced_named_matrix.values, index=reduced_named_matrix.row_labels,
+                   columns=reduced_named_matrix.column_labels)
+            self._dataframe.index.name = self.row_name
+            self._dataframe.columns.name = self.column_name
+        return self._dataframe
 
     def _deleteZeroRowsColumns(self)->'NamedMatrix':
         """
@@ -61,11 +98,11 @@ class NamedMatrix(object):
                     indices.append(idx)
             return np.array(indices)
         #
-        row_idxs = findIndices(self.matrix)
+        row_idxs = findIndices(self.values)
         if len(row_idxs) == 0:
             return NamedMatrix(np.array([]), np.array([]), np.array([]))
-        column_idxs = findIndices(self.matrix.T)
-        matrix = self.matrix.copy()
+        column_idxs = findIndices(self.values.T)
+        matrix = self.values.copy()
         matrix = matrix[row_idxs, :]
         matrix = matrix[:, column_idxs]
         row_ids = self.row_ids[row_idxs]
@@ -75,39 +112,31 @@ class NamedMatrix(object):
         return NamedMatrix(matrix, row_ids, column_ids,
                            row_labels=row_labels, column_labels=column_labels)
     
-    def template(self, matrix:Optional[np.ndarray]=None)->'NamedMatrix':
+    def template(self, matrix:Optional[Union[np.ndarray, Matrix]]=None)->'NamedMatrix':
         """
         Create a new NamedMatrix with the same row and column names but with a new matrix.
 
         Args:
-            matrix (np.ndarray): New matrix to use. If None, then self.matrix is used.
+            matrix (np.ndarray): New matrix to use. If None, then self is used.
 
         Returns:
             NamedMatrix: New NamedMatrix with the same row and column names but with a new matrix.
         """
         if matrix is None:
-            matrix = self.matrix.copy()
-        if not np.allclose(matrix.shape, self.matrix.shape):
+            matrix = self.values.copy()
+        if isinstance(matrix, Matrix):
+            matrix = matrix.values
+        if not np.allclose(matrix.shape, self.values.shape):
             raise ValueError("Matrix shape must be the same as the original matrix")
         return NamedMatrix(matrix, self.row_ids, self.column_ids,
                            row_labels=self.row_labels, column_labels=self.column_labels)
     
     def isCompatible(self, other:'NamedMatrix')->bool:
-        if not np.allclose(self.matrix.shape, other.matrix.shape):
+        if not np.allclose(self.values.shape, other.values.shape):
             return False
         is_true =  np.all(self.row_ids == other.row_ids) and np.all(self.column_ids == other.column_ids)  \
             and np.all(self.row_labels == other.row_labels) and np.all(self.column_labels == other.column_labels)
         return bool(is_true)
-    
-    @property
-    def dataframe(self)->pd.DataFrame:
-        if len(self._dataframe) == 0:
-            reduced_named_matrix = self._deleteZeroRowsColumns()
-            if len(reduced_named_matrix.matrix) == 0:
-                return pd.DataFrame()
-            self._dataframe = pd.DataFrame(reduced_named_matrix.matrix, index=reduced_named_matrix.row_labels,
-                   columns=reduced_named_matrix.column_labels)
-        return self._dataframe
     
     def __repr__(self):
         return str(self.dataframe.__repr__())
@@ -124,14 +153,15 @@ class NamedMatrix(object):
         """
         if not self.isCompatible(other):
             return False
-        return bool(np.allclose(self.matrix, other.matrix))
+        return bool(np.allclose(self.values, other.values))
     
     def __le__(self, other)->bool:
         if not self.isCompatible(other):
             return False
-        return bool(np.all(self.matrix <= other.matrix))
+        return bool(np.all(self.values <= other.values))
         
-    def getSubMatrix(self, row_ids:Optional[list]=None, column_ids:Optional[list]=None)->SubsetResult:
+    def getSubNamedMatrix(self, row_ids:Optional[Union[np.ndarray, list]]=None,
+                     column_ids:Optional[Union[np.ndarray, list]]=None)->SubsetResult:
         """
         Create an ndarray that is a subset of the rows in the NamedMatrix.
 
@@ -142,11 +172,20 @@ class NamedMatrix(object):
         Returns:
             SubsetResult (readonly values)
         """
-        def findIndices(sub_names:np.ndarray, all_names:np.ndarray)->np.ndarray:
+        def cleanName(name):
+            if name[0] in ["[", "("]:
+                new_name = name[1:]
+            else:
+                new_name = name
+            if name[-1] in ["]", ")"]:
+                new_name = new_name[:-1]
+            return new_name.replace(",", "")
+        def findIndices(sub_names,
+                        all_names=None)->np.ndarray:
             if all_names is None:
-                return np.range(len(sub_names))
-            sub_names_lst = [str(n) for n in sub_names]
-            all_names_lst = [str(n) for n in all_names]
+                return np.array(range(len(sub_names)))
+            sub_names_lst = [cleanName(str(n)) for n in sub_names]
+            all_names_lst = [cleanName(str(n)) for n in all_names]
             indices = np.repeat(-1, len(sub_names))
             # Find the indices of the names in the other_names and place them in the correct order
             for sub_idx, sub_name in enumerate(sub_names_lst):
@@ -157,39 +196,24 @@ class NamedMatrix(object):
                     raise ValueError(f'Could not find name {sub_name} in other names!')
             return np.array(indices)
         #
-        if row_ids is None:
-            row_idxs = np.array(range(self.num_row))
-        else:
-            row_idxs = findIndices(np.array(row_ids), self.row_ids)
-        if column_ids is None:
-            column_idxs = np.array(range(self.num_column))
-        else:
-            column_idxs = findIndices(np.array(column_ids), self.column_ids)  # type: ignore
-        new_matrix = self.matrix[row_idxs, :].copy()
-        new_matrix = new_matrix[:, column_idxs]
-        return SubsetResult(matrix=new_matrix, row_idxs=row_idxs, column_idxs=column_idxs)
-    
-    def getSubNamedMatrix(self, row_ids:Optional[list]=None, column_ids:Optional[list]=None)->'NamedMatrix':
+        row_idxs = findIndices(row_ids, self.row_ids)  # type: ignore
+        column_idxs = findIndices(column_ids, self.column_ids)  # type: ignore
+        new_values = self.values[row_idxs, :].copy()
+        new_values = new_values[:, column_idxs]
+        named_matrix = NamedMatrix(new_values, row_ids=self.row_ids[row_idxs],
+                                   column_ids=self.column_ids[column_idxs])
+        return SubsetResult(named_matrix=named_matrix,
+                            row_idxs=row_idxs, column_idxs=column_idxs)
+        
+    def getSubMatrix(self, row_idxs:np.ndarray, column_idxs:np.ndarray)->Matrix:
         """
-        Create an ndarray that is a subset of the rows in the NamedMatrix. Return rows and columns
-        sorted in the same order as specified by the arguments.
+        Create an ndarray that is a subset of the rows in the NamedMatrix.
 
         Args:
-            row_ids (list): List of row names to keep. If None, keep all.
-            column_ids (list): List of row names to keep. If None, keep all.
+            row_idxs (ndarray): row indices to keep
+            column_idxs (ndarray): column indices to keep
 
         Returns:
-            SubsetResult (readonly values)
+            Matrix
         """
-        def get(array, idxs):
-            if idxs is None:
-                return array
-            return array[idxs]
-        #
-        subset_result = self.getSubMatrix(row_ids=row_ids, column_ids=column_ids)
-        mat = subset_result.matrix.copy()
-        row_ids = get(self.row_ids, subset_result.row_idxs)
-        column_ids = get(self.column_ids, subset_result.column_idxs)
-        row_labels = get(self.row_labels, subset_result.row_idxs)
-        column_labels = get(self.column_labels, subset_result.column_idxs)
-        return NamedMatrix(mat, row_ids, column_ids, row_labels=row_labels, column_labels=column_labels)  # type: ignore
+        return Matrix(self.values[row_idxs, :][:, column_idxs])

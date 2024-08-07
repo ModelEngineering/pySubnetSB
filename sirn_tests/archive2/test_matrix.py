@@ -23,7 +23,7 @@ class TestMatrix(unittest.TestCase):
         if IGNORE_TEST:
             return
         matrix = Matrix(self.array)
-        self.assertTrue(np.all(matrix.values== self.array))
+        self.assertTrue(np.all(matrix.array == self.array))
 
     def testMakeTrinaryMatrix(self):
         if IGNORE_TEST:
@@ -45,9 +45,9 @@ class TestMatrix(unittest.TestCase):
         matrix = Matrix(Matrix.makeTrinaryMatrix(4, 5, prob0=0.2))
         row_triples = []
         for idx in range(matrix.num_row):
-            triple = (np.sum(matrix.values[idx, :] < 0),
-                      np.sum(matrix.values[idx, :] == 0),
-                      np.sum(matrix.values[idx, :] > 0 ))
+            triple = (np.sum(matrix.array[idx, :] < 0),
+                      np.sum(matrix.array[idx, :] == 0),
+                      np.sum(matrix.array[idx, :] > 0 ))
             row_triples.append(triple)
 
 
