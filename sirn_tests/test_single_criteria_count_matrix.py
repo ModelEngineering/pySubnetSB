@@ -1,4 +1,4 @@
-from sirn.criteria_count_matrix import CriteriaCountMatrix  # type: ignore
+from sirn.single_criteria_count_matrix import SingleCriteriaCountMatrix  # type: ignore
 
 import numpy as np
 import time
@@ -17,7 +17,13 @@ NROW, NCOL = MAT.shape
 class TestCriteriaMatrix(unittest.TestCase):
 
     def setUp(self):
-        self.cc_matrix = CriteriaCountMatrix(MAT)
+        self.cc_matrix = SingleCriteriaCountMatrix(MAT)
+
+    def testConstructor(self):
+        if IGNORE_TEST:
+            return
+        repr = str(self.cc_matrix)
+        self.assertTrue(isinstance(repr, str))
 
     def testMakeCriteriaCountMatrix(self):
         if IGNORE_TEST:
@@ -30,7 +36,7 @@ class TestCriteriaMatrix(unittest.TestCase):
             return
         for _ in range(1000):
             nrow, ncol = (100, 100)
-            cc_matrix = CriteriaCountMatrix(np.random.randint(-10, 10, (nrow, ncol)))
+            cc_matrix = SingleCriteriaCountMatrix(np.random.randint(-10, 10, (nrow, ncol)))
             trues = [v == ncol for v in np.sum(cc_matrix.values, axis=1)]
             self.assertTrue(all(trues))
 
