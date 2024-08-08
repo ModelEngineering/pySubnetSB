@@ -108,6 +108,12 @@ class TestNamedMatrix(unittest.TestCase):
         time_matrix = timeit(is_named_matrix=False)
         self.assertTrue(time_named_matrix/time_matrix > 100)
         #print(f"TimeNamed: {time_named_matrix}", f"TimeMatrix: {time_matrix}")
+
+    def testCopyEquals(self):
+        if IGNORE_TEST:
+            return
+        named_matrix = self.named_matrix.copy()
+        self.assertTrue(named_matrix == self.named_matrix)
         
 
 if __name__ == '__main__':

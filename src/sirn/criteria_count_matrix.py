@@ -5,6 +5,7 @@ from sirn.criteria_vector import CriteriaVector # type: ignore
 from sirn.named_matrix import Matrix  # type: ignore
 from sirn.named_matrix import NamedMatrix  # type: ignore
 
+from abc import ABC, abstractmethod
 import numpy as np
 from typing import List, Union, Optional
 
@@ -18,28 +19,49 @@ class CriteriaCountMatrix(Matrix):
         self.criteria_vec = criteria_vector
         super().__init__(array)
 
-    def __repr__(self)->str:
-        named_matrix = NamedMatrix(self.values, row_name="rows", column_name="criteria")
-        return named_matrix.__repr__()
-    
-    def isEqualValues(self, other)->bool:
-        """
-        Compare the values of two matrices.
-        Args:
-            other (CriteriaCountMatrix): Another matrix with same shape.
-            max_permutation (int): The maximum number of permutations.
-        Returns:
-            bool: True if the values are equal.
-        """
+    def __eq__(self, other)->bool:
+        if not self.isCompatible(other):
+            return False
+        if not bool(np.all(self.criteria_vec == other.criteria_vec)):
+            return False
         return bool(np.all(self.values == other.values))
     
-    def isLessEqualValues(self, other)->bool:
+    def copy(self)->'CriteriaCountMatrix':
+        """
+        Create a copy of the CriteriaCountMatrix.
+
+        Returns:
+            CriteriaCountMatrix: A copy of the CriteriaCountMatrix.
+        """
+        new_cc_mat = CriteriaCountMatrix(self.values.copy(), criteria_vector=self.criteria_vec)
+        return new_cc_mat
+
+    @abstractmethod 
+    def getReferenceArray(self)->np.ndarray:
+        raise NotImplementedError("Subclasses must implement.")
+
+    @abstractmethod 
+    def getTargetArray(self, assignment:np.ndarray[int])->np.ndarray:
+        raise NotImplementedError("Subclasses must implement.")
+    
+    def isEqual(self, other:'CriteriaCountMatrix', other_assignment:np.ndarray)->bool:
         """
         Compare the values of two matrices.
         Args:
             other (CriteriaCountMatrix): Another matrix with same shape.
-            max_permutation (int): The maximum number of permutations.
+            other_assignment (np.ndarray): The assignment of other rows to self rows.
         Returns:
             bool: True if the values are equal.
         """
-        return bool(np.all(self.values <= other.values))
+        return bool(np.all(self.getReferenceArray() == other.getTargetArray(other_assignment)))
+    
+    def isLessEqual(self, other:'CriteriaCountMatrix', other_assignment:np.ndarray)->bool:
+        """
+        Compare the values of two matrices.
+        Args:
+            other (CriteriaCountMatrix): Another matrix with same shape.
+            other_assignment (np.ndarray): The assignment of other rows to self rows.
+        Returns:
+            bool: True if the values are equal.
+        """
+        return bool(np.all(self.getReferenceArray() <= other.getTargetArray(other_assignment)))

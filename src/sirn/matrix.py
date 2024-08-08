@@ -10,23 +10,50 @@ class Matrix(object):
         """
         Args:
             arr (np.array): Stoichiometry matrix. Rows are reactions; columns are species.
+        Instance variables:
+            num_mat (int): Number of matrices.
+            num_row (int): Number of rows.
+            num_column (int): Number of columns.
         """
         self.values = array
         self.shape = np.shape(array)
         if len(self.shape) == 2:
+            self.num_mat = 1
             self.num_row, self.num_column = np.shape(array)
         elif len(self.shape) == 1:
+            self.num_mat = 1
             self.num_row, self.num_column = len(array), 1
+        elif len(self.shape) == 3:
+            self.num_mat, self.num_row, self.num_column = np.shape(array)
         else:
-            self.num_row, self.num_column = 0, 0
+            self.num_mat, self.num_row, self.num_column = 0, 0, 0
 
     def __repr__(self)->str:
         return str(self.values)
 
     def __eq__(self, other)->bool:
-        if np.shape(self.values) != np.shape(other.array):
+        if not np.all(np.shape(self.values) == np.shape(other.values)):
             return False
-        return np.all(self.values == other.array)  # type: ignore
+        return np.all(self.values == other.values)  # type: ignore
+    
+    def isCompatible(self, other)->bool:
+        """
+        Check if the matrix is compatible with another matrix.
+        Args:
+            other (Matrix): Another matrix.
+        Returns:
+            bool: True if the matrix is compatible; False otherwise.
+        """
+        return bool(np.all(np.shape(self.values) == np.shape(other.values)))
+    
+    def copy(self)->'Matrix':
+        """
+        Create a copy of the Matrix.
+
+        Returns:
+            Matrix: A copy of the Matrix.
+        """
+        return Matrix(self.values.copy())
     
     def isPermutablyIdentical(self, other):
         """

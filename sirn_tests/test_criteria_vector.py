@@ -24,6 +24,7 @@ class TestCriteriaVector(unittest.TestCase):
         self.assertGreater(len(self.criteria_vector.criteria_functions), 0)
         self.assertTrue(self.criteria_vector.criteria_functions[0](-1))
         self.assertFalse(self.criteria_vector.criteria_functions[0](2))
+        self.assertEqual(len(self.criteria_vector.criteria_strs), len(self.criteria_vector.criteria_functions))
 
 
 if __name__ == '__main__':

@@ -2,6 +2,7 @@
 from sirn.matrix import Matrix  # type: ignore
 
 import collections
+from IPython.display import display
 import pandas as pd  # type: ignore
 import numpy as np
 from typing import Optional, Union
@@ -43,32 +44,34 @@ class NamedMatrix(Matrix):
 
     @property
     def row_ids(self)->np.ndarray:
-        if not isinstance(self._row_ids, np.ndarray):
-            if self._row_ids is None:
-                self._row_ids = np.array([str(n) for n in range(self.num_row)])
-            else:
-                self._row_ids = np.array(self._row_ids)
+        if self._row_ids is None:
+            self._row_ids = np.array([str(n) for n in range(self.num_row)])
+        else:
+            self._row_ids = np.array(self._row_ids)
         return self._row_ids  # type: ignore
     
     @property
     def column_ids(self)->np.ndarray:
-        if not isinstance(self._column_ids, np.ndarray):
-            if self._column_ids is None:
-                self._column_ids = np.array([str(n) for n in range(self.num_column)])
-            else:
-                self._column_ids = np.array(self._column_ids)
+        if self._column_ids is None:
+            self._column_ids = np.array([str(n) for n in range(self.num_column)])
+        else:
+            self._column_ids = np.array(self._column_ids)
         return self._column_ids  # type: ignore
     
     @property
-    def row_labels(self)->np.ndarray:
+    def row_labels(self):
         if self._row_labels is None:
             self._row_labels = np.array([str(n) for n in self.row_ids])
+        else:
+            self._row_labels = np.array(self._row_labels)
         return self._row_labels
     
     @property
-    def column_labels(self)->np.ndarray:
+    def column_labels(self):
         if self._column_labels is None:
             self._column_labels = np.array([str(n) for n in self.column_ids])
+        else:
+            self._column_labels = np.array(self._column_labels)
         return self._column_labels
     
     @property
@@ -82,6 +85,36 @@ class NamedMatrix(Matrix):
             self._dataframe.index.name = self.row_name
             self._dataframe.columns.name = self.column_name
         return self._dataframe
+    
+    def copy(self)->'NamedMatrix':
+        """
+        Create a copy of the NamedMatrix.
+
+        Returns:
+            NamedMatrix: A copy of the NamedMatrix.
+        """
+        return NamedMatrix(self.values.copy(), row_ids=self.row_ids.copy(),
+                           column_ids=self.column_ids.copy(),
+                           row_labels=self.row_labels.copy(),
+                           column_labels=self.column_labels.copy(),
+                           row_name=self.row_name, column_name=self.column_name)
+    
+    def __eq__(self, other):
+        """
+        Compare the properties of the two NamedMatrix objects.
+
+        Args:
+            other (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
+        if not super().__eq__(other):
+            return False
+        for attr in ['row_ids', 'column_ids', 'row_labels', 'column_labels', 'row_name', 'column_name']:
+            if not np.all(getattr(self, attr) == getattr(other, attr)):
+                return False
+        return True
 
     def _deleteZeroRowsColumns(self)->'NamedMatrix':
         """
@@ -139,21 +172,8 @@ class NamedMatrix(Matrix):
         return bool(is_true)
     
     def __repr__(self):
-        return str(self.dataframe.__repr__())
-    
-    def __eq__(self, other):
-        """
-        Compare the properties of the two NamedMatrix objects.
-
-        Args:
-            other (_type_): _description_
-
-        Returns:
-            _type_: _description_
-        """
-        if not self.isCompatible(other):
-            return False
-        return bool(np.allclose(self.values, other.values))
+        #print(self.dataframe)
+        return self.dataframe.__repr__()
     
     def __le__(self, other)->bool:
         if not self.isCompatible(other):

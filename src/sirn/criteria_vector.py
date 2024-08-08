@@ -25,17 +25,24 @@ class CriteriaVector(object):
             criteria (np.array): A vector of criteria.
         """
         self.boundary_values = boundary_values
-        self.criteria_functions = self._makeCriteria()
+        self.criteria_functions, self.criteria_strs = self._makeCriteria()
         self.num_criteria = len(self.criteria_functions)
 
     def _makeCriteria(self):
+        """"
+        Returns:
+            np.array: A vector of criteria
+            list: A list of strings describing the criteria
+        """
         criteria = []
+        criteria_strs = []   # Strings describing the functions
         # Construct criteria for equality with boundary values
         for val in self.boundary_values:
             idx = len(criteria)
             function_name = f'function_{idx}'
             exec(f'def {function_name}(x):\n    return x == {val}')
             criteria.append(locals()[function_name])
+            criteria_strs.append(f'={val}')
         # Construct criteria for being between boundary values
         for i in range(len(self.boundary_values) - 1):
             idx = len(criteria)
@@ -44,15 +51,18 @@ class CriteriaVector(object):
             upper = self.boundary_values[i+1]
             exec(f'def {function_name}(x):\n    return np.logical_and((x > {lower}), (x < {upper}))')
             criteria.append(locals()[function_name])
+            criteria_strs.append(f'{self.boundary_values[i]}<,<{self.boundary_values[i+1]}')
         # Construct criteria for endpoints
         idx = len(criteria)
         function_name = f'function_{idx}'
         exec(f'def {function_name}(x):\n    return x < {self.boundary_values[0]}')
         criteria.append(locals()[function_name])
+        criteria_strs.append(f'<{self.boundary_values[0]}')
         #
         idx = len(criteria)
         function_name = f'function_{idx}'
         exec(f'def {function_name}(x):\n    return x > {self.boundary_values[-1]}')
         criteria.append(locals()[function_name])
+        criteria_strs.append(f'>{self.boundary_values[-1]}')
         #
-        return criteria
+        return criteria, criteria_strs

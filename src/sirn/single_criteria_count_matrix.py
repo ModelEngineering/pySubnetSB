@@ -18,14 +18,35 @@ class SingleCriteriaCountMatrix(CriteriaCountMatrix):
         """
         if criteria_vector is None:
             criteria_vector = CriteriaVector()
-        values = self._makeCriteriaCountMatrix(array, criteria_vector)
+        values = self._makeSingleCriteriaCountMatrix(array, criteria_vector)
         super().__init__(values, criteria_vector=criteria_vector)
 
     def __repr__(self)->str:
-        named_matrix = NamedMatrix(self.values, row_name="rows", column_name="criteria")
+        named_matrix = NamedMatrix(self.values, row_name="rows", column_name="criteria",
+               column_labels=self.criteria_vec.criteria_strs)  # type: ignore
         return named_matrix.__repr__()
+    
+    def getReferenceArray(self)->np.ndarray:
+        """
+        Get a reference matrix of criteria counts against which another matrix is compared.
+        Returns:
+            np.array: Matrix of counts to compare
+        """
+        return self.values
 
-    def _makeCriteriaCountMatrix(self, array:np.ndarray, criteria_vec:CriteriaVector)->np.ndarray:
+    def getTargetArray(self, assignment:np.ndarray[int])->np.ndarray:
+        """
+        Get a matrix as specified by the assignment.
+
+        Args:
+            other_assignment (np.ndarray): _description_
+
+        Returns:
+            np.ndarray: _description_
+        """
+        return self.values[assignment, :]
+
+    def _makeSingleCriteriaCountMatrix(self, array:np.ndarray, criteria_vec:CriteriaVector)->np.ndarray:
         """
         Evaluate the criteria on an array.
         Args:
@@ -36,25 +57,3 @@ class SingleCriteriaCountMatrix(CriteriaCountMatrix):
         lst = [c(array.T) for c in criteria_vec.criteria_functions]  # type: ignore
         result = np.sum(lst, axis=1)
         return result.T
-    
-    def isEqualValues(self, other)->bool:
-        """
-        Compare the values of two matrices.
-        Args:
-            other (CriteriaCountMatrix): Another matrix with same shape.
-            max_permutation (int): The maximum number of permutations.
-        Returns:
-            bool: True if the values are equal.
-        """
-        return bool(np.all(self.values == other.values))
-    
-    def isLessEqualValues(self, other)->bool:
-        """
-        Compare the values of two matrices.
-        Args:
-            other (CriteriaCountMatrix): Another matrix with same shape.
-            max_permutation (int): The maximum number of permutations.
-        Returns:
-            bool: True if the values are equal.
-        """
-        return bool(np.all(self.values <= other.values))
