@@ -1,6 +1,6 @@
 '''A container for structurally identical networks and their statistics. Has a string representation.'''
 
-from sirn.network import Network  # type: ignore
+from src.sirn.network_base import NetworkBase  # type: ignore
 from sirn import constants as cn  # type: ignore
 
 import collections
@@ -16,7 +16,7 @@ TIME_SEP = "#"
 
 class ClusteredNetwork(object):
 
-    def __init__(self, network_name:Union[Network, str], is_indeterminate:bool=False, num_perm:int=0,
+    def __init__(self, network_name:Union[NetworkBase, str], is_indeterminate:bool=False, num_perm:int=0,
                  processing_time:Optional[float]=None):
         self.network_name = str(network_name)
         self.is_indeterminate = is_indeterminate

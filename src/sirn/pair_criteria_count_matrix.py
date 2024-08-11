@@ -10,7 +10,6 @@ from sirn import constants as cn # type: ignore
 from sirn.criteria_vector import CriteriaVector # type: ignore
 from sirn.criteria_count_matrix import CriteriaCountMatrix # type: ignore
 from sirn.named_matrix import Matrix  # type: ignore
-from sirn.named_matrix import NamedMatrix  # type: ignore
 
 import collections
 import itertools

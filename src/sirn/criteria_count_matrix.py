@@ -3,7 +3,6 @@
 from sirn import constants as cn # type: ignore
 from sirn.criteria_vector import CriteriaVector # type: ignore
 from sirn.named_matrix import Matrix  # type: ignore
-from sirn.named_matrix import NamedMatrix  # type: ignore
 
 from abc import ABC, abstractmethod
 import numpy as np

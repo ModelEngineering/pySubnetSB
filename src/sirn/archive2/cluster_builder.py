@@ -1,7 +1,7 @@
 '''Builds clustered networks from a NetworkCollection based on their structural identity.'''
 
 from sirn import constants as cn  # type: ignore
-from sirn.network import Network  # type: ignore
+from src.sirn.network_base import NetworkBase  # type: ignore
 from sirn.network_collection import NetworkCollection  # type: ignore
 from sirn.clustered_network import ClusteredNetwork # type: ignore
 from sirn.clustered_network_collection import ClusteredNetworkCollection # type: ignore
@@ -62,16 +62,16 @@ class ClusterBuilder(object):
             return 0
         return max(sequence)
     
-    def _makeHashDct(self)->Dict[int, List[Network]]:
+    def _makeHashDct(self)->Dict[int, List[NetworkBase]]:
         """
         Makes the hash dictionary for the network collection
 
         Returns:
             Dict[int, List[Network]]: _description_
         """
-        def makeDct(attr:str)->Dict[int, List[Network]]:
+        def makeDct(attr:str)->Dict[int, List[NetworkBase]]:
             # Build the hash dictionary based on the attribute
-            hash_dct: Dict[int, List[Network]] = {}
+            hash_dct: Dict[int, List[NetworkBase]] = {}
             # Build the hash dictionary
             for network in self.network_collection.networks:
                 hash_val = getattr(network, attr)
@@ -94,7 +94,7 @@ class ClusterBuilder(object):
             hash_dct = {cn.NON_SIRN_HASH: self.network_collection.networks}
         return hash_dct
 
-    def clustered2Network(self, clustered_network:ClusteredNetwork)->Network:
+    def clustered2Network(self, clustered_network:ClusteredNetwork)->NetworkBase:
         result = self.network_collection.network_dct[clustered_network.network_name]
         return result
 
@@ -190,7 +190,7 @@ class ClusterBuilder(object):
         return [ClusteredNetworkCollection.makeFromRepr(repr_str)
                                          for repr_str in df.clustered_network_repr.values]
     
-    def makeNetworkFromClusteredNetwork(self, clustered_network:ClusteredNetwork)->Network:
+    def makeNetworkFromClusteredNetwork(self, clustered_network:ClusteredNetwork)->NetworkBase:
         """
         Makes a Network from a ClusteredNetwork
 

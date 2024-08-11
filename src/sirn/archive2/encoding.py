@@ -169,7 +169,7 @@ class Encoding(object):
             augmenteds.append(counts)
         mat = np.array(augmenteds)
         mat -= 1  # Account for adding CRITERIA_PAIRED_VALUES
-        named_matrix = NamedMatrix(array=mat, row_ids=pairs, column_ids=CRITERIA_PAIRED_VALUES)
+        named_matrix = NamedMatrix(array=mat, row_names=pairs, column_names=CRITERIA_PAIRED_VALUES)
         return named_matrix
     
     def _makeAdjacentPairEncodingNamedMatrix(self)->NamedMatrix:

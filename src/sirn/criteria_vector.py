@@ -28,6 +28,9 @@ class CriteriaVector(object):
         self.criteria_functions, self.criteria_strs = self._makeCriteria()
         self.num_criteria = len(self.criteria_functions)
 
+    def copy(self):
+        return CriteriaVector(self.boundary_values)
+
     def _makeCriteria(self):
         """"
         Returns:

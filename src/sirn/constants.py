@@ -36,3 +36,21 @@ MAX_HASH = 'max_hash'
 NON_SIRN_HASH = 1
 # Numerical constants
 MAX_PERMUTATIONS = 10000
+# Network matrices
+#   Matrix type
+MT_STANDARD = 'mt_standard'
+MT_SINGLE_CRITERIA = 'mt_single_criteria'
+MT_PAIR_CRITERIA = 'mt_pair_criteria'
+MT_LST = [MT_STANDARD, MT_SINGLE_CRITERIA, MT_PAIR_CRITERIA]
+#   Orientation
+OR_REACTION = 'or_reaction'
+OR_SPECIES = 'or_species'
+OR_LST = [OR_REACTION, OR_SPECIES]
+#   Participant
+PR_REACTANT = 'pr_reactant'
+PR_PRODUCT = 'pr_product'
+PR_LST = [PR_REACTANT, PR_PRODUCT]
+#   Identity
+ID_WEAK = 'id_weak'
+ID_STRONG = 'id_strong'
+ID_LST = [ID_WEAK, ID_STRONG]

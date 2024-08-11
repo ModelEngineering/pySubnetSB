@@ -5,26 +5,40 @@ class Enum(object):
     PERMITTED_STRS:list = []  # Must override this
 
     def __init__(self, value):
-        self.value = self.PERMITTED_STRS.index(value)
+        self.value = value
 
     def __repr__(self):
-        return self.PERMITTED_STRS[self.value]
+        return str(self.value)
     
     def __eq__(self, other):
-        if self.__class__ != other.__class__:
-            raise RuntimeError("Cannot compare different enums.")
-        return self.value == other.value
+        return str(self) == str(other)
+    
+    def hasValue(self, value:str):
+        return str(self.__class__) == value
     
 # Derived classes
+class NoneEnum(Enum):
+    def __init__(self, value):
+        self.value = "None"
+
 class ParticipantEnum(Enum):
-    PERMITTED_STRS = ['reactant', 'product']
+    REACTANT = 'reactant'
+    PRODUCT = 'product'
+    PERMITTED_STRS = [REACTANT, PRODUCT]
 
 class OrientationEnum(Enum):
-    PERMITTED_STRS = ['reaction', 'species']
+    REACTION = 'reaction'
+    SPECIES = 'species'
+    PERMITTED_STRS = [REACTION, SPECIES]
 
 class IdentityEnum(Enum):
-    PERMITTED_STRS = ['weak', 'strong']
+    WEAK = 'weak'
+    STRONG = 'strong'
+    PERMITTED_STRS = [WEAK, STRONG]
 
 # Matrix type
 class MatrixTypeEnum(Enum):
-    PERMITTED_STRS = ['stoichiometry', 'criteria', 'criteria_pair']
+    STANDARD = 'standard'
+    SINGLE_CRITERIA = 'single_criteria'
+    PAIR_CRITERIA = 'pair_criteria'
+    PERMITTED_STRS = [STANDARD, SINGLE_CRITERIA, PAIR_CRITERIA]
