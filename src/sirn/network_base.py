@@ -1,7 +1,4 @@
-'''Container of properties for a reaction network.'''
-
-"""
-"""
+'''Efficient container of properties for a reaction network.'''
 
 from sirn import constants as cn  # type: ignore
 from sirn.criteria_vector import CriteriaVector  # type: ignore
@@ -12,16 +9,14 @@ from sirn.single_criteria_count_matrix import SingleCriteriaCountMatrix  # type:
 from sirn.stoichometry import Stoichiometry  # type: ignore
 from sirn.util import hashArray  # type: ignore
 
-import collections
-import itertools
 import os
 import numpy as np
-from typing import Optional, Union, List, Tuple
+from typing import Optional
 
 
 class NetworkBase(object):
     """
-    Abstraction for a reaction network. This is represented by a reactant PMatrix and product PMatrix.
+    Abstraction for a reaction network. This is represented by reactant and product stoichiometry matrices.
     """
 
     def __init__(self, reactant_arr:Matrix, 
@@ -35,8 +30,8 @@ class NetworkBase(object):
             reactant_mat (np.ndarray): Reactant matrix.
             product_mat (np.ndarray): Product matrix.
             network_name (str): Name of the network.
-            reaction_names (List[str]): Names of the reactions.
-            species_names (List[str]): Names of the species
+            reaction_names (np.ndarray[str]): Names of the reactions.
+            species_names (np.ndarray[str]): Names of the species
         """
         # Reactant stoichiometry matrix is negative
         self.num_species, self.num_reaction = np.shape(reactant_arr)

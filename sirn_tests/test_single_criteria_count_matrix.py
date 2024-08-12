@@ -24,7 +24,7 @@ class TestSingleCriteriaMatrix(unittest.TestCase):
             return
         repr = str(self.scc_mat)
         self.assertTrue(isinstance(repr, str))
-        self.assertTrue(np.all(self.scc_mat.row_hashes == [10100, 10100,    200]))
+        self.assertTrue(np.all(self.scc_mat.row_hashes == [200, 10100, 10100]))
         self.assertTrue(np.all(self.scc_mat.sorted_mat.values.shape == self.scc_mat.values.shape))
 
     def testMakeCriteriaCountMatrix(self):

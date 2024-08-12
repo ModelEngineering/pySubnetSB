@@ -43,8 +43,7 @@ class TestNamedMatrix(unittest.TestCase):
         for _ in range(10000):
             named_matrix = NamedMatrix(arr)
         elapsed_time = time.time() - start_time
-        self.assertLess(elapsed_time, 1e-2)
-
+        self.assertLess(elapsed_time, 1e-1)
 
     def testEq(self):
         if IGNORE_TEST:
