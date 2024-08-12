@@ -26,8 +26,8 @@ class NetworkBase(object):
 
     def __init__(self, reactant_arr:Matrix, 
                  product_arr:np.ndarray,
-                 reaction_names:Optional[List[str]]=None,
-                 species_names:Optional[List[str]]=None,
+                 reaction_names:Optional[np.ndarray[str]]=None,
+                 species_names:Optional[np.ndarray[str]]=None,
                  network_name:Optional[str]=None,
                  criteria_vector:Optional[CriteriaVector]=None)->None:
         """
@@ -39,19 +39,36 @@ class NetworkBase(object):
             species_names (List[str]): Names of the species
         """
         # Reactant stoichiometry matrix is negative
-        self.species_names = species_names
-        self.reaction_names = reaction_names
+        self.num_species, self.num_reaction = np.shape(reactant_arr)
         self.criteria_vec = criteria_vector
         self.reactant_mat = NamedMatrix(reactant_arr, row_names=species_names, column_names=reaction_names,
                                         row_description="species", column_description="reactions")
         self.product_mat = NamedMatrix(product_arr, row_names=species_names, column_names=reaction_names,
                                         row_description="species", column_description="reactions")
         # The following are deferred execution for efficiency considerations
+        self._species_names = species_names
+        self._reaction_names = reaction_names
         self._network_name = network_name
         self._stoichiometry_mat:Optional[NamedMatrix] = None
         self._network_mats:Optional[dict] = None # Network matrices populated on demand by getNetworkMat
         self._strong_hash:Optional[int] = None  # Hash for strong identity
         self._weak_hash:Optional[int] = None  # Hash for weak identity
+
+    @property
+    def species_names(self)->np.ndarray[str]:
+        if self._species_names is None:
+            self._species_names = np.array([f"S{i}" for i in range(self.num_species)])
+        if not isinstance(self._species_names, np.ndarray):
+            self._species_names = np.array(self._species_names)
+        return self._species_names
+    
+    @property
+    def reaction_names(self)->np.ndarray[str]:
+        if self._reaction_names is None:
+            self._reaction_names = np.array([f"S{i}" for i in range(self.num_reaction)])
+        if not isinstance(self._reaction_names, np.ndarray):
+            self._reaction_names = np.array(self._reaction_names)
+        return self._reaction_names
 
     @property
     def weak_hash(self)->int:
@@ -61,6 +78,7 @@ class NetworkBase(object):
                                   identity=cn.ID_WEAK)
                                   for o in [cn.OR_SPECIES, cn.OR_REACTION]]
             hash_arr = np.array([hashArray(stoichiometry.row_hashes) for stoichiometry in stoichiometries])
+            hash_arr = np.sort(hash_arr)
             self._weak_hash = hashArray(hash_arr)
         return self._weak_hash
         
@@ -76,6 +94,7 @@ class NetworkBase(object):
                         identity=cn.ID_STRONG,
                         participant=i_participant))
             hash_arr = np.array([hashArray(stoichiometry.row_hashes) for stoichiometry in stoichiometries])
+            hash_arr = np.sort(hash_arr)
             self._strong_hash = hashArray(hash_arr)
         return self._strong_hash
 
@@ -175,57 +194,23 @@ class NetworkBase(object):
             return False
         return True
     
-#    def randomize(self, structural_identity_type:str=cn.STRUCTURAL_IDENTITY_TYPE_STRONG,
-#                  num_iteration:int=10, is_verify=True)->'Network':
-#        """
-#        Creates a new network with randomly permuted reactant and product matrices.
-#
-#        Args:
-#            collection_identity_type (str): Type of identity collection
-#            num_iteration (int): Number of iterations to find a randomized network
-#            is_verify (bool): Verify that the network is structurally identical
-#
-#        Returns:
-#            Network
-#        """
-#        is_found = False
-#        for _ in range(num_iteration):
-#            randomize_result = self.reactant_mat.randomize()
-#            reactant_arr = randomize_result.pmatrix.array.copy()
-#            if structural_identity_type == cn.STRUCTURAL_IDENTITY_TYPE_STRONG:
-#                is_structural_identity_type_weak = False
-#                product_arr = PMatrix.permuteArray(self.product_mat.array,
-#                        randomize_result.row_perm, randomize_result.column_perm) 
-#            elif structural_identity_type == cn.STRUCTURAL_IDENTITY_TYPE_WEAK:
-#                is_structural_identity_type_weak = True
-#                stoichiometry_arr = PMatrix.permuteArray(self.stoichiometry_mat.array,
-#                        randomize_result.row_perm, randomize_result.column_perm) 
-#                product_arr = reactant_arr + stoichiometry_arr
-#            else:
-#                # No requirement for being structurally identical
-#                is_structural_identity_type_weak = True
-#                randomize_result = self.product_mat.randomize()
-#                product_arr = randomize_result.pmatrix.array
-#            network = Network(reactant_arr, product_arr)
-#            if not is_verify:
-#                is_found = True
-#                break
-#            result =self.isStructurallyIdentical(network,
-#                     is_structural_identity_weak=is_structural_identity_type_weak)
-#            if (structural_identity_type==cn.STRUCTURAL_IDENTITY_TYPE_NOT):
-#                is_found = True
-#                break
-#            elif (is_structural_identity_type_weak) and result.is_structural_identity_weak:
-#                is_found = True
-#                break
-#            elif (not is_structural_identity_type_weak) and result.is_structural_identity_strong:
-#                is_found = True
-#                break
-#            else:
-#                pass
-#        if not is_found:
-#            raise ValueError("Could not find a randomized network. Try increasing num_iteration.")
-#        return network
+    def randomlyPermute(self)->'NetworkBase':
+        """
+        Creates a new network with permuted reactant and product matrices using the same random permutation.
+
+        Returns:
+            BaseNetwork
+        """
+        reaction_perm = np.random.permutation(range(self.num_reaction))
+        species_perm = np.random.permutation(range(self.num_species))
+        reactant_arr = self.reactant_mat.values[species_perm, :]
+        reactant_arr = reactant_arr[:, reaction_perm]
+        product_arr = self.product_mat.values[species_perm, :]
+        product_arr = product_arr[:, reaction_perm]
+        reaction_names = np.array([self.reaction_names[i] for i in reaction_perm])
+        species_names = np.array([self.species_names[i] for i in species_perm])
+        return NetworkBase(reactant_arr, product_arr, network_name=self.network_name,
+              reaction_names=reaction_names, species_names=species_names)
     
     @classmethod
     def makeFromAntimonyStr(cls, antimony_str:str, network_name:Optional[str]=None)->'NetworkBase':

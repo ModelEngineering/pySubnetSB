@@ -30,15 +30,7 @@ class SingleCriteriaCountMatrix(CriteriaCountMatrix):
         Returns:
             List[int]: A list of hashes.
         """
-        if np.all(self.values >= HASH_BASE):
-            raise ValueError(f"Values must be less than {HASH_BASE}.")
-        row_hashes = []
-        for array in self.values:
-            row_hash = np.sum([v*HASH_BASE**n for n, v in enumerate(array)])
-            row_hashes.append(row_hash)
-        return np.array(row_hashes)
-
-        return [hash(row.tostring()) for row in self.values]
+        return self.getRowHashes(self.sorted_mat.values)
 
     def __repr__(self)->str:
         named_matrix = NamedMatrix(self.values, row_description="rows", column_description="criteria",

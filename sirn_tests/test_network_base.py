@@ -139,30 +139,49 @@ class TestNetwork(unittest.TestCase):
         network = self.network.copy()
         self.assertEqual(self.network, network)
         
-    def testRandomize(self):
-        return
+    def testRandomlyPermuteTrue(self):
         if IGNORE_TEST:
             return
-        def test(structural_identity_type):
-            for idx in range(10):
-                big_network = NetworkBase.makeFromAntimonyStr(BIG_NETWORK)
-                network = big_network.randomize(structural_identity_type=structural_identity_type)
-                if structural_identity_type == cn.STRUCTURAL_IDENTITY_TYPE_STRONG:
-                    result = big_network.isStructurallyIdentical(network,
-                                        is_structural_identity_weak=False)
-                    self.assertTrue(result.is_structural_identity_strong)
-                elif structural_identity_type == cn.STRUCTURAL_IDENTITY_TYPE_WEAK:
-                    result = big_network.isStructurallyIdentical(network,
-                                        is_structural_identity_weak=True)
-                    self.assertTrue(result.is_structural_identity_weak)
-                else:  # cn.STRUCTURAL_IDENTITY_TYPE_NOT
-                    result = big_network.isStructurallyIdentical(network,
-                                        is_structural_identity_weak=True)
-                    self.assertFalse(result.is_excessive_perm)
+        def test(size, num_iteration=500):
+            reactant_arr = np.random.randint(0, 3, (size, size))
+            product_arr = np.random.randint(0, 3, (size, size))
+            network = NetworkBase(reactant_arr, product_arr)
+            for _ in range(num_iteration):
+                new_network = network.randomlyPermute()
+                self.assertNotEqual(network, new_network)
+                self.assertEqual(network.num_species, new_network.num_species)
+                self.assertEqual(network.num_reaction, new_network.num_reaction)
+                self.assertEqual(network.weak_hash, new_network.weak_hash)
+                self.assertEqual(network.strong_hash, new_network.strong_hash)
         #
-        test(cn.STRUCTURAL_IDENTITY_TYPE_STRONG)
-        test(cn.STRUCTURAL_IDENTITY_TYPE_WEAK)
-        test(cn.STRUCTURAL_IDENTITY_TYPE_NOT)
+        test(3)
+        test(30)
+
+    def testRandomlyPermuteFalse(self):
+        if IGNORE_TEST:
+            return
+        # Randomly change a value in the reactant matrix
+        def test(size, num_iteration=500):
+            reactant_arr = np.random.randint(0, 3, (size, size))
+            product_arr = np.random.randint(0, 3, (size, size))
+            network = NetworkBase(reactant_arr, product_arr)
+            for _ in range(num_iteration):
+                new_network = network.randomlyPermute()
+                irow = np.random.randint(0, size)
+                icol = np.random.randint(0, size)
+                cur_value = new_network.reactant_mat.values[irow, icol]
+                if cur_value == 0:
+                    new_network.reactant_mat.values[irow, icol] = 1
+                else:
+                    new_network.reactant_mat.values[irow, icol] = 0
+                self.assertNotEqual(network, new_network)
+                self.assertEqual(network.num_species, new_network.num_species)
+                self.assertEqual(network.num_reaction, new_network.num_reaction)
+                self.assertNotEqual(network.weak_hash, new_network.weak_hash)
+                self.assertNotEqual(network.strong_hash, new_network.strong_hash)
+        #
+        test(3)
+        test(30)
 
 if __name__ == '__main__':
     unittest.main(failfast=True)

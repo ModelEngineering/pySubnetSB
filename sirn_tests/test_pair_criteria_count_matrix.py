@@ -27,6 +27,7 @@ class TestPairCriteriaMatrix(unittest.TestCase):
             return
         repr = str(self.pcc_mat)
         self.assertTrue(isinstance(repr, str))
+        self.assertTrue(np.all(self.pcc_mat.sorted_mat.values.shape == self.pcc_mat.values.shape))
 
     def testMakeCriteriaCountMatrixScale(self):
         if IGNORE_TEST:

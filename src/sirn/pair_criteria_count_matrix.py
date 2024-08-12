@@ -32,28 +32,6 @@ class PairCriteriaCountMatrix(CriteriaCountMatrix):
         pair_matrix_result = self._makePairCriteriaCountMatrix(array, criteria_vector)
         super().__init__(pair_matrix_result.criteria_count_arr, criteria_vector=criteria_vector)
         self._reference_matrix: Optional[Matrix] = None
-    
-    def index2Pair(self, index:int)->Tuple[int, int]:
-        """
-        Convert an index to a pair of row indices. Pairs are counted by row
-        and then by column.
-        Args:
-            index (int): An index.
-        Returns:
-            Tuple[int, int]: A pair of row indices.
-        """
-        return divmod(index, self.num_column)
-    
-    def pair2Index(self, pair:Tuple[int, int])->int:
-        """
-        Convert a pair of row indices to an index. Pairs are counted by row
-        and then by columns.
-        Args:
-            pair (Tuple[int, int]): A pair of row indices.
-        Returns:
-            int: An index.
-        """
-        return pair[0]*self.num_column + pair[1]
 
     def _makePairCriteriaCountMatrix(self, values:np.ndarray, criteria_vec:CriteriaVector)->PairCriteriaResult:
         """
