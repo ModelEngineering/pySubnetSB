@@ -194,5 +194,12 @@ class TestNetwork(unittest.TestCase):
         self.assertFalse(network1.isStructurallyCompatible(network3))
         self.assertFalse(network1.isStructurallyCompatible(network4))
 
+    def testPrettyPrintReaction(self):
+        if IGNORE_TEST:
+            return
+        network = NetworkBase.makeFromAntimonyStr(NETWORK3, network_name="Network3")
+        stg = network.prettyPrintReaction(0)
+        self.assertTrue("2.0 S1 -> 2.0 S1 + S2" in stg)
+
 if __name__ == '__main__':
     unittest.main(failfast=True)

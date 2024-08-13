@@ -77,7 +77,7 @@ class Network(NetworkBase):
         Returns:
             np.ndarray: Vector of compatibility sets.
         """
-        def makeBigArray(matrix:Matrix, other_num_row:int, is_block_repeats=False)->np.ndarray:
+        def makeBigArray(matrix:Matrix, other_num_row:int, is_block_repeats=False)->list:
             """
             Constructs a large array that allows for simultaneous comparison of all rows.
               is_rotate: True: rotate the rows in the array
@@ -89,7 +89,7 @@ class Network(NetworkBase):
                 is_block_repeats (bool): If True, block repeats.
 
             Returns:
-                np.ndarray: Expanded array.
+                list-list
             """
             # Convert to a linear array
             this_num_row, num_column = matrix.values.shape
@@ -143,4 +143,4 @@ class Network(NetworkBase):
                 indices = target_num_row*iset + target_indices
                 compatible_sets[iset] = target_indices[satisfy_arr[indices]].tolist()
         #
-        return np.array(compatible_sets)
+        return compatible_sets

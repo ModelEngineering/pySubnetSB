@@ -34,6 +34,8 @@ class NetworkBase(object):
             species_names (np.ndarray[str]): Names of the species
         """
         # Reactant stoichiometry matrix is negative
+        if not np.all(reactant_arr.shape == product_arr.shape):
+            raise ValueError("Reactant and product matrices must have the same shape.")
         self.num_species, self.num_reaction = np.shape(reactant_arr)
         self.criteria_vec = criteria_vector
         self.reactant_mat = NamedMatrix(reactant_arr, row_names=species_names, column_names=reaction_names,
@@ -49,6 +51,7 @@ class NetworkBase(object):
         self._strong_hash:Optional[int] = None  # Hash for strong identity
         self._weak_hash:Optional[int] = None  # Hash for weak identity
 
+    # Properties for handling deferred execution
     @property
     def species_names(self)->np.ndarray[str]:
         if self._species_names is None:
@@ -60,7 +63,7 @@ class NetworkBase(object):
     @property
     def reaction_names(self)->np.ndarray[str]:
         if self._reaction_names is None:
-            self._reaction_names = np.array([f"S{i}" for i in range(self.num_reaction)])
+            self._reaction_names = np.array([f"J{i}" for i in range(self.num_reaction)])
         if not isinstance(self._reaction_names, np.ndarray):
             self._reaction_names = np.array(self._reaction_names)
         return self._reaction_names
@@ -106,7 +109,8 @@ class NetworkBase(object):
             self._stoichiometry_mat = NamedMatrix(stoichiometry_arr, row_names=self.species_names,
                column_names=self.reaction_names, row_description="species", column_description="reactions")
         return self._stoichiometry_mat
-    
+
+    # Methods 
     def getNetworkMatrix(self,
                          matrix_type:Optional[str]=None,
                          orientation:Optional[str]=None,
@@ -178,7 +182,10 @@ class NetworkBase(object):
                        criteria_vector=self.criteria_vec)  # type: ignore
 
     def __repr__(self)->str:
-        return self.network_name
+        repr = f"{self.network_name}: {self.num_species} species, {self.num_reaction} reactions"
+        reactions = ["  " + self.prettyPrintReaction(i) for i in range(self.num_reaction)]
+        repr += '\n' + '\n'.join(reactions)
+        return repr
     
     def __eq__(self, other)->bool:
         if self.network_name != other.network_name:
@@ -225,7 +232,8 @@ class NetworkBase(object):
         if not (self.weak_hash == other.weak_hash) or not (self.strong_hash == other.strong_hash):
             return False
         return True
-    
+
+    # FIXME: More sophisticated subset checking? 
     def isSubsetCompatible(self, other:'NetworkBase')->bool:
         """
         Determines if two networks are compatible in that self can be a subset of other.
@@ -241,7 +249,6 @@ class NetworkBase(object):
             return False
         if self.num_reaction > other.num_reaction:
             return False
-        raise NotImplementedError("isSubsetCompatible")
         return True
     
     @classmethod
@@ -296,3 +303,28 @@ class NetworkBase(object):
         reactant_mat = np.random.randint(-1, 2, (species_array_size, reaction_array_size))
         product_mat = np.random.randint(-1, 2, (species_array_size, reaction_array_size))
         return NetworkBase(reactant_mat, product_mat)
+   
+    def prettyPrintReaction(self, index:int)->str:
+        """
+        Pretty prints a reaction.
+
+        Args:
+            index (int): Index of the reaction.
+
+        Returns:
+            str
+        """
+        def makeSpeciesExpression(reaction_idx:int, stoichiometry_mat:np.ndarray)->str:
+            all_idxs = np.array(range(self.num_species))
+            species_idxs = all_idxs[stoichiometry_mat[:, reaction_idx] > 0]
+            species_names = self.species_names[species_idxs]
+            stoichiometries = [s for s in stoichiometry_mat[species_idxs, reaction_idx]]
+            stoichiometries = ["" if np.isclose(s, 1) else str(s) + " " for s in stoichiometries]
+            expressions = [f"{stoichiometries[i]}{species_names[i]}" for i in range(len(species_names))]
+            result =  ' + '.join(expressions)
+            return result
+        #
+        reactant_expression = makeSpeciesExpression(index, self.reactant_mat.values)
+        product_expression = makeSpeciesExpression(index, self.product_mat.values)
+        result = f"{self.reaction_names[index]}: " + f"{reactant_expression} -> {product_expression}"
+        return result

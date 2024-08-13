@@ -7,7 +7,7 @@ import tellurium as te  # type: ignore
 import unittest
 
 
-IGNORE_TEST = False
+IGNORE_TEST = True
 IS_PLOT = False
 NETWORK_NAME = "test"
 BIG_NETWORK = """
@@ -91,8 +91,52 @@ class TestNetwork(unittest.TestCase):
             return
         result = self.network.makeCompatibilitySetVector(self.network,
                      cn.OR_SPECIES, identity=cn.ID_WEAK, is_subsets=False)
-        import pdb; pdb.set_trace()
+        for idx, compatibility_set in enumerate(result):
+            self.assertTrue(len(compatibility_set) == 1)
+            self.assertTrue(compatibility_set[0] == idx)
+
+    def testMakeCompatibilitySetVectorScaleTrue(self):
+        if IGNORE_TEST:
+            return
+        def test(factor=2, num_iteration=100):
+            # factor: factor by which the target is scaled
+            big_reactant_mat = np.concatenate([self.network.reactant_mat.values for _ in range(factor)])
+            big_product_mat = np.concatenate([self.network.product_mat.values for _ in range(factor)])
+            big_network = Network(big_reactant_mat, big_product_mat)
+            for _ in range(num_iteration):
+                result = self.network.makeCompatibilitySetVector(big_network,
+                            cn.OR_SPECIES, identity=cn.ID_WEAK, is_subsets=True)
+                num_species = self.network.num_species
+                for idx, compatibility_set in enumerate(result):
+                    self.assertTrue(len(compatibility_set) == factor)
+                    for idx2 in compatibility_set:
+                        self.assertTrue(np.mod(idx2, num_species) == idx)
+        #
+        test(2)
+        test(20, num_iteration=1000)
+
+    def makeRandomNetwork(self, num_species=5, num_reaction=5):
+        big_reactant_mat = np.random.randint(0, 2, (num_species, num_reaction))
+        big_product_mat = np.random.randint(0, 2, (num_species, num_reaction))
+        return Network(big_reactant_mat, big_product_mat)
+    
+    def testMakeCompatibilitySetVectorScaleFalse(self):
+        if IGNORE_TEST:
+            return
+        def test(reference_size=10, target_size=20, num_iteration=100):
+            for _ in range(num_iteration):
+                reference_network = self.makeRandomNetwork(reference_size, reference_size)
+                target_network = self.makeRandomNetwork(target_size, target_size)
+                result = reference_network.makeCompatibilitySetVector(target_network,
+                            cn.OR_SPECIES, identity=cn.ID_WEAK, is_subsets=True)
+                size_arr = np.array([len(s) for s in result])
+                self.assertTrue(np.all(size_arr <= target_size))
+
+        #
+        test(reference_size=10, target_size=20)
+        test(reference_size=18, target_size=20)
+    
+
 
 
 if __name__ == '__main__':
-    unittest.main(failfast=True)
