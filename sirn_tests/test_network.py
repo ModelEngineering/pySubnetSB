@@ -7,7 +7,7 @@ import tellurium as te  # type: ignore
 import unittest
 
 
-IGNORE_TEST = True
+IGNORE_TEST = False
 IS_PLOT = False
 NETWORK_NAME = "test"
 BIG_NETWORK = """
@@ -137,6 +137,5 @@ class TestNetwork(unittest.TestCase):
         test(reference_size=18, target_size=20)
     
 
-
-
 if __name__ == '__main__':
+    unittest.main(failfast=True)

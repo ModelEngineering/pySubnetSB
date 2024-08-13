@@ -63,7 +63,7 @@ class Network(NetworkBase):
           identity:str=cn.ID_WEAK,
           participant:Optional[str]=None,
           is_subsets:bool=False,
-          )->np.ndarray[CompatibilitySet]:
+          )->list:
         """
         Constructs a vector of lists of rows in the target that are compatible with each row in the reference (self).
 
@@ -75,7 +75,7 @@ class Network(NetworkBase):
             is_subsets (bool): If True, check for subsets of other.
 
         Returns:
-            np.ndarray: Vector of compatibility sets.
+            list-list: Vector of lists of rows in the target that are compatible with each row in the reference.
         """
         def makeBigArray(matrix:Matrix, other_num_row:int, is_block_repeats=False)->list:
             """
@@ -100,7 +100,7 @@ class Network(NetworkBase):
                 repeat_arr = np.repeat(linear_arr, other_num_row, axis=0)
                 arr = np.reshape(repeat_arr, (len(linear_arr), other_num_row)).T
                 arr = np.reshape(arr, (this_num_row*other_num_row, num_column))
-            return arr
+            return arr.tolist()
         #
         if orientation == cn.OR_REACTION:
             this_num_row = self.num_reaction
@@ -133,9 +133,9 @@ class Network(NetworkBase):
             big_target_arr = makeBigArray(target_matrix, reference_num_row, is_block_repeats=False)
             # Find the compatible sets
             if is_subsets:
-                big_compatible_arr = big_reference_arr <= big_target_arr
+                big_compatible_arr = np.less_equal(big_reference_arr, big_target_arr)
             else:
-                big_compatible_arr = big_reference_arr == big_target_arr
+                big_compatible_arr = np.equal(big_reference_arr, big_target_arr)
             satisfy_arr = np.sum(big_compatible_arr, axis=1) == num_criteria
             # Construct the sets
             target_indices = np.array(range(target_num_row))
