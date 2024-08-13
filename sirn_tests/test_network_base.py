@@ -183,5 +183,16 @@ class TestNetwork(unittest.TestCase):
         test(3)
         test(30)
 
+    def testIsStructurallyCompatible(self):
+        if IGNORE_TEST:
+            return
+        network1 = NetworkBase.makeFromAntimonyStr(NETWORK1, network_name=NETWORK_NAME)
+        network2 = NetworkBase.makeFromAntimonyStr(NETWORK2, network_name=NETWORK_NAME)
+        network3 = NetworkBase.makeFromAntimonyStr(NETWORK3, network_name=NETWORK_NAME)
+        network4 = NetworkBase.makeFromAntimonyStr(NETWORK4, network_name=NETWORK_NAME)
+        self.assertTrue(network1.isStructurallyCompatible(network2))
+        self.assertFalse(network1.isStructurallyCompatible(network3))
+        self.assertFalse(network1.isStructurallyCompatible(network4))
+
 if __name__ == '__main__':
     unittest.main(failfast=True)

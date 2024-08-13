@@ -1,7 +1,4 @@
 DSIRN
-3. PMatrix.isSubset
-4. Network.isSubset
-5. NetworkCollection.findSubsets
 6. Script to find networks that contain an antimony file as a subset
 Analysis
   1. Plot indeterminant vs. max_num_perm; do for naive algorith as well

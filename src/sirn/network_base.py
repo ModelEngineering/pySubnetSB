@@ -207,6 +207,43 @@ class NetworkBase(object):
         return NetworkBase(reactant_arr, product_arr, network_name=self.network_name,
               reaction_names=reaction_names, species_names=species_names)
     
+    def isStructurallyCompatible(self, other:'NetworkBase')->bool:
+        """
+        Determines if two networks are compatible to be structurally identical.
+        This means that they have the same species and reactions.
+
+        Args:
+            other (Network): Network to compare to.
+
+        Returns:
+            bool: True if compatible.
+        """
+        if self.num_species != other.num_species:
+            return False
+        if self.num_reaction != other.num_reaction:
+            return False
+        if not (self.weak_hash == other.weak_hash) or not (self.strong_hash == other.strong_hash):
+            return False
+        return True
+    
+    def isSubsetCompatible(self, other:'NetworkBase')->bool:
+        """
+        Determines if two networks are compatible in that self can be a subset of other.
+        This means that they have the same species and reactions.
+
+        Args:
+            other (Network): Network to compare to.
+
+        Returns:
+            bool: True if compatible.
+        """
+        if self.num_species > other.num_species:
+            return False
+        if self.num_reaction > other.num_reaction:
+            return False
+        raise NotImplementedError("isSubsetCompatible")
+        return True
+    
     @classmethod
     def makeFromAntimonyStr(cls, antimony_str:str, network_name:Optional[str]=None)->'NetworkBase':
         """
