@@ -92,3 +92,29 @@ def timeit(func):
             print(f'Function {func.__name__}{args} {kwargs} Took {total_time:.4f} seconds')
         return result
     return timeit_wrapper
+
+def repeatArray(array:np.ndarray, num_repeat:int)->np.ndarray:
+    """Creates a two dimensional array consisting of num_repeat blocks of the input array.
+
+    Args:
+        array (np.array): An array.
+        num_repeat (int): Number of times to repeat the array.
+
+    Returns:
+        np.array: array.columns X array.rows*num_repeats
+    """
+    return np.vstack([array]*num_repeat)
+
+def repeatRow(array:np.ndarray, num_repeat:int)->np.ndarray:
+    """Creates a two dimensional array consisting of num_repeat repetitions of each
+    row of the input array.
+
+    Args:
+        array (np.array): An array.
+        num_repeats (int): Number of times to repeat the array.
+
+    Returns:
+        np.array: array.columns X array.rows*num_repeats
+    """
+    repeat_arr = np.repeat(array, num_repeat, axis=0)
+    return repeat_arr

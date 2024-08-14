@@ -19,7 +19,7 @@ OSCILLATOR_DIRS = [
         "Oscillators_DOE_JUNE_12_B_41373",
         "Oscillators_DOE_JUNE_12_C_27662",
         ]
-#MAX_NUM_PERM = 1000  # Maximum number of permutations to search
+MAX_NUM_ASSIGNMENT = 1000  # Maximum number of permutations to search
 #STRUCTURAL_IDENTITY_TYPE = "structural_identity_type"
 #STRUCTURAL_IDENTITY_TYPE_NOT = "identity_collection_type_not"
 #STRUCTURAL_IDENTITY_TYPE_WEAK = "identity_collection_type_weak"
@@ -35,7 +35,6 @@ NUM_HASH = 'num_hash'
 MAX_HASH = 'max_hash'
 NON_SIRN_HASH = 1
 # Numerical constants
-MAX_PERMUTATIONS = 10000
 # Network matrices
 #   Matrix type
 MT_STANDARD = 'mt_standard'

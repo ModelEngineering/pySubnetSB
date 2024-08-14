@@ -64,14 +64,21 @@ class PairCriteriaCountMatrix(CriteriaCountMatrix):
         return PairCriteriaResult(row_offsets=row_offsets, criteria_count_arr=criteria_count_arr)
     
     ############## OVERRIDE PARENT METHODS #######3
-    def getReferenceArray(self)->np.ndarray:
+    def getReferenceArray(self, assignment_len:Optional[int]=None)->np.ndarray:
         """
         Get a reference matrix of criteria counts against which another matrix is compared.
+
+        Args:
+            assignment_len (int): Number of rows in the matrix to be compared
+
         Returns:
             np.array: Matrix of counts to compare
         """
+        if assignment_len is None:
+            assignment_len = self.num_row
         if self._reference_matrix is None:
             assignment = np.array(range(self.num_row))
+            assignment = assignment[:assignment_len]
             self._reference_matrix = self.getTargetArray(assignment)
         return self._reference_matrix
 

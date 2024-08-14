@@ -7,12 +7,13 @@ from sirn.pair_criteria_count_matrix import PairCriteriaCountMatrix  # type: ign
 from sirn.single_criteria_count_matrix import SingleCriteriaCountMatrix  # type: ignore
 from sirn.network_base import NetworkBase  # type: ignore
 
-import collections
+import copy
+import itertools
 import numpy as np
 from typing import Optional
 
-CompatibilitySet = collections.namedtuple("CompatibilitySet", ["pos", "set"])
-NULL_COMPATIBILITY_VECTOR:np.ndarray = np.array([])
+
+MAX_PREFIX_LEN = 3   # Maximum length of a prefix in the assignment to do a pairwise analysis
 
 
 class Network(NetworkBase):
@@ -59,11 +60,11 @@ class Network(NetworkBase):
     
     def makeCompatibilitySetVector(self,
           target:'Network',
-          orientation:str,
+          orientation:str=cn.OR_SPECIES,
           identity:str=cn.ID_WEAK,
           participant:Optional[str]=None,
           is_subsets:bool=False,
-          )->list:
+          )->list[list[int]]:
         """
         Constructs a vector of lists of rows in the target that are compatible with each row in the reference (self).
 
@@ -144,3 +145,161 @@ class Network(NetworkBase):
                 compatible_sets[iset] = target_indices[satisfy_arr[indices]].tolist()
         #
         return compatible_sets
+    
+    def _isCompatibleMatrices(self, reference_mat:Matrix, target_mat:Matrix, is_subsets:bool)->bool:
+        """
+        Determines if the matrices are compatible.
+
+        Args:
+            reference_mat (Matrix): Reference matrix.
+            target_mat (Matrix): Target matrix.
+            is_subsets (bool): If True, check for subsets of other.
+
+        Returns:
+            bool: True if compatible.
+        """
+        if is_subsets:
+            return np.less_equal(reference_mat.values, target_mat.values).all()
+        return np.equal(reference_mat.values, target_mat.values).all()
+    
+    def oldermakeCompatibleAssignments(self,
+                                  target:'Network',
+                                  orientation:str=cn.OR_SPECIES,
+                                  identity:str=cn.ID_WEAK,
+                                  participant:Optional[str]=None,
+                                  is_subsets:bool=False,
+                                  max_num_assignment=cn.MAX_NUM_ASSIGNMENT,
+                                  max_prefix_len:int=MAX_PREFIX_LEN)->list[np.ndarray[int]]:
+        """
+        Constructs a list of compatible assignments. The strategy is to find prefixes that are pairwise compatible.
+
+        Args:
+            target (Network): Target network.
+            orientation (str): Orientation of the network. cn.OR_REACTIONS or cn.OR_SPECIES.
+            identity (str): Identity of the network. cn.ID_WEAK or cn.ID_STRONG.
+            participant (str): Participant in the network for ID_STRONG. cn.PR_REACTANT or cn.PR_PRODUCT.
+            is_subsets (bool): If True, check for subsets of other.
+            max_num_assignment (int): Maximum number of assignments.
+            max_prefix_len (int): Maximum length of a prefix in the assignment to do a pairwise analysis.
+
+        Returns:
+            list: List of compatible assignments.
+        """
+        compatible_sets = self.makeCompatibilitySetVector(target, orientation=orientation, identity=identity,
+                                                          participant=participant, is_subsets=is_subsets)
+        assignment_len = len(compatible_sets)
+        reference_pair_criteria_matrix = self.getNetworkMatrix(matrix_type=cn.MT_PAIR_CRITERIA,
+                                                                orientation=orientation,
+                                                                identity=identity,
+                                                                participant=participant)
+        target_pair_criteria_matrix = target.getNetworkMatrix(matrix_type=cn.MT_PAIR_CRITERIA,
+                                                                orientation=orientation,
+                                                                identity=identity,
+                                                                participant=participant)
+        # Build a list of prefixes that are used for the first MAX_PREFIX_LEN of an assignment
+        if assignment_len > max_prefix_len:
+            # Find compatiable prefixes based on a pairwise analysis
+            good_prefixes:list = compatible_sets[0]
+            for prefix_idx in range(1, max_prefix_len):
+                reference_mat = reference_pair_criteria_matrix.getReferenceArray(assignment_len=prefix_idx+1)
+                for prefix in good_prefixes:
+                    for n in compatible_sets[prefix_idx]:
+                        assignment = prefix + [n]
+                        target_mat = target_pair_criteria_matrix.getTargetArray(assignment_len=prefix_idx+1,
+                                                                                assignment=prefix) 
+                        if self._isCompatibleMatrices(reference_mat, target_mat, is_subsets):
+                            good_prefixes.append(assignment)
+        # Select the rest of the assignment
+        tail_sets = compatible_sets[max_prefix_len:]
+        new_max_num_assignment = max(max_num_assignment // len(good_prefixes), 10)
+        reduced_tail_sets = self._reduceCompatibleSets(tail_sets, new_max_num_assignment)
+        tail_assignments = list(itertools.product(*reduced_tail_sets))
+        assignments = []
+        for prefix in good_prefixes:
+            for tail_assignment in tail_assignments:
+                assignment = prefix + tail_assignment
+                if len(assignment) == assignment_len:
+                    assignments.append(prefix + tail_assignment)
+        #
+        return assignments
+    
+
+    def makeCompatibleAssignments(self,
+                                  target:'Network',
+                                  orientation:str=cn.OR_SPECIES,
+                                  identity:str=cn.ID_WEAK,
+                                  participant:Optional[str]=None,
+                                  is_subsets:bool=False,
+                                  max_num_assignment=cn.MAX_NUM_ASSIGNMENT,
+                                  max_prefix_len:int=MAX_PREFIX_LEN)->np.ndarray[np.ndarray[int]]:
+        """
+        Constructs a list of compatible assignments. The strategy is to find prefixes that are pairwise compatible.
+
+        Args:
+            target (Network): Target network.
+            orientation (str): Orientation of the network. cn.OR_REACTIONS or cn.OR_SPECIES.
+            identity (str): Identity of the network. cn.ID_WEAK or cn.ID_STRONG.
+            participant (str): Participant in the network for ID_STRONG. cn.PR_REACTANT or cn.PR_PRODUCT.
+            is_subsets (bool): If True, check for subsets of other.
+            max_num_assignment (int): Maximum number of assignments.
+            max_prefix_len (int): Maximum length of a prefix in the assignment to do a pairwise analysis.
+
+        Returns:
+            list: List of compatible assignments.
+        """
+        compatible_sets = self.makeCompatibilitySetVector(target, orientation=orientation, identity=identity,
+                                                          participant=participant, is_subsets=is_subsets)
+        assignment_len = len(compatible_sets)  # Number of rows in the reference
+        reference_pair_criteria_matrix = self.getNetworkMatrix(matrix_type=cn.MT_PAIR_CRITERIA,
+                                                                orientation=orientation,
+                                                                identity=identity,
+                                                                participant=participant)
+        target_pair_criteria_matrix = target.getNetworkMatrix(matrix_type=cn.MT_PAIR_CRITERIA,
+                                                                orientation=orientation,
+                                                                identity=identity,
+                                                                participant=participant)
+        reference_sequential_matrix = reference_pair_criteria_matrix.getReferenceArray(assignment_len=assignment_len)
+        # Initialize the matrix of assignments. Rows are assignment instance and columns are rows in the target.
+        assignment_arr = np.array(np.array([compatible_sets[0]]))
+        assignment_arr = np.reshape(assignment_arr, (len(assignment_arr), 1))
+        # Incrementally extend the assignment matrix
+        for pos in range(1, assignment_len):
+            pass
+            # Add a column that is the cross product of the compatibility set for this position.$a
+            #   This is done by repeating by doing a block repeat of each row in the assignment array
+            #   with a block size equal to the number of elements in the compatibility set for compatibility_sets[pos],
+            #   and then repeating the compatibility set block for compatibility_sets[pos] for each row in the assignment array.
+
+            # Remove assignments (rows) that have a repeated index in the target (using np.unique)
+
+            # Check for pairwise compatibility between the last assignment and the new assignment
+        #
+        return assignment_arr
+
+
+    def _reduceCompatibleSets(self, compatible_sets:list, max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT)->list:
+            """
+            Reduces the compatible sets so that the maximum number of assignments is not exceeded.
+
+            Args:
+                compatible_sets (list): List of compatible sets.
+
+            Returns:
+                list: List of reduced compatible sets.
+            """
+            new_sets = copy.deepcopy(compatible_sets)
+            values = []
+            [values.extend(s) for s in new_sets]  # type: ignore
+            num_value = len(values)
+            #
+            for _ in range(num_value):
+                sizes = [len(s) for s in new_sets]
+                num_assignment = np.prod(sizes)
+                if num_assignment < max_num_assignment:
+                    break
+                i_large = sizes.index(max(sizes))
+                sel_set = new_sets[i_large]
+                i_pos = np.random.randint(0, len(sel_set))
+                reduced_sel_set = sel_set[:i_pos] + sel_set[i_pos+1:]
+                new_sets[i_large] = reduced_sel_set
+            return new_sets

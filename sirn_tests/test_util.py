@@ -1,21 +1,17 @@
-from sirn import util  # type: ignore
+import sirn.util as util # type: ignore
 
-import numpy as np
 import time
+import numpy as np
 import unittest
 
 
 IGNORE_TEST = False
 IS_PLOT = False
 
-
 #############################
 # Tests
 #############################
 class TestFunctions(unittest.TestCase):
-
-    def setUp(self):
-        pass
 
     def testHashArray(self):
         if IGNORE_TEST:
@@ -74,6 +70,29 @@ class TestFunctions(unittest.TestCase):
             time.sleep(1)
         test()
         util.IS_TIMEIT = False
+
+    def testRepeatRow(self):
+        if IGNORE_TEST:
+            return
+        arr = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]])
+        num_repeat = 2
+        result = util.repeatRow(arr, num_repeat)
+        for idx in range(arr.shape[0]):
+            result_idx1 = num_repeat*idx
+            result_idx2 = num_repeat*idx + 1
+            self.assertTrue(np.all(result[result_idx1] == arr[idx]))
+            self.assertTrue(np.all(result[result_idx2] == arr[idx]))
+
+    def testRepeatArray(self):
+        if IGNORE_TEST:
+            return
+        arr = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]])
+        num_repeat = 2
+        num_row = arr.shape[0]
+        result = util.repeatArray(arr, num_repeat)
+        for idx in range(num_repeat):
+            rows = range(idx*num_row, (idx+1)*num_row)
+            self.assertTrue(np.all(result[rows] == arr))
 
 
 if __name__ == '__main__':
