@@ -6,10 +6,10 @@ from sirn.named_matrix import Matrix  # type: ignore
 
 from abc import ABC, abstractmethod
 import numpy as np
-from typing import List, Union, Optional
+from typing import Optional
 
 
-HASH_BASE = 100 # Base of exponent used to separate encoding values, the count of criteria occurrences
+HASH_BASE = np.int64(100) # Base of exponent used to separate encoding values, the count of criteria occurrences
 
 
 class CriteriaCountMatrix(Matrix):
@@ -59,7 +59,7 @@ class CriteriaCountMatrix(Matrix):
             raise ValueError(f"Values must be less than {HASH_BASE}.")
         row_hashes = []
         for array in array:
-            row_hash = np.sum([v*HASH_BASE**n for n, v in enumerate(array)])
+            row_hash = np.sum([np.int64(v)*HASH_BASE**n for n, v in enumerate(array)])
             row_hashes.append(row_hash)
         return np.array(row_hashes)
 

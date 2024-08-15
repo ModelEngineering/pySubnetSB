@@ -7,7 +7,7 @@ import tellurium as te  # type: ignore
 import unittest
 
 
-IGNORE_TEST = True
+IGNORE_TEST = False
 IS_PLOT = False
 NETWORK_NAME = "test"
 BIG_NETWORK = """
@@ -137,15 +137,23 @@ class TestNetwork(unittest.TestCase):
         test(reference_size=18, target_size=20)
 
     def testMakeCompatibleAssignments(self):
-        #if IGNORE_TEST:
-        #    return
-        reference_size = 10
-        target_size = 20
-        reference_network = self.makeRandomNetwork(reference_size, reference_size)
-        target_network = self.makeRandomNetwork(target_size, target_size)
-        result = reference_network.makeCompatibleAssignments(target_network,
-                    cn.OR_SPECIES, identity=cn.ID_WEAK, is_subsets=True)
-        import pdb; pdb.set_trace()
+        if IGNORE_TEST:
+            return
+        reference_size = 5
+        for _ in range(10): 
+            target_size = 10
+            reference_network = self.makeRandomNetwork(reference_size, reference_size)
+            target_network = self.makeRandomNetwork(target_size, target_size)
+            result = reference_network.makeCompatibleAssignments(target_network,
+                        cn.OR_SPECIES, identity=cn.ID_WEAK, is_subsets=True, max_num_assignment=1000)
+            if len(result.assignment_arr) == 0:
+                continue
+            self.assertGreater(len(result.assignment_arr), 0)
+            self.assertEqual(len(result.assignment_arr[0]), reference_size)
+            break
+        else:
+            self.assertTrue(False)
+        #print(result.compression_factor)
     
 
 if __name__ == '__main__':

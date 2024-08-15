@@ -99,3 +99,20 @@ class PairCriteriaCountMatrix(CriteriaCountMatrix):
         # Construct the indices to reference the desired rows
         array_indices = [ (pair[1] - pair[0] + self.num_row) % self.num_row for pair in pairs]
         return self.values[array_indices, np.array(assignment[:-1]), :]
+
+    def getTargetArrayFromPairArray(self, pair1_arr:np.ndarray[int], pair2_arr:np.ndarray[int])->np.ndarray:
+        """
+        Get a matrix as specified by the assignment. self.values is a 3-d array:
+            1. Matrix selected
+            2. Row in matrix
+            3. Column in matrix
+
+        Args:
+            other_assignment (np.ndarray): Sequence of rows in original matrix that are to be compared
+
+        Returns:
+            np.ndarray: _description_
+        """
+        # Construct the indices to reference the desired rows
+        array_indices = (pair2_arr - pair1_arr + self.num_row) % self.num_row
+        return self.values[array_indices, pair1_arr, :]
