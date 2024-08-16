@@ -4,10 +4,11 @@ from sirn.network import Network # type: ignore
 import numpy as np
 import copy
 import tellurium as te  # type: ignore
+import time
 import unittest
 
 
-IGNORE_TEST = False
+IGNORE_TEST = True
 IS_PLOT = False
 NETWORK_NAME = "test"
 BIG_NETWORK = """
@@ -137,23 +138,31 @@ class TestNetwork(unittest.TestCase):
         test(reference_size=18, target_size=20)
 
     def testMakeCompatibleAssignments(self):
-        if IGNORE_TEST:
-            return
-        reference_size = 5
-        for _ in range(10): 
-            target_size = 10
-            reference_network = self.makeRandomNetwork(reference_size, reference_size)
-            target_network = self.makeRandomNetwork(target_size, target_size)
-            result = reference_network.makeCompatibleAssignments(target_network,
-                        cn.OR_SPECIES, identity=cn.ID_WEAK, is_subsets=True, max_num_assignment=1000)
-            if len(result.assignment_arr) == 0:
-                continue
-            self.assertGreater(len(result.assignment_arr), 0)
-            self.assertEqual(len(result.assignment_arr[0]), reference_size)
-            break
-        else:
-            self.assertTrue(False)
-        #print(result.compression_factor)
+        #if IGNORE_TEST:
+        #    return
+        def test(identity):
+            reference_size =10 
+            target_size = 100
+            start_time = time.time()
+            for _ in range(10): 
+                reference_network = self.makeRandomNetwork(reference_size, reference_size)
+                target_network = self.makeRandomNetwork(target_size, target_size)
+                result = reference_network.makeCompatibleAssignments(target_network,
+                            cn.OR_SPECIES, identity=identity, is_subsets=True, max_num_assignment=100000)
+                if len(result.assignment_arr) == 0:
+                    continue
+                if IGNORE_TEST:
+                    print(f"Time: {time.time() - start_time:.4f}", len(result.assignment_arr), result.is_truncated)
+                self.assertGreater(len(result.assignment_arr), 0)
+                self.assertEqual(len(result.assignment_arr[0]), reference_size)
+                break
+            else:
+                self.assertTrue(False)
+            if IGNORE_TEST:
+                print(np.sum(np.log10(result.compression_factor)))
+        #
+        test(cn.ID_WEAK)
+        test(cn.ID_STRONG)
     
 
 if __name__ == '__main__':

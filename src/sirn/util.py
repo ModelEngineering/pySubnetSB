@@ -118,3 +118,15 @@ def repeatRow(array:np.ndarray, num_repeat:int)->np.ndarray:
     """
     repeat_arr = np.repeat(array, num_repeat, axis=0)
     return repeat_arr
+
+def arrayProd(arr:np.ndarray)->float:
+    """Calculates the product of the elements of an array in log space
+    to avoid overflow.
+
+    Args:
+        arr (np.array): An array.
+
+    Returns:
+        int: The product of the elements of the array.
+    """
+    return np.exp(np.sum(np.log(arr)))
