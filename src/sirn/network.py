@@ -194,6 +194,8 @@ class Network(NetworkBase):
                 Checks if the assignments are compatible with the PairwiseCriteriaCountMatrices of
                 the reference and target matrices.
                 """
+                if assignment_arr.shape[0] == 0:
+                    return assignment_arr
                 # Get the pair array for the last two columns of the assignment array
                 reference_pair_criteria_matrix = self.getNetworkMatrix(matrix_type=cn.MT_PAIR_CRITERIA,
                                                                 orientation=orientation,
@@ -256,13 +258,11 @@ class Network(NetworkBase):
         for pos in range(1, assignment_len):
             # Check if no assignments
             if assignment_arr.shape[0] == 0:
-                import pdb; pdb.set_trace()
                 return NULL_ASSIGNMENT_RESULT
             # Prune the number of assignments if it exceeds the maximum number of assignments
             keep_count = max_num_assignment // len(compatible_sets[pos])
             assignment_arr, new_is_truncated = prune(assignment_arr, keep_count=keep_count)
             if assignment_arr.shape[0] == 0:
-                import pdb; pdb.set_trace()
                 return NULL_ASSIGNMENT_RESULT
             is_truncated = is_truncated or new_is_truncated
             # Extend assignment_arr to the cross product of the compatibility set for this position.$a
@@ -364,17 +364,14 @@ class Network(NetworkBase):
             big_target_arr = np.reshape(flattened_big_target_arr,
                                         (num_assignment*self.num_species, self.num_reaction))
             # Compare each row
-            if is_subsets:
-                big_compatible_arr = np.less_equal(big_reference_arr, big_target_arr)
-            else:
-                big_compatible_arr = np.equal(big_reference_arr, big_target_arr)
+            big_compatible_arr = np.equal(big_reference_arr, big_target_arr)
             big_row_sum = np.sum(big_compatible_arr, axis=1)
             big_row_satisfy = big_row_sum == self.num_reaction
             # Rows are results of the comparison of the reference and target; columns are assignments
-            assignment_pair_row_arr = np.reshape(big_row_satisfy, (num_assignment, self.num_species))
+            assignment_pair_satisfy_arr = np.reshape(big_row_satisfy, (num_assignment, self.num_species))
             # Index is True if the assignment-pair results in an identical matrix
-            assignment_pair_arr = np.sum(assignment_pair_row_arr, axis=1) == target.num_species
-            return assignment_pair_arr
+            assignment_satisfy_arr = np.sum(assignment_pair_satisfy_arr, axis=1) == target.num_species
+            return assignment_satisfy_arr  # Booleans indicating acceptable assignments
         #
         # Analyze by identity
         if identity == cn.ID_WEAK:

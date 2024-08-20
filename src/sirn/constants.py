@@ -5,7 +5,7 @@ for _ in range(2):
     PROJECT_DIR = os.path.dirname(PROJECT_DIR)
 MODEL_DIR = os.path.join(PROJECT_DIR, 'models')
 DATA_DIR = os.path.join(PROJECT_DIR, 'data')
-TEST_DIR = os.path.join(PROJECT_DIR, 'sirn_tests')
+TEST_DIR = os.path.join(PROJECT_DIR, 'src', 'sirn_tests')
 OSCILLATOR_DIRS = [
         "Oscillators_May_28_2024_8898",
         "Oscillators_June_9_2024_14948",
