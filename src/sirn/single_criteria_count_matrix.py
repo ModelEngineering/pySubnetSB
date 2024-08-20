@@ -5,6 +5,7 @@ from sirn.criteria_vector import CriteriaVector # type: ignore
 from sirn.criteria_count_matrix import CriteriaCountMatrix # type: ignore
 from sirn.named_matrix import Matrix  # type: ignore
 from sirn.named_matrix import NamedMatrix  # type: ignore
+from sirn import util # type: ignore
 
 import numpy as np
 from typing import List, Union, Optional
@@ -22,15 +23,15 @@ class SingleCriteriaCountMatrix(CriteriaCountMatrix):
             criteria_vector = CriteriaVector()
         values = self._makeSingleCriteriaCountMatrix(array, criteria_vector)
         super().__init__(values, criteria_vector=criteria_vector)
-        self.row_hashes = self._getRowHashes()
 
-    def _getRowHashes(self)->np.ndarray:
-        """
-        Get a list of hashes for each row.
-        Returns:
-            List[int]: A list of hashes.
-        """
-        return self.getRowHashes(self.sorted_mat.values)
+#    def _getRowHashes(self, array:np.ndarray)->np.ndarray:
+#        """
+#        Get a list of hashes for each row.
+#        Returns:
+#            List[int]: A list of hashes.
+#        """
+#        #return np.sort(self.getRowHashes(self.sorted_hash_arr.values))
+#        return self.sorted_hash_arr
 
     def __repr__(self)->str:
         named_matrix = NamedMatrix(self.values, row_description="rows", column_description="criteria",

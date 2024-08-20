@@ -149,7 +149,6 @@ class NamedMatrix(Matrix):
         return bool(is_true)
     
     def __repr__(self):
-        #print(self.dataframe)
         return self.dataframe.__repr__()
     
     def __le__(self, other)->bool:

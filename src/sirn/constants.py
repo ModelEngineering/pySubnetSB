@@ -37,10 +37,10 @@ NON_SIRN_HASH = 1
 # Numerical constants
 # Network matrices
 #   Matrix type
-MT_STANDARD = 'mt_standard'
+MT_STOICHIOMETRY = 'mt_stoichiometry'
 MT_SINGLE_CRITERIA = 'mt_single_criteria'
 MT_PAIR_CRITERIA = 'mt_pair_criteria'
-MT_LST = [MT_STANDARD, MT_SINGLE_CRITERIA, MT_PAIR_CRITERIA]
+MT_LST = [MT_STOICHIOMETRY, MT_SINGLE_CRITERIA, MT_PAIR_CRITERIA]
 #   Orientation
 OR_REACTION = 'or_reaction'
 OR_SPECIES = 'or_species'

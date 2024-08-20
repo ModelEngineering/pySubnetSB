@@ -6,7 +6,7 @@ from sirn.criteria_vector import CriteriaVector  # type: ignore
 from sirn.matrix import Matrix  # type: ignore
 from sirn.pair_criteria_count_matrix import PairCriteriaCountMatrix  # type: ignore
 from sirn.single_criteria_count_matrix import SingleCriteriaCountMatrix  # type: ignore
-from sirn.network_base import NetworkBase  # type: ignore
+from sirn.network_base import NetworkBase, AssignmentPair  # type: ignore
 
 import copy
 import collections
@@ -14,11 +14,41 @@ import itertools
 import numpy as np
 from typing import Optional, Tuple
 
+NULL_ARRAY = np.array([])  # Null array
+
 
 MAX_PREFIX_LEN = 3   # Maximum length of a prefix in the assignment to do a pairwise analysis
 #  assignments: np.ndarray[np.ndarray[int]]
 #  is_truncated: bool (True if the number of assignments exceeds the maximum number of assignments)
 AssignmentResult = collections.namedtuple('AssignmentResult', 'assignment_arr is_truncated compression_factor')
+# Pair of assignments of species and reactions in target network to the reference network.
+
+
+class StructurallyIdenticalResult(object):
+    # Auxiliary object returned by isStructurallyIdentical
+
+    def __init__(self,
+                 assignment_pairs:list[AssignmentPair],
+                 is_truncated:Optional[bool]=False,
+                 species_compression_factor:Optional[float]=None,
+                 reaction_compression_factor:Optional[float]=None,
+                 )->None:
+        """
+        Args:
+            assignment_pairs (list[AssignmentPair]): List of assignment pairs.
+            is_trucnated (bool): True if the number of assignments exceeds the maximum number of assignments.
+            species_compression_factor (float): Number of species assignments considered at each step divided by the 
+                number of assignments kept
+            reaction_compression_factor (float): Number of species assignments considered at each step divided by the 
+                number of assignments kept
+        """
+        self.assignment_pairs = assignment_pairs
+        self.is_truncated = is_truncated
+        self.species_compression_factor = species_compression_factor
+        self.reaction_compression_factor = reaction_compression_factor
+
+    def __bool__(self)->bool:
+        return len(self.assignment_pairs) > 0
 
 
 class Network(NetworkBase):
@@ -113,7 +143,7 @@ class Network(NetworkBase):
             return compatible_sets
         #
         # Check compatibility
-        if (not is_subsets) and not self.isStructurallyCompatible(target):
+        if (not is_subsets) and not self.isStructurallyCompatible(target, identity=identity):
             return compatible_sets
         if is_subsets and not self.isSubsetCompatible(target):
             return compatible_sets
@@ -133,22 +163,6 @@ class Network(NetworkBase):
                 compatible_sets[idx] = list(set(reactant_compatible_sets[idx]) & set(product_compatible_sets[idx]))
         #
         return compatible_sets
-    
-    def _isCompatibleMatrices(self, reference_mat:Matrix, target_mat:Matrix, is_subsets:bool)->bool:
-        """
-        Determines if the matrices are compatible.
-
-        Args:
-            reference_mat (Matrix): Reference matrix.
-            target_mat (Matrix): Target matrix.
-            is_subsets (bool): If True, check for subsets of other.
-
-        Returns:
-            bool: True if compatible.
-        """
-        if is_subsets:
-            return np.less_equal(reference_mat.values, target_mat.values).all()
-        return np.equal(reference_mat.values, target_mat.values).all()
 
     def makeCompatibleAssignments(self,
                                   target:'Network',
@@ -173,7 +187,9 @@ class Network(NetworkBase):
         Returns:
             AssignmentResult
         """
-        def checkAssignments(assignment_arr:np.ndarray, participant:Optional[str]=None)->np.ndarray:
+        NULL_ASSIGNMENT_RESULT = AssignmentResult(assignment_arr=NULL_ARRAY, is_truncated=None,
+                                                    compression_factor=None)
+        def checkAssignments(pos, assignment_arr:np.ndarray, participant:Optional[str]=None)->np.ndarray:
                 """
                 Checks if the assignments are compatible with the PairwiseCriteriaCountMatrices of
                 the reference and target matrices.
@@ -187,23 +203,24 @@ class Network(NetworkBase):
                                                                 orientation=orientation,
                                                                 identity=identity,
                                                                 participant=participant)
-                num_assignment = assignment_arr.shape[0]
-                pair_arr = assignment_arr[:, -2:]
-                target_arr = target_pair_criteria_matrix.getTargetArrayFromPairArray(pair_arr[:, 0], pair_arr[:, 1])
-                reference_arr = np.vstack(
-                    [reference_pair_criteria_matrix.values[pos-1, pos, :].tolist()*num_assignment]).T
-                num_column = target_arr.shape[1]
-                reference_arr = np.reshape(reference_arr, (num_assignment, num_column))
+                num_assignment, assignment_len = assignment_arr.shape
+                target_arr = target_pair_criteria_matrix.getTargetArray(assignment_arr)
+                base_reference_arr = reference_pair_criteria_matrix.getReferenceArray(assignment_len)
+                reference_arr = np.vstack([base_reference_arr]*num_assignment)
+                num_column = reference_pair_criteria_matrix.num_column
                 if is_subsets:
                     compatible_arr = np.less_equal(reference_arr, target_arr)
                 else:
                     compatible_arr = np.equal(reference_arr, target_arr)
                 # Find the rows that are compatible
                 satisfy_arr = np.sum(compatible_arr, axis=1) == num_column
-                assignment_arr = assignment_arr[satisfy_arr, :]
-                return assignment_arr   
+                # Reshape so can count satisfying each position in the assignment
+                satisfy_arr = np.reshape(satisfy_arr, (num_assignment, assignment_len-1))
+                satisfy_arr = np.sum(satisfy_arr, axis=1) == assignment_len - 1
+                new_assignment_arr = assignment_arr[satisfy_arr, :]
+                return new_assignment_arr   
         #
-        def prune(assignment_arr, expansion_factor:Optional[int]=None)->Tuple[np.ndarray, bool]:
+        def prune(assignment_arr, keep_count:Optional[int]=None)->Tuple[np.ndarray, bool]:
             """Prunes the assignments if the number of assignments exceeds the maximum number of assignments.
 
             Args:
@@ -213,12 +230,8 @@ class Network(NetworkBase):
                 Tuple[np.ndarray, bool]: _description_
             """
             is_truncated = False
-            if expansion_factor is None:
+            if keep_count is None:
                 keep_count = max_num_assignment
-            else:
-                # Considers expansion of assignments by set cross product
-                keep_count = int(assignment_arr.shape[0]*(1 - 1/expansion_factor))
-                keep_count = int(max_num_assignment/expansion_factor)
             if assignment_arr.shape[0] > keep_count:
                 select_idx = np.random.choice(assignment_arr.shape[0], keep_count, replace=False)
                 assignment_arr = assignment_arr[select_idx, :]
@@ -229,6 +242,10 @@ class Network(NetworkBase):
                                                           is_subsets=is_subsets)
         assignment_len = len(compatible_sets)  # Number of rows in the reference
         # Initialize the 2d array of assignments. Rows are assignment instance and columns are rows in the target.
+        if len(compatible_sets) == 0:
+            return NULL_ASSIGNMENT_RESULT
+        if compatible_sets[0] == 0:
+            return NULL_ASSIGNMENT_RESULT
         assignment_arr = np.array(np.array(compatible_sets[0]))
         assignment_arr = np.reshape(assignment_arr, (len(assignment_arr), 1))
            
@@ -239,11 +256,14 @@ class Network(NetworkBase):
         for pos in range(1, assignment_len):
             # Check if no assignments
             if assignment_arr.shape[0] == 0:
-                return AssignmentResult(assignment_arr=assignment_arr, is_truncated=is_truncated,
-                                compression_factor=np.array(initial_sizes)/np.array(final_sizes))
+                import pdb; pdb.set_trace()
+                return NULL_ASSIGNMENT_RESULT
             # Prune the number of assignments if it exceeds the maximum number of assignments
-            prune_factor = len(compatible_sets[pos])
-            assignment_arr, new_is_truncated = prune(assignment_arr, expansion_factor=prune_factor)
+            keep_count = max_num_assignment // len(compatible_sets[pos])
+            assignment_arr, new_is_truncated = prune(assignment_arr, keep_count=keep_count)
+            if assignment_arr.shape[0] == 0:
+                import pdb; pdb.set_trace()
+                return NULL_ASSIGNMENT_RESULT
             is_truncated = is_truncated or new_is_truncated
             # Extend assignment_arr to the cross product of the compatibility set for this position.$a
             #   This is done by repeating by doing a block repeat of each row in the assignment array
@@ -267,40 +287,115 @@ class Network(NetworkBase):
             #   Then we verify that the reference row is either equal (is_subset=False) or less than or equal (is_subset=True)
             #   the target row.
             if identity == cn.ID_WEAK:
-                assignment_arr = checkAssignments(assignment_arr, None)
+                assignment_arr = checkAssignments(pos, assignment_arr, None)
             else:
                 # Strong identity
                 # Must satisfy conditions for both reactant and product
-                assignment_arr = checkAssignments(assignment_arr, participant=cn.PR_REACTANT)
-                assignment_arr = checkAssignments(assignment_arr, participant=cn.PR_PRODUCT)
+                assignment_arr = checkAssignments(pos, assignment_arr, participant=cn.PR_REACTANT)
+                assignment_arr = checkAssignments(pos, assignment_arr, participant=cn.PR_PRODUCT)
             final_sizes.append(assignment_arr.shape[0])
         #
+        if all([s > 0 for s in final_sizes]):
+            compression_factor = np.array(initial_sizes)/np.array(final_sizes)
+        else:
+            compression_factor = None
         return AssignmentResult(assignment_arr=assignment_arr, is_truncated=is_truncated,
-                                compression_factor=np.array(initial_sizes)/np.array(final_sizes))
+                                compression_factor=compression_factor)
+    
+    def isStructurallyIdentical(self, target:'Network', is_subsets:bool=False,
+            max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT, identity:str=cn.ID_WEAK,
+            )->StructurallyIdenticalResult:
+        """
+        Determines if the network is structurally identical to another network.
 
-    def _reduceCompatibleSets(self, compatible_sets:list, max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT)->list:
+        Args:
+            target (Network): Network to search for structurally identity
+            is_subsets (bool, optional): Consider subsets
+            max_num_assignment (int, optional): Maximum number of assignments to produce.
+            identity (str, optional): cn.ID_WEAK or cn.ID_STRONG
+
+        Returns:
+            StructurallyIdenticalResult: _description_
+        """
+        MAX_ARRAY_COMPARE = 100000
+        NULL_STRUCTURALLY_IDENTICAL_RESULT = StructurallyIdenticalResult(assignment_pairs=[])
+        # Get the compatible assignments for species and reactions
+        species_assignment_result = self.makeCompatibleAssignments(target, cn.OR_SPECIES, identity=identity,
+              is_subsets=is_subsets, max_num_assignment=max_num_assignment)
+        species_assignment_arr = species_assignment_result.assignment_arr
+        reaction_assignment_result = self.makeCompatibleAssignments(target, cn.OR_REACTION, identity=identity,
+              is_subsets=is_subsets, max_num_assignment=max_num_assignment)
+        reaction_assignment_arr = reaction_assignment_result.assignment_arr
+        is_trucated = species_assignment_result.is_truncated or reaction_assignment_result.is_truncated
+        if len(species_assignment_arr) == 0 or len(reaction_assignment_arr) == 0:
+            return NULL_STRUCTURALLY_IDENTICAL_RESULT
+        # Compare the reference and target matrices for the participant and identity
+        def compare(participant:Optional[str]=None)->np.ndarray[bool]:
             """
-            Reduces the compatible sets so that the maximum number of assignments is not exceeded.
+            Compares the reference matrix to the target matrix for the participant and identity.
 
             Args:
-                compatible_sets (list): List of compatible sets.
+                participant: cn.PR_REACTANT or cn.PR_PRODUCT
 
             Returns:
-                list: List of reduced compatible sets.
+                np.ndarray[bool]: flattened boolean array of the outcome of comparisons for assignments
+                                  The array is organized breadth-first (column first).
             """
-            new_sets = copy.deepcopy(compatible_sets)
-            values = []
-            [values.extend(s) for s in new_sets]  # type: ignore
-            num_value = len(values)
-            #
-            for _ in range(num_value):
-                sizes = [len(s) for s in new_sets]
-                num_assignment = np.prod(sizes)
-                if num_assignment < max_num_assignment:
-                    break
-                i_large = sizes.index(max(sizes))
-                sel_set = new_sets[i_large]
-                i_pos = np.random.randint(0, len(sel_set))
-                reduced_sel_set = sel_set[:i_pos] + sel_set[i_pos+1:]
-                new_sets[i_large] = reduced_sel_set
-            return new_sets
+            reference_matrix = self.getNetworkMatrix(matrix_type=cn.MT_STOICHIOMETRY, orientation=cn.OR_SPECIES,
+                  participant=participant, identity=identity)
+            target_matrix = target.getNetworkMatrix(matrix_type=cn.MT_STOICHIOMETRY, orientation=cn.OR_SPECIES,
+                  participant=participant, identity=identity)
+            # Size the comparison arrays used to make comparisons
+            num_species_assignment =  len(species_assignment_result.assignment_arr)
+            num_reaction_assignment =  len(reaction_assignment_result.assignment_arr)
+            num_assignment =  num_species_assignment*num_reaction_assignment
+            if num_assignment > MAX_ARRAY_COMPARE:
+                raise ValueError(f"Number of assignments exceeds {MAX_ARRAY_COMPARE}.")
+            # Set up the comparison arrays. These are referred to as 'big' arrays.
+            big_reference_arr = np.vstack([reference_matrix.values]*num_assignment)
+            species_idxs = species_assignment_arr.flatten()
+            reaction_idxs = reaction_assignment_arr.flatten()
+            #   The following constructs the re-arranged target matrix.
+            #   This is organized as blocks of row rearrangements (species) and
+            #   each row rearrangement is repeated for several columns (reactions) rearrangements.
+            big_reaction_idxs = np.vstack([reaction_idxs]*len(species_idxs)).flatten()
+            big_species_idxs = np.repeat(species_idxs, len(reaction_idxs))
+            flattened_big_target_arr = target_matrix.values[big_species_idxs, big_reaction_idxs]
+            big_target_arr = np.reshape(flattened_big_target_arr,
+                                        (num_assignment*self.num_species, self.num_reaction))
+            # Compare each row
+            if is_subsets:
+                big_compatible_arr = np.less_equal(big_reference_arr, big_target_arr)
+            else:
+                big_compatible_arr = np.equal(big_reference_arr, big_target_arr)
+            big_row_sum = np.sum(big_compatible_arr, axis=1)
+            big_row_satisfy = big_row_sum == self.num_reaction
+            # Rows are results of the comparison of the reference and target; columns are assignments
+            assignment_pair_row_arr = np.reshape(big_row_satisfy, (num_assignment, self.num_species))
+            # Index is True if the assignment-pair results in an identical matrix
+            assignment_pair_arr = np.sum(assignment_pair_row_arr, axis=1) == target.num_species
+            return assignment_pair_arr
+        #
+        # Analyze by identity
+        if identity == cn.ID_WEAK:
+            assignment_pair_arr = compare(participant=None)
+        else:
+            # Strong identity requires that both reactant and product satisfy the assignment
+            assignment_pair_arr = compare(participant=cn.PR_REACTANT) & compare(participant=cn.PR_PRODUCT)
+        # Construct the assignment pairs
+        assignment_idxs = np.array(range(len(assignment_pair_arr)))
+        num_reaction_assignment = reaction_assignment_arr.shape[0]
+        species_idxs = assignment_idxs//num_reaction_assignment
+        reaction_idxs = np.mod(assignment_idxs, num_reaction_assignment)
+        assignment_pairs = []
+        for species_idx, reaction_idx in zip(species_idxs, reaction_idxs):
+            species_assignment = species_assignment_arr[species_idx, :]
+            reaction_assignment = reaction_assignment_arr[reaction_idx, :]
+            assignment_pair = AssignmentPair(species_assignment=species_assignment,
+                                            reaction_assignment=reaction_assignment)
+            assignment_pairs.append(assignment_pair)
+        # Construct the result
+        return StructurallyIdenticalResult(assignment_pairs=assignment_pairs,
+                is_truncated=is_trucated,
+                species_compression_factor=species_assignment_result.compression_factor,
+                reaction_compression_factor=reaction_assignment_result.compression_factor)

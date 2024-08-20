@@ -1,23 +1,17 @@
 '''A PairCriteriaCountMatrix counts of co-occurrences of criteria pairs satisfied by pairs of rows.'''
 
-"""
-To do:
-1. Change interface to checking compatibility so returns matrices to compare rather than indices.
-2. Need to produce matrices with # criteria**2 columns
-"""
 
 from sirn import constants as cn # type: ignore
 from sirn.criteria_vector import CriteriaVector # type: ignore
 from sirn.criteria_count_matrix import CriteriaCountMatrix # type: ignore
-from sirn.named_matrix import Matrix  # type: ignore
+from sirn.named_matrix import Matrix, NamedMatrix  # type: ignore
 
 import collections
 import itertools
 import numpy as np
-from typing import Tuple, Optional
+import pandas as pd # type: ignore
+from typing import Tuple, Optional, List
 
-
-PairCriteriaResult = collections.namedtuple('PairCriteriaResult', 'row_offsets criteria_count_arr')
 
 class PairCriteriaCountMatrix(CriteriaCountMatrix):
     def __init__(self, array:np.array, criteria_vector:Optional[CriteriaVector]=None):
@@ -27,41 +21,60 @@ class PairCriteriaCountMatrix(CriteriaCountMatrix):
             criteria_vector (CriteriaVector): A vector of criteria.
             criteria_count_matrix (CriteriaCountMatrix): A matrix of criteria counts.
         """
+        self.array = array
         if criteria_vector is None:
             criteria_vector = CriteriaVector()
-        pair_matrix_result = self._makePairCriteriaCountMatrix(array, criteria_vector)
-        super().__init__(pair_matrix_result.criteria_count_arr, criteria_vector=criteria_vector)
+        self.criteria_vector = criteria_vector
+        criteria_count_arr, self.criteria_vector_idx_pairs = self._makePairCriteriaCountMatrix(array, criteria_vector)
+        super().__init__(criteria_count_arr, criteria_vector=criteria_vector)
         self._reference_matrix: Optional[Matrix] = None
 
-    def _makePairCriteriaCountMatrix(self, values:np.ndarray, criteria_vec:CriteriaVector)->PairCriteriaResult:
+    def _makeColumnLabels(self, pairs=None)->List[str]:
+        if pairs is None:
+            pairs = self.criteria_vector_idx_pairs
+        labels = []
+        for criteria1_idx, criteria2_idx in pairs:
+            labels.append(f"{self.criteria_vector.criteria_strs[criteria1_idx]}_{self.criteria_vector.criteria_strs[criteria2_idx]}")
+        return labels
+    
+    def _makeDataframe(self, imat:int)->pd.DataFrame:
         """
-        Constructs 3-d matrix that describes pairwise comparisons of rows and criteria.
+        Make a dataframe of the matrix values.
+        """
+        values = self.values[imat, :, :]
+        column_labels = self._makeColumnLabels()
+        df = pd.DataFrame(values, columns=column_labels)
+        return df
+
+    def _makePairCriteriaCountMatrix(self, array:np.ndarray, criteria_vec:CriteriaVector)->Tuple[np.ndarray, list]:
+        """
+        Constructs 3-d matrix that describes pairwise comparisons of rows and criteria. Let m_i,j be the value of the
+        stoichiometry matrix at row i and column j. Consider the pair of row i, ip and the pair of criteria k, kp.
+        We want to calculate
+            e_i,ip,k,kp = sum_n c_k(m_i,n) AND c_kp(m_ip,n)
+        We structure this as a 3-d array:
+            dim 1: i
+            dim 2: ip
+            dim 3: k,kp
+
         Args:
             array (np.array): An array of real numbers.
         Returns:
-            np.array: A matrix of boolean values.
+            criteria_count_arr (np.array): A 3-d array of counts of criteria pairs as described above.
+            pairs of indices of criteria_vector
         """
-        num_row, num_column = values.shape
-        row_perm = np.array(range(num_row))
-        criteria_perm = np.array(range(criteria_vec.num_criteria))
-        base_arrs = np.array([c(values) for c in criteria_vec.criteria_functions])
-        row_offsets:list = []
-        pair_matrices:list = []
-        for row_idx in range(num_row):
-            criteria_arrs:list = []
-            for criteria_idx in range(criteria_vec.num_criteria):
-                perm_arrs = base_arrs[criteria_perm, :]
-                perm_arrs = perm_arrs[:, row_perm, :]
-                combined_arr = np.logical_and(base_arrs, perm_arrs)
-                # Aggregate across the rows
-                sum_arr = np.sum(combined_arr, axis=2).T
-                criteria_arrs.append(sum_arr)
-                row_offsets.append(row_idx)
-                criteria_perm = np.roll(criteria_perm, 1)
-            pair_matrices.append(np.concatenate(criteria_arrs, axis=1))
-            row_perm = np.roll(row_perm, 1)
-        criteria_count_arr = np.array(pair_matrices)
-        return PairCriteriaResult(row_offsets=row_offsets, criteria_count_arr=criteria_count_arr)
+        num_row = array.shape[0]
+        num_criteria = criteria_vec.num_criteria
+        # criteria_arr is a 3-d array of criteria values: criteria, row, column
+        criteria_arr = np.array([c(array) for c in criteria_vec.criteria_functions])
+        row_pairs = list(itertools.product(range(num_row), range(num_row)))
+        criteria_pairs = list(itertools.product(range(num_criteria), range(num_criteria)))
+        criteria1_idxs, criteria2_idxs = list(zip(*criteria_pairs))
+        pair_count_arr = np.zeros((num_row, num_row, num_criteria*num_criteria), dtype=int)
+        for row1, row2 in row_pairs:
+            bools = criteria_arr[criteria1_idxs, row1, :] & criteria_arr[criteria2_idxs, row2, :]
+            pair_count_arr[row1, row2, :] = np.sum(bools, axis=1)
+        return pair_count_arr, criteria_pairs
     
     ############## OVERRIDE PARENT METHODS #######3
     def getReferenceArray(self, assignment_len:Optional[int]=None)->np.ndarray:
@@ -76,13 +89,13 @@ class PairCriteriaCountMatrix(CriteriaCountMatrix):
         """
         if assignment_len is None:
             assignment_len = self.num_row
-        if self._reference_matrix is None:
-            assignment = np.array(range(self.num_row))
-            assignment = assignment[:assignment_len]
-            self._reference_matrix = self.getTargetArray(assignment)
+        assignment = np.array(range(self.num_row))
+        assignment = assignment[:assignment_len]
+        assignment = np.reshape(assignment, (1, assignment_len))
+        self._reference_matrix = self.getTargetArray(assignment)
         return self._reference_matrix
 
-    def getTargetArray(self, assignment:np.ndarray[int])->np.ndarray:
+    def getTargetArray(self, assignments:np.ndarray[np.ndarray[int]])->np.ndarray:
         """
         Get a matrix as specified by the assignment. self.values is a 3-d array:
             1. Matrix selected
@@ -93,26 +106,8 @@ class PairCriteriaCountMatrix(CriteriaCountMatrix):
             other_assignment (np.ndarray): Sequence of rows in original matrix that are to be compared
 
         Returns:
-            np.ndarray: _description_
+            np.ndarray: Two dimensional array in which rows being are flattened and the columns remain
         """
-        pairs = [(assignment[i], assignment[i+1]) for i in range(len(assignment)-1)]
-        # Construct the indices to reference the desired rows
-        array_indices = [ (pair[1] - pair[0] + self.num_row) % self.num_row for pair in pairs]
-        return self.values[array_indices, np.array(assignment[:-1]), :]
-
-    def getTargetArrayFromPairArray(self, pair1_arr:np.ndarray[int], pair2_arr:np.ndarray[int])->np.ndarray:
-        """
-        Get a matrix as specified by the assignment. self.values is a 3-d array:
-            1. Matrix selected
-            2. Row in matrix
-            3. Column in matrix
-
-        Args:
-            other_assignment (np.ndarray): Sequence of rows in original matrix that are to be compared
-
-        Returns:
-            np.ndarray: _description_
-        """
-        # Construct the indices to reference the desired rows
-        array_indices = (pair2_arr - pair1_arr + self.num_row) % self.num_row
-        return self.values[array_indices, pair1_arr, :]
+        idx1s = assignments[:, :-1].flatten()
+        idx2s = assignments[:, 1:].flatten()
+        return self.values[idx1s, idx2s, :]

@@ -8,25 +8,6 @@ from typing import List, Tuple, Union
 
 IS_TIMEIT = False
 
-def hashArray(arr: np.ndarray)->int:
-    """Hashes an array.
-
-    Args:
-        arr (np.array): An array.
-
-    Returns:
-        int: Hash value.
-    """
-    if len(arr) == 0:
-        return 0
-    hash_vals = pd.util.hash_array(arr)
-    hash_val = hash_vals[0]
-    if len(hash_vals) == 1:
-        return hash_val
-    for val in hash_vals[1:]:
-        hash_val = 1000*val + hash_val
-    return int(hash_val)
-
 def string2Array(array_str: str)->np.ndarray:
     """Converts a string to an array.
 
@@ -130,3 +111,32 @@ def arrayProd(arr:np.ndarray)->float:
         int: The product of the elements of the array.
     """
     return np.exp(np.sum(np.log(arr)))
+
+def makeRowOrderIndependentHash(array:np.ndarray)->int:
+    """Creates a single integer hash for a 1, 2, or 3 dimensional array
+    that depends only on the order of values in the columns (last dimension in the array).
+    So, the resulting hash is invariant to permutations of the rows.
+
+    Args:
+        array (np.array): An array.
+
+    Returns:
+        int: Hash value.
+    """
+    def hash2DArray(array):
+        result = []
+        for row in array:
+            result.append(hash(str(row)))
+        return hash(str(np.sort(np.array(result))))
+    #
+    if array.ndim == 1:
+        return hash(str(array))
+    elif array.ndim == 2:
+        return hash2DArray(array)
+    elif array.ndim == 3:
+        result = []
+        for mat in array:
+            result.append(hash2DArray(mat))
+        return hash(str(np.sort(np.array(result))))
+    else:
+        raise ValueError("Array must be 1, 2, or 3 dimensional.")

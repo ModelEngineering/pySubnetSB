@@ -9,7 +9,7 @@ Subnets.
 
 from sirn.stoichometry import Stoichiometry  # type: ignore
 from sirn.pmatrix import PMatrix  # type: ignore
-from sirn.util import hashArray  # type: ignore
+from sirn.util import makeRowOrderIndependentHash  # type: ignore
 from sirn import constants as cn  # type: ignore
 
 import collections
@@ -134,7 +134,7 @@ class Network(object):
         stoichiometry_array = self.product_pmatrix.array + self.reactant_pmatrix.array
         self.stoichiometry_pmatrix = PMatrix(stoichiometry_array)
         # Hash values for simple stoichiometry (only stoichiometry matrix) and non-simple stoichiometry
-        self.nonsimple_hash = hashArray(np.array([self.reactant_pmatrix.hash_val,
+        self.nonsimple_hash = makeRowOrderIndependentHash(np.array([self.reactant_pmatrix.hash_val,
                                                   self.product_pmatrix.hash_val]))
         self.simple_hash = self.stoichiometry_pmatrix.hash_val
 

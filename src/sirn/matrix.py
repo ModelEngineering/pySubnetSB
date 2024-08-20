@@ -2,7 +2,7 @@
 
 import numpy as np
 import itertools
-from typing import Tuple
+from typing import Optional
 
 class Matrix(object):
 
@@ -27,6 +27,14 @@ class Matrix(object):
             self.num_mat, self.num_row, self.num_column = np.shape(array)
         else:
             self.num_mat, self.num_row, self.num_column = 0, 0, 0
+        self._hash:Optional[int] = None  # Deferred execution to improve efficiency
+
+    @property
+    def hash(self)->int:
+        # This is an order dependent hash
+        if self._hash is None:
+            self._hash = hash(str(self.values))
+        return self._hash
 
     def __repr__(self)->str:
         return str(self.values)

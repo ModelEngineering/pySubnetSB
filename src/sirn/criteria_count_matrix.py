@@ -3,6 +3,7 @@
 from sirn import constants as cn # type: ignore
 from sirn.criteria_vector import CriteriaVector # type: ignore
 from sirn.named_matrix import Matrix  # type: ignore
+import sirn.util as util # type: ignore
 
 from abc import ABC, abstractmethod
 import numpy as np
@@ -21,31 +22,34 @@ class CriteriaCountMatrix(Matrix):
         """
         self.criteria_vec = criteria_vector
         super().__init__(array)
-        self.sorted_mat = self._sortMatrix()
+        self.row_order_independent_hash = util.makeRowOrderIndependentHash(self.values)
+        #self.sorted_hash_arr = self._sortMatrix()
 
-    def _sortMatrix(self)->Matrix:
-        """
-        Sort the rows of the matrix by their hash values.
-
-        Returns:
-            Matrix: _description_
-        """
-        def sort2dArray(arrays):
-            row_hashes = self.getRowHashes(arrays)
-            sort_idx = np.argsort(row_hashes)
-            sorted_arrs = arrays[sort_idx, :]
-            return np.array(sorted_arrs)
-        #
-        if self.num_mat == 1:
-            sorted_arr = sort2dArray(self.values)
-        else:
-            # Iterate across the 2d arrays
-            sorted_arrays = []
-            for arrays in self.values:
-                sorted_arr = sort2dArray(arrays)
-                sorted_arrays.append(sorted_arr)
-            sorted_arr = np.array(sorted_arrays)
-        return Matrix(sorted_arr)
+#    def _sortMatrix(self)->Matrix:
+#        """
+#        Sort the rows of the matrix by their hash values.
+#
+#        Returns:
+#            Matrix: _description_
+#        """
+#        def sort2dArray(arrays):
+#            row_hashes = self.getRowHashes(arrays)
+#            #sort_idx = np.argsort(row_hashes)
+#            #sorted_arrs = arrays[sort_idx, :]
+#            #return np.array(sorted_arrs)
+#            result = np.sort(row_hashes)
+#            return result
+#        #
+#        if self.num_mat == 1:
+#            sorted_arr = sort2dArray(self.values)
+#        else:
+#            # Iterate across the 2d arrays
+#            sorted_arrays = []
+#            for arrays in self.values:
+#                sorted_arr = sort2dArray(arrays)
+#                sorted_arrays.append(sorted_arr)
+#            sorted_arr = np.array(sorted_arrays)
+#        return Matrix(sorted_arr)
 
     @staticmethod
     def getRowHashes(array)->np.ndarray:
@@ -55,11 +59,10 @@ class CriteriaCountMatrix(Matrix):
         Returns:
             np.ndarray[int]: A list of hashes.
         """
-        if np.any(array >= HASH_BASE):
-            raise ValueError(f"Values must be less than {HASH_BASE}.")
         row_hashes = []
         for array in array:
-            row_hash = np.sum([np.int64(v)*HASH_BASE**n for n, v in enumerate(array)])
+            #row_hash = np.sum([np.int64(v)*HASH_BASE**n for n, v in enumerate(array)])
+            row_hash = util.makeRowOrderIndependentHash(array)
             row_hashes.append(row_hash)
         return np.array(row_hashes)
 

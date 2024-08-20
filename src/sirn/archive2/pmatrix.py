@@ -4,7 +4,7 @@ To make operations more computationally efficient, rows and columns are ordered 
 order independent properties.
 """
 
-from sirn.util import hashArray  # type: ignore
+from sirn.util import makeRowOrderIndependentHash  # type: ignore
 from sirn.matrix import Matrix # type: ignore
 from sirn.array_collection import ArrayCollection # type: ignore
 from sirn import constants as cn  # type: ignore
@@ -129,7 +129,7 @@ class PMatrix(Matrix):
         self.column_collection = ArrayCollection(column_arr)
         hash_arr = np.sort(np.concatenate([self.row_collection.encoding.encodings,
                                    self.column_collection.encoding.encodings]))
-        self.hash_val = hashArray(hash_arr)
+        self.hash_val = makeRowOrderIndependentHash(hash_arr)
         # log10 of the estimated number of permutations of rows and columns
         self.log_estimate = self.row_collection.log_estimate + self.column_collection.log_estimate
 
