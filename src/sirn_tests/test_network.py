@@ -187,11 +187,8 @@ class TestNetwork(unittest.TestCase):
     def testIsStructurallyIdenticalDoubleSubset(self):
         if IGNORE_TEST:
             return
-        # Double the size of the target. Look for exact match. Should fail.
-        reactant_arr = np.vstack([self.network.reactant_mat.values]*2)
-        reactant_arr = np.hstack([reactant_arr]*2)
-        product_arr = np.vstack([self.network.product_mat.values]*2)
-        product_arr = np.hstack([product_arr]*2)
+        reactant_arr = np.hstack([self.network.reactant_mat.values]*2)
+        product_arr = np.hstack([self.network.product_mat.values]*2)
         target_network = Network(reactant_arr, product_arr)
         result = self.network.isStructurallyIdentical(target_network, is_subsets=True, identity=cn.ID_WEAK)
         self.assertTrue(result)
@@ -216,10 +213,9 @@ class TestNetwork(unittest.TestCase):
     def testIsStructurallyIdenticalScaleRandomlyPermuteTrue(self):
         if IGNORE_TEST:
             return
-        def test(size, num_iteration=10):
+        def test(size, num_iteration=100):
             num_species = size
             num_reaction = size
-            num_assertion = 0
             for _ in range(num_iteration):
                 for identity in [cn.ID_WEAK, cn.ID_STRONG]:
                     for is_subsets in [True, False]:
@@ -227,17 +223,12 @@ class TestNetwork(unittest.TestCase):
                         target = reference.randomlyPermute()
                         result = reference.isStructurallyIdentical(target, identity=identity, is_subsets=is_subsets)
                         self.assertTrue(result)
-                        first_matched_network = target.makeNetworkFromAssignmentPair(result.assignment_pairs[0])
-                        # FIXME: This fails sometimes
                         if (not is_subsets) and identity == cn.ID_STRONG:
-                            try:
-                                self.assertTrue(np.all(
-                                    first_matched_network.reactant_mat.values == reference.reactant_mat.values))
-                                self.assertTrue(np.all(
-                                     first_matched_network.product_mat.values == reference.product_mat.values))
-                            except AssertionError:
-                                num_assertion += 1
-            print(f"Failed {num_assertion} times for size {size}")
+                            first_matched_network = target.makeNetworkFromAssignmentPair(result.assignment_pairs[0])
+                            self.assertTrue(np.all(
+                                first_matched_network.reactant_mat.values == reference.reactant_mat.values))
+                            self.assertTrue(np.all(
+                                    first_matched_network.product_mat.values == reference.product_mat.values))
         #
         test(3)
         test(4)
@@ -269,4 +260,4 @@ class TestNetwork(unittest.TestCase):
     
 
 if __name__ == '__main__':
-    unittest.main(failfast=True)
+    unittest.main(failfast=False)

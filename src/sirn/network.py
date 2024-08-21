@@ -49,6 +49,13 @@ class StructurallyIdenticalResult(object):
 
     def __bool__(self)->bool:
         return len(self.assignment_pairs) > 0
+    
+    def __repr__(self)->str:
+        repr = f"StructurallyIdenticalResult(assignment_pairs={self.assignment_pairs};"
+        repr += f" is_truncated={self.is_truncated};"
+        repr += f" species_compression_factor={self.species_compression_factor};"
+        repr += f" reaction_compression_factor={self.reaction_compression_factor})."
+        return repr
 
 
 class Network(NetworkBase):
@@ -338,7 +345,9 @@ class Network(NetworkBase):
                 participant: cn.PR_REACTANT or cn.PR_PRODUCT
 
             Returns:
-                np.ndarray[bool]: flattened boolean array of the outcome of comparisons for assignments
+                np.ndarray[bool]: flattened boolean array of the outcome of comparisons for pairs of assignments
+                                  (i.e., assignments of target species to reference species
+                                  and target reactions to reference reactions).
                                   The array is organized breadth-first (column first).
             """
             reference_matrix = self.getNetworkMatrix(matrix_type=cn.MT_STOICHIOMETRY, orientation=cn.OR_SPECIES,
@@ -358,11 +367,27 @@ class Network(NetworkBase):
             #   The following constructs the re-arranged target matrix.
             #   This is organized as blocks of row rearrangements (species) and
             #   each row rearrangement is repeated for several columns (reactions) rearrangements.
-            big_reaction_idxs = np.vstack([reaction_idxs]*len(species_idxs)).flatten()
-            big_species_idxs = np.repeat(species_idxs, len(reaction_idxs))
-            flattened_big_target_arr = target_matrix.values[big_species_idxs, big_reaction_idxs]
-            big_target_arr = np.reshape(flattened_big_target_arr,
-                                        (num_assignment*self.num_species, self.num_reaction))
+            #   Indices are pair to select each row and column in the target matrix
+            # 
+            #   Create the sequence of reaction indices that is paired with the sequence of species indices
+            #   This repeat the reaction indices for each species (row), and does this for each
+            #   reaction assignment.
+            structured_reaction_idxs = np.reshape(reaction_idxs, (num_reaction_assignment, self.num_reaction))
+            big_structured_reaction1_idxs = np.hstack([structured_reaction_idxs]*self.num_species)
+            big_structured_reaction2_idxs = np.vstack([big_structured_reaction1_idxs]*num_species_assignment)
+            big_reaction_idxs = big_structured_reaction2_idxs.flatten()
+            #  Create the sequence of species indices that is paired with the sequence of reaction indices
+            big_species1_idxs = np.repeat(species_idxs, self.num_reaction)
+            #  Reshape to the shape of the stoichiometry matrix
+            big_species2_idxs = np.reshape(big_species1_idxs,
+                  (num_species_assignment, self.num_species*self.num_reaction))
+            #  Replicate for each reaction assignment
+            big_species3_idxs = np.hstack([big_species2_idxs]*num_reaction_assignment)
+            #  Convert to a single array
+            big_species_idxs = big_species3_idxs.flatten()
+            #   The following constructs the re-arranged target matrix.
+            big_target_arr = np.reshape(target_matrix.values[big_species_idxs, big_reaction_idxs],
+                  (num_assignment*self.num_species, self.num_reaction))
             # Compare each row
             big_compatible_arr = np.equal(big_reference_arr, big_target_arr)
             big_row_sum = np.sum(big_compatible_arr, axis=1)
@@ -379,13 +404,14 @@ class Network(NetworkBase):
         else:
             # Strong identity requires that both reactant and product satisfy the assignment
             assignment_pair_arr = compare(participant=cn.PR_REACTANT) & compare(participant=cn.PR_PRODUCT)
-        # Construct the assignment pairs
+        # Construct the indices for reactions and species
         assignment_idxs = np.array(range(len(assignment_pair_arr)))
         num_reaction_assignment = reaction_assignment_arr.shape[0]
-        species_idxs = assignment_idxs//num_reaction_assignment
-        reaction_idxs = np.mod(assignment_idxs, num_reaction_assignment)
+        # Calculate the indices for species and reaction assignments
+        species_assignment_idxs = assignment_idxs[assignment_pair_arr]//num_reaction_assignment
+        reaction_assignment_idxs = np.mod(assignment_idxs[assignment_pair_arr], num_reaction_assignment)
         assignment_pairs = []
-        for species_idx, reaction_idx in zip(species_idxs, reaction_idxs):
+        for species_idx, reaction_idx in zip(species_assignment_idxs, reaction_assignment_idxs):
             species_assignment = species_assignment_arr[species_idx, :]
             reaction_assignment = reaction_assignment_arr[reaction_idx, :]
             assignment_pair = AssignmentPair(species_assignment=species_assignment,

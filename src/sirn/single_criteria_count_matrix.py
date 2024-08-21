@@ -8,9 +8,7 @@ from sirn.named_matrix import NamedMatrix  # type: ignore
 from sirn import util # type: ignore
 
 import numpy as np
-from typing import List, Union, Optional
-
-HASH_BASE = 100 # Base of exponent used to separate encoding values, the count of criteria occurrences
+from typing import Optional
 
 class SingleCriteriaCountMatrix(CriteriaCountMatrix):
     def __init__(self, array:np.array, criteria_vector:Optional[CriteriaVector]=None):
