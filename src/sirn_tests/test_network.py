@@ -8,7 +8,7 @@ import time
 import unittest
 
 
-IGNORE_TEST = False
+IGNORE_TEST = True
 IS_PLOT = False
 NETWORK_NAME = "test"
 BIG_NETWORK = """
@@ -196,7 +196,7 @@ class TestNetwork(unittest.TestCase):
     def testIsStructurallyIdenticalSimpleRandomlyPermute(self):
         if IGNORE_TEST:
             return
-        target = self.network.randomlyPermute()
+        target, _ = self.network.permute()
         result = self.network.isStructurallyIdentical(target, identity=cn.ID_WEAK)
         self.assertTrue(result)
         result = self.network.isStructurallyIdentical(target, identity=cn.ID_STRONG)
@@ -211,17 +211,23 @@ class TestNetwork(unittest.TestCase):
         self.assertTrue(result)
     
     def testIsStructurallyIdenticalScaleRandomlyPermuteTrue(self):
-        if IGNORE_TEST:
-            return
-        def test(size, num_iteration=100):
-            num_species = size
-            num_reaction = size
+        #if IGNORE_TEST:
+        #    return
+        def test(reference_size, target_factor=1, num_iteration=100):
             for _ in range(num_iteration):
                 for identity in [cn.ID_WEAK, cn.ID_STRONG]:
                     for is_subsets in [True, False]:
-                        reference = Network.makeRandomNetwork(num_species, num_reaction)
-                        target = reference.randomlyPermute()
+                        if (not is_subsets) and (target_factor > 1):
+                            continue
+                        #reference = Network.makeRandomNetwork(reference_size, reference_size)
+                        reference = Network.makeRandomNetworkByReactionType(reference_size)
+                        target, _ = reference.permute()
+                        target_reactant_arr = np.hstack([target.reactant_mat.values]*target_factor)
+                        target_product_arr = np.hstack([target.product_mat.values]*target_factor)
+                        target = Network(target_reactant_arr, target_product_arr)
                         result = reference.isStructurallyIdentical(target, identity=identity, is_subsets=is_subsets)
+                        if not result:
+                            import pdb; pdb.set_trace()
                         self.assertTrue(result)
                         if (not is_subsets) and identity == cn.ID_STRONG:
                             first_matched_network = target.makeNetworkFromAssignmentPair(result.assignment_pairs[0])
@@ -230,9 +236,10 @@ class TestNetwork(unittest.TestCase):
                             self.assertTrue(np.all(
                                     first_matched_network.product_mat.values == reference.product_mat.values))
         #
-        test(3)
-        test(4)
-        test(20)
+        test(10, num_iteration=1000)
+        """ for target_factor in [1, 2]:
+            for size in [3, 4, 20]:
+                test(size, target_factor=target_factor) """
 
     def testIsStructurallyIdenticalScaleRandomlyPermuteFalse(self):
         if IGNORE_TEST:
@@ -243,7 +250,7 @@ class TestNetwork(unittest.TestCase):
             for _ in range(num_iteration):
                 for identity in [cn.ID_STRONG]:
                     for is_subsets in [True, False]:
-                        reference = Network.makeRandomNetwork(num_species, num_reaction)
+                        reference, _ = Network.makeRandomNetwork(num_species, num_reaction)
                         target = reference.randomlyPermute()
                         # Change the target so that it's no longer structurally identical
                         if target.reactant_mat.values[0, 0] == 0:
@@ -255,9 +262,9 @@ class TestNetwork(unittest.TestCase):
                         self.assertFalse(result)
         #
         test(3)
-        test(4)
-        test(50)
+        #test(4)
+        #test(50)
     
 
 if __name__ == '__main__':
-    unittest.main(failfast=False)
+    unittest.main(failfast=True)

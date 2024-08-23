@@ -12,7 +12,7 @@ import collections
 import itertools
 import os
 import numpy as np
-from typing import Optional
+from typing import Optional, Tuple
 
 AssignmentPair = collections.namedtuple('AssignmentPair', 'species_assignment reaction_assignment')
 
@@ -245,15 +245,21 @@ class NetworkBase(object):
             return False
         return True
     
-    def randomlyPermute(self)->'NetworkBase':
+    def permute(self, assignment_pair:Optional[AssignmentPair]=None)->Tuple['NetworkBase', AssignmentPair]:
         """
-        Creates a new network with permuted reactant and product matrices using the same random permutation.
+        Creates a new network with permuted reactant and product matrices. If no permutation is specified,
+        then a random permutation is used.
 
         Returns:
             BaseNetwork
+            AssignmentPair (species_assignment, reaction_assignment) for reconstructing the original network.
         """
-        reaction_perm = np.random.permutation(range(self.num_reaction))
-        species_perm = np.random.permutation(range(self.num_species))
+        if assignment_pair is None:
+            reaction_perm = np.random.permutation(range(self.num_reaction))
+            species_perm = np.random.permutation(range(self.num_species))
+        else:
+            reaction_perm = assignment_pair.reaction_assignment
+            species_perm = assignment_pair.species_assignment
         reactant_arr = self.reactant_mat.values.copy()
         product_arr = self.product_mat.values.copy()
         reactant_arr = reactant_arr[species_perm, :]
@@ -262,8 +268,9 @@ class NetworkBase(object):
         product_arr = product_arr[:, reaction_perm]
         reaction_names = np.array([self.reaction_names[i] for i in reaction_perm])
         species_names = np.array([self.species_names[i] for i in species_perm])
+        assignment_pair = AssignmentPair(np.argsort(species_perm), np.argsort(reaction_perm))
         return NetworkBase(reactant_arr, product_arr, network_name=self.network_name,
-              reaction_names=reaction_names, species_names=species_names)
+              reaction_names=reaction_names, species_names=species_names), assignment_pair
     
     def isStructurallyCompatible(self, other:'NetworkBase', identity:str=cn.ID_WEAK)->bool:
         """
@@ -356,6 +363,106 @@ class NetworkBase(object):
         reactant_mat = np.random.randint(0, 3, (species_array_size, reaction_array_size))
         product_mat = np.random.randint(0, 3, (species_array_size, reaction_array_size))
         return cls(reactant_mat, product_mat)
+    
+    @classmethod
+    def makeRandomNetworkByReactionType(cls, num_reaction:int, num_species:Optional[int]=None,
+          input_boundary_frac:Optional[float]=0.1, output_boundary_frac:Optional[float]=0.1,
+          uni_uni_frac:Optional[float]=0.3, uni_bi_frac:Optional[float]=0.3, bi_uni_frac:Optional[float]=0.1,
+          bi_bi_frac:Optional[float]=0.1)->'NetworkBase':
+        """
+        Makes a random network based on the type of reaction: input_boundary, output_boundary,
+            uni_uni, uni_bi, bi_uni, bi_bi.
+
+        Args:
+            num_reaction (int): Number of reactions.
+            num_species (int): Number of species.
+            input_boundary_frac (float): Fraction of input boundary reactions.
+            output_boundary_frac (float): Fraction of output boundary reactions.
+            uni_uni_frac (float): Fraction of uni-uni reactions.
+            uni_bi_frac (float): Fraction of uni-bi reactions.
+            bi_bi_frac (float): Fraction of bi-bi reactions.
+
+        Returns:
+            Network
+        """
+        SUFFIX = "_frac"
+        # Handle defaults
+        if num_species is None:
+            num_species = num_reaction
+        # Initializations
+        REACTION_TYPES = ['input_boundary', 'output_boundary', 'uni_uni', 'uni_bi', 'bi_uni', 'bi_bi']
+        FRAC_NAMES = [n + SUFFIX for n in REACTION_TYPES]
+        dct = locals()
+        for name in FRAC_NAMES:
+            total = np.sum([dct[n] for n in FRAC_NAMES])
+            statement = f"{name} = {name} / {total}"
+            exec(statement)
+        CULMULATIVE_ARR = np.cumsum([dct[n + SUFFIX] for n in REACTION_TYPES])
+        #######
+        def getType(frac:float)->str:
+            """
+            Returns the name of the reaction associated with the fraction (e.g., a random (0, 1))
+
+            Args:
+                frac (float)
+
+            Returns:
+                str: Reaction type
+            """
+            pos = np.sum(CULMULATIVE_ARR < frac)
+            return REACTION_TYPES[pos]
+        #######
+        # Initialize the reactant and product matrices
+        reactant_arr = np.zeros((num_species, num_reaction))
+        product_arr = np.zeros((num_species, num_reaction))
+        # Construct the reactions
+        for i_reaction in range(num_reaction):
+            frac = np.random.rand()
+            reaction_type = getType(frac)
+            if reaction_type == 'input_boundary':
+                i_species = np.random.randint(0, num_species)
+                product_arr[i_species, i_reaction] = 1
+            elif reaction_type == 'output_boundary':
+                i_species = np.random.randint(0, num_species)
+                reactant_arr[i_species, i_reaction] = 1
+            elif reaction_type == 'uni_uni':
+                i_species1 = np.random.randint(0, num_species)
+                i_species2 = np.random.randint(0, num_species)
+                reactant_arr[i_species1, i_reaction] = 1
+                product_arr[i_species2, i_reaction] = 1
+            elif reaction_type == 'uni_bi':
+                i_species1 = np.random.randint(0, num_species)
+                i_species2 = np.random.randint(0, num_species)
+                i_species3 = np.random.randint(0, num_species)
+                reactant_arr[i_species1, i_reaction] = 1
+                product_arr[i_species2, i_reaction] = 1
+                product_arr[i_species3, i_reaction] = 1
+            elif reaction_type == 'bi_uni':
+                i_species1 = np.random.randint(0, num_species)
+                i_species2 = np.random.randint(0, num_species)
+                i_species3 = np.random.randint(0, num_species)
+                reactant_arr[i_species1, i_reaction] = 1
+                reactant_arr[i_species2, i_reaction] = 1
+                product_arr[i_species3, i_reaction] = 1
+            else:
+                i_species1 = np.random.randint(0, num_species)
+                i_species2 = np.random.randint(0, num_species)
+                i_species3 = np.random.randint(0, num_species)
+                i_species4 = np.random.randint(0, num_species)
+                reactant_arr[i_species1, i_reaction] = 1
+                reactant_arr[i_species2, i_reaction] = 1
+                product_arr[i_species3, i_reaction] = 1
+                product_arr[i_species4, i_reaction] = 1
+        # Eliminate 0 rows (species not used)
+        keep_idxs:list = []
+        for i_species in range(num_species):
+            if np.sum(reactant_arr[i_species, :]) > 0 or np.sum(product_arr[i_species, :]) > 0:
+                keep_idxs.append(i_species)
+        reactant_arr = reactant_arr[keep_idxs, :]
+        product_arr = product_arr[keep_idxs, :]
+        # Construct the network
+        network = cls(reactant_arr, product_arr)
+        return network
    
     def prettyPrintReaction(self, index:int)->str:
         """

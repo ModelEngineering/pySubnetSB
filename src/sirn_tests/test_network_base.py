@@ -147,9 +147,11 @@ class TestNetwork(unittest.TestCase):
             product_arr = np.random.randint(0, 3, (size, size))
             network = NetworkBase(reactant_arr, product_arr)
             for _ in range(num_iteration):
-                new_network = network.randomlyPermute()
+                new_network, assignment_pair = network.permute()
                 if network == new_network:
                     continue
+                original_network, _ = new_network.permute(assignment_pair=assignment_pair)
+                self.assertEqual(network, original_network)
                 self.assertEqual(network.num_species, new_network.num_species)
                 self.assertEqual(network.num_reaction, new_network.num_reaction)
                 self.assertEqual(network.weak_hash, new_network.weak_hash)
@@ -167,7 +169,7 @@ class TestNetwork(unittest.TestCase):
             product_arr = np.random.randint(0, 3, (size, size))
             network = NetworkBase(reactant_arr, product_arr)
             for _ in range(num_iteration):
-                new_network = network.randomlyPermute()
+                new_network, _ = network.permute()
                 irow = np.random.randint(0, size)
                 icol = np.random.randint(0, size)
                 cur_value = new_network.reactant_mat.values[irow, icol]
@@ -213,21 +215,32 @@ class TestNetwork(unittest.TestCase):
         self.assertTrue(network.isMatrixEqual(network2))
         self.assertFalse(network.isMatrixEqual(network3, identity=cn.ID_STRONG))
 
-    def testHashBug(self):
+    def testHash(self):
         if IGNORE_TEST:
             return
+        size = 5
         def makeHashArray(network):
-            single_criteria_matrices = [self.network.getNetworkMatrix(
+            single_criteria_matrices = [network.getNetworkMatrix(
                                   matrix_type=cn.MT_SINGLE_CRITERIA, orientation=o,
                                   identity=cn.ID_WEAK)
                                   for o in [cn.OR_SPECIES, cn.OR_REACTION]]
             this_hash_arr = np.array([s.row_order_independent_hash for s in single_criteria_matrices])
             return this_hash_arr
-        network = NetworkBase.makeRandomNetwork(5, 5)
-        other = network.randomlyPermute()
-        this_hash_arr = makeHashArray(self.network)
+        network = NetworkBase.makeRandomNetwork(size, size)
+        other, _ = network.permute()
+        this_hash_arr = makeHashArray(network)
         other_hash_arr = makeHashArray(other)
         self.assertTrue(np.all(this_hash_arr == other_hash_arr))
+
+    def testMakeRandomNetworkFromReactionType(self):
+        if IGNORE_TEST:
+            return
+        for _ in range(100):
+            size = np.random.randint(3, 20)
+            network = NetworkBase.makeRandomNetworkByReactionType(size)
+            eval_arr = np.hstack([network.reactant_mat.values, network.product_mat.values])
+            sum_arr = np.sum(eval_arr, axis=1)
+            self.assertTrue(np.all(sum_arr > 0))
 
 if __name__ == '__main__':
     unittest.main(failfast=True)

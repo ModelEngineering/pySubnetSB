@@ -56,7 +56,8 @@ class NamedMatrix(Matrix):
     @property
     def dataframe(self)->pd.DataFrame:
         if self._dataframe is None:
-            reduced_named_matrix = self._deleteZeroRowsColumns()
+            #reduced_named_matrix = self._deleteZeroRowsColumns()
+            reduced_named_matrix = self
             if len(reduced_named_matrix.values) == 0:
                 return pd.DataFrame()
             self._dataframe = pd.DataFrame(reduced_named_matrix.values)
