@@ -11,6 +11,7 @@ For an input of N boundary values, the functions appear in the vector in the fol
 from sirn.matrix import Matrix # type: ignore
 
 import numpy as np
+import pickle
 from typing import List, Union
 
 BOUNDARY_VALUES = [-1.0, 0.0, 1.0]
@@ -30,6 +31,10 @@ class CriteriaVector(object):
 
     def copy(self):
         return CriteriaVector(self.boundary_values)
+    
+    def serialize(self)->str:
+        # Creates a pickle string for the input object
+        return pickle.dumps(self.boundary_values)   # type: ignore
 
     def _makeCriteria(self):
         """"

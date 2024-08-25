@@ -3,6 +3,7 @@ import sirn.util as util # type: ignore
 import time
 import numpy as np
 import unittest
+from functools import cmp_to_key
 
 
 IGNORE_TEST = False
@@ -84,6 +85,38 @@ class TestFunctions(unittest.TestCase):
         test(ndim=1)
         test(ndim=2)
         test(ndim=3)
+    
+    def testIsLessThan(self):
+        if IGNORE_TEST:
+            return
+        arr1 = np.array([1, 2, 3])
+        arr2 = np.array([1, 2, 4])
+        arr3 = np.array([1, 2, 4 , 5])
+        self.assertTrue(util.isArrayLessEqual(arr1, arr2))
+        self.assertFalse(util.isArrayLessEqual(arr2, arr1))
+        self.assertFalse(util.isArrayLessEqual(arr1, arr3))
+
+    def testArrayToStr(self):
+        if IGNORE_TEST:
+            return
+        big_array = np.random.randint(0, 10, 100)
+        big_array = np.reshape(big_array, (10, 10))
+        sorted_arr = sorted(big_array, key=util.arrayToStr)
+        for idx in range(1, len(sorted_arr)-1):
+            self.assertTrue(util.isArrayLessEqual(sorted_arr[idx-1], sorted_arr[idx]))
+
+    def testPruneArray(self):
+        if IGNORE_TEST:
+            return
+        def test(size=20, max_size=10, num_iteration=100):
+            for _ in range(num_iteration):
+                arr = np.random.randint(0, 3, (size, size))
+                pruned_arr, is_pruned = util.pruneArray(arr, max_size)
+                self.assertTrue(is_pruned)
+                self.assertTrue(pruned_arr.shape[0] <= max_size)
+        #
+        test(size=5, max_size=2)
+        test()
 
 
 if __name__ == '__main__':

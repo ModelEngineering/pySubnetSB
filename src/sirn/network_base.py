@@ -366,12 +366,14 @@ class NetworkBase(object):
     
     @classmethod
     def makeRandomNetworkByReactionType(cls, num_reaction:int, num_species:Optional[int]=None,
-          input_boundary_frac:Optional[float]=0.1, output_boundary_frac:Optional[float]=0.1,
-          uni_uni_frac:Optional[float]=0.3, uni_bi_frac:Optional[float]=0.3, bi_uni_frac:Optional[float]=0.1,
-          bi_bi_frac:Optional[float]=0.1)->'NetworkBase':
+          input_boundary_frac:Optional[float]=0.1, output_boundary_frac:Optional[float]=0.14,
+          uni_uni_frac:Optional[float]=0.34, uni_bi_frac:Optional[float]=0.13, bi_uni_frac:Optional[float]=0.19,
+          bi_bi_frac:Optional[float]=0.07)->'NetworkBase':
         """
         Makes a random network based on the type of reaction: input_boundary, output_boundary,
             uni_uni, uni_bi, bi_uni, bi_bi.
+        Fractions are from the paper "SBMLKinetics: a tool for annotation-independent classification of
+            reaction kinetics for SBML models", Jin Liu, BMC Bioinformatics, 2023.
 
         Args:
             num_reaction (int): Number of reactions.
@@ -392,12 +394,12 @@ class NetworkBase(object):
         # Initializations
         REACTION_TYPES = ['input_boundary', 'output_boundary', 'uni_uni', 'uni_bi', 'bi_uni', 'bi_bi']
         FRAC_NAMES = [n + SUFFIX for n in REACTION_TYPES]
-        dct = locals()
+        value_dct:dict = {}
+        total = np.sum([input_boundary_frac, output_boundary_frac, uni_uni_frac, uni_bi_frac, bi_uni_frac, bi_bi_frac])
         for name in FRAC_NAMES:
-            total = np.sum([dct[n] for n in FRAC_NAMES])
-            statement = f"{name} = {name} / {total}"
-            exec(statement)
-        CULMULATIVE_ARR = np.cumsum([dct[n + SUFFIX] for n in REACTION_TYPES])
+            value = locals()[name]
+            value_dct[name] = value/total
+        CULMULATIVE_ARR = np.cumsum([value_dct[n + SUFFIX] for n in REACTION_TYPES])
         #######
         def getType(frac:float)->str:
             """
@@ -410,7 +412,11 @@ class NetworkBase(object):
                 str: Reaction type
             """
             pos = np.sum(CULMULATIVE_ARR < frac)
-            return REACTION_TYPES[pos]
+            try:
+                reaction_type = REACTION_TYPES[pos]
+            except:
+                import pdb; pdb.set_trace()
+            return reaction_type
         #######
         # Initialize the reactant and product matrices
         reactant_arr = np.zeros((num_species, num_reaction))

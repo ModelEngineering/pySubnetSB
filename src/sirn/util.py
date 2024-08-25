@@ -1,6 +1,6 @@
 '''Utility functions for the SIRN package.'''
 import collections
-from functools import wraps
+from functools import wraps, cmp_to_key
 import numpy as np
 import time
 import pandas as pd # type: ignore
@@ -140,3 +140,61 @@ def makeRowOrderIndependentHash(array:np.ndarray)->int:
         return hash(str(np.sort(np.array(result))))
     else:
         raise ValueError("Array must be 1, 2, or 3 dimensional.")
+    
+def isArrayLessEqual(left_arr:np.ndarray, right_arr:np.ndarray)->bool:
+    """Determines if one array is less than another.
+
+    Args:
+        left_arr (np.array): An array.
+        right_arr (np.array): An array.
+
+    Returns:
+        bool: True if left_arr is less than right_arr.
+    """
+    if left_arr.shape != right_arr.shape:
+        return False
+    for left_val, right_val in zip(left_arr, right_arr):
+        if left_val < right_val:
+            return True
+        elif left_val > right_val:
+            return False
+    return True
+
+def arrayToStr(arr:np.ndarray)->str:
+    """Converts an array of integers to a single integer.
+
+    Args:
+        arr (np.array): An array of integers.
+
+    Returns:
+        int: The integer value of the array.
+    """
+    return ''.join(map(str, arr))
+
+def arrayToSortedDataFrame(array:np.ndarray)->pd.DataFrame:
+    """Converts an array to a sorted pandas DataFrame.
+
+    Args:
+        array (np.array): A 2d array.
+
+    Returns:
+        pd.DataFrame: A sorted DataFrame.
+    """
+    sorted_assignment_arr = sorted(array, key=arrayToStr)
+    return pd.DataFrame(sorted_assignment_arr)
+
+def pruneArray(array:np.ndarray, max_size:int)->Tuple[np.ndarray, bool]:
+    """
+    Randomly prunes an array to a maximum size.
+
+    Args:
+        array (np.array): A 2d array.
+        max_size (int): The maximum number of rows to keep.
+
+    Returns:
+        np.array: A pruned array.
+    """
+    if array.shape[0] <= max_size:
+        return array, False
+    idxs = np.random.permutation(array.shape[0])[:max_size]
+    return array[idxs], True
