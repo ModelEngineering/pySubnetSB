@@ -84,7 +84,23 @@ class TestFunctions(unittest.TestCase):
         #
         test(ndim=1)
         test(ndim=2)
-        test(ndim=3)
+        with self.assertRaises(ValueError):
+            test(ndim=3)
+
+    def testHashArrayScale(self):
+        if IGNORE_TEST:
+            return
+        def test(size=20, num_iteration=100):
+            for _ in range(num_iteration):
+                row_perm = np.random.permutation(size)
+                mat_perm = np.random.permutation(size)
+                arr1 = np.random.randint(-2, 3, (size, size))
+                arr2 = arr1.copy()
+                arr2 = arr2[row_perm, :]
+                result1 = util.makeRowOrderIndependentHash(arr1)
+                result2 = util.makeRowOrderIndependentHash(arr2)
+                self.assertTrue(result1 == result2)
+        test(num_iteration=10000)
     
     def testIsLessThan(self):
         if IGNORE_TEST:

@@ -13,6 +13,9 @@ import numpy as np
 import pickle
 from typing import Optional, List, Tuple, Union
 
+
+IS_DEBUG = False
+
 NULL_ARRAY = np.array([])  # Null array
 ATTRS = ["reactant_mat", "product_mat", "reaction_names", "species_names", "network_name"]
 
@@ -135,12 +138,23 @@ class Network(NetworkBase):
                    network_name=network_name, reaction_names=reaction_names,  # type: ignore
                    species_names=species_names, criteria_vector=criteria_vector)   # type: ignore
     
+    def _validateAssignments(self, assignment_arr:np.ndarray[int], pos:int,
+          expected_assignment_arr:Optional[np.ndarray]=None):
+        # Checks if the assignment is consistent with expectations
+        if not IS_DEBUG:
+            return
+        if expected_assignment_arr is not None:
+            truncated_assignment_arr = np.array([a[:pos+1] for a in assignment_arr])
+            if not self._isMemberOfArray(expected_assignment_arr[:pos+1], truncated_assignment_arr):
+                df = util.arrayToSortedDataFrame(truncated_assignment_arr)
+                import pdb; pdb.set_trace()
+    
     def makeCompatibilitySetVector(self,
           target:'Network',
           orientation:str=cn.OR_SPECIES,
           identity:str=cn.ID_WEAK,
           is_subsets:bool=False,
-          )->list[list[int]]:
+          expected_assignment_arr:Optional[np.ndarray]=None)->List[List[int]]:
         """
         Constructs a vector of lists of rows in the target that are compatible with each row in the reference (self).
         Handles the interaction between identity and participant.
@@ -151,6 +165,7 @@ class Network(NetworkBase):
             identity (str): Identity of the network. cn.ID_WEAK or cn.ID_STRONG.
             participant (str): Participant in the network for ID_STRONG. cn.PR_REACTANT or cn.PR_PRODUCT.
             is_subsets (bool): If True, check for subsets of other.
+            expected_assignment_arr (np.ndarray): Expected assignment. Used in debugging.
 
         Returns:
             list-list: Vector of lists of rows in the target that are compatible with each row in the reference.
@@ -182,6 +197,10 @@ class Network(NetworkBase):
             for iset in range(reference_num_row):
                 indices = target_num_row*iset + target_indices
                 compatible_sets[iset] = target_indices[satisfy_arr[indices]].tolist()
+            if IS_DEBUG and expected_assignment_arr is not None:
+                trues = [expected_assignment_arr[iset] in compatible_sets[iset] for iset in range(reference_num_row)]
+                if not all(trues):
+                    import pdb; pdb.set_trace()
             return compatible_sets
         #
         # Check compatibility
@@ -231,7 +250,6 @@ class Network(NetworkBase):
         Returns:
             AssignmentResult
         """
-        IS_DEBUG = False
         #####
         def checkAssignments(assignment_arr:np.ndarray, participant:Optional[str]=None)->np.ndarray:
                 """
@@ -252,7 +270,8 @@ class Network(NetworkBase):
                 num_assignment, assignment_len = assignment_arr.shape
                 target_arr = target_pair_criteria_matrix.getTargetArray(assignment_arr)
                 base_reference_arr = reference_pair_criteria_matrix.getReferenceArray(assignment_len)
-                reference_arr = np.vstack([base_reference_arr]*num_assignment)
+                #reference_arr = np.vstack([base_reference_arr]*num_assignment)
+                reference_arr = np.concatenate([base_reference_arr]*num_assignment, axis=0)
                 num_column = reference_pair_criteria_matrix.num_column
                 if is_subsets:
                     compatible_arr = np.less_equal(reference_arr, target_arr)
@@ -266,28 +285,22 @@ class Network(NetworkBase):
                 new_assignment_arr = assignment_arr[satisfy_arr, :]
                 return new_assignment_arr   
         #####
-        def checkAssignment(pos:int):
-            # Checks if the assignment is consistent with expectations
-            if not IS_DEBUG:
-                return
-            if expected_assignment_arr is not None:
-                truncated_assignment_arr = np.array([a[:pos+1] for a in assignment_arr])
-                if not self._isMemberOfArray(expected_assignment_arr[:pos+1], truncated_assignment_arr):
-                    df = util.arrayToSortedDataFrame(truncated_assignment_arr)
-                    import pdb; pdb.set_trace()
-        #####
         is_truncated = False # True if the set of assignments was truncated because of excessive size
         compatible_sets = self.makeCompatibilitySetVector(target, orientation=orientation, identity=identity,
-                                                          is_subsets=is_subsets)
+              is_subsets=is_subsets, expected_assignment_arr=expected_assignment_arr)
         assignment_len = len(compatible_sets)  # Number of rows in the reference
         # Initialize the 2d array of assignments. Rows are assignment instance and columns are rows in the target.
         if len(compatible_sets) == 0:
+            if IS_DEBUG:
+                import pdb; pdb.set_trace()
             return AssignmentResult(assignment_arr=NULL_ARRAY, is_truncated=is_truncated, compression_factor=None)
         if compatible_sets[0] == 0:
+            if IS_DEBUG:
+                import pdb; pdb.set_trace()
             return AssignmentResult(assignment_arr=NULL_ARRAY, is_truncated=is_truncated, compression_factor=None)
         assignment_arr = np.array(np.array(compatible_sets[0]))
         assignment_arr = np.reshape(assignment_arr, (len(assignment_arr), 1))
-        checkAssignment(0)
+        self._validateAssignments(assignment_arr, 0, expected_assignment_arr)
         # Incrementally extend assignments by the cross product of the compatibility set for each position
         initial_sizes:list = []  # Number of assignments at each step
         final_sizes:list = [] # Number of assignments after cross product and pruning 
@@ -297,10 +310,10 @@ class Network(NetworkBase):
                 return AssignmentResult(assignment_arr=NULL_ARRAY, is_truncated=is_truncated, compression_factor=None)
             # Prune the number of assignments if it exceeds the maximum number of assignments
             keep_count = max_num_assignment // len(compatible_sets[pos])
-            checkAssignment(pos-1)
+            self._validateAssignments(assignment_arr, pos-1, expected_assignment_arr)
             new_assignment_arr, new_is_truncated = util.pruneArray(assignment_arr, keep_count)
             is_truncated = is_truncated or new_is_truncated
-            checkAssignment(pos-1)
+            self._validateAssignments(assignment_arr, pos-1, expected_assignment_arr)
             assignment_arr = new_assignment_arr
             if assignment_arr.shape[0] == 0:
                 return AssignmentResult(assignment_arr=NULL_ARRAY, is_truncated=is_truncated, compression_factor=None)
@@ -310,9 +323,12 @@ class Network(NetworkBase):
             #   and then repeating the compatibility set block for compatibility_sets[pos] for each
             #   row in the assignment array.
             ex_assignment_arr = np.repeat(assignment_arr, len(compatible_sets[pos]), axis=0)
-            ex_compatibility_arr = np.vstack([compatible_sets[pos]*len(assignment_arr)]).T
-            assignment_arr = np.hstack((ex_assignment_arr, ex_compatibility_arr))
-            checkAssignment(pos)
+            #ex_compatibility_arr = np.vstack([compatible_sets[pos]*len(assignment_arr)]).T
+            ex_compatibility_arr = np.concatenate([compatible_sets[pos]*len(assignment_arr)], axis=0)
+            ex_compatibility_arr = np.reshape(ex_compatibility_arr, (len(assignment_arr)*len(compatible_sets[pos]), 1))
+            #assignment_arr = np.hstack((ex_assignment_arr, ex_compatibility_arr))
+            assignment_arr = np.concatenate([ex_assignment_arr, ex_compatibility_arr], axis=1)
+            self._validateAssignments(assignment_arr, pos, expected_assignment_arr)
             initial_sizes.append(assignment_arr.shape[0])
             # Find the rows that have a duplicate value. We do this by: (a) sorting the array, (b) finding the
             #   difference between the array and the array shifted by one, (c) finding the product of the differences.
@@ -322,7 +338,7 @@ class Network(NetworkBase):
             prod_arr = np.prod(diff_arr, axis=1)
             keep_idx = np.where(prod_arr > 0)[0]
             assignment_arr = assignment_arr[keep_idx, :]
-            checkAssignment(pos)
+            self._validateAssignments(assignment_arr, pos, expected_assignment_arr)
             # Check for pairwise compatibility between the last assignment and the new assignment
             #   This is done by finding the pairwise column for the previous and current assignment.
             #   Then we verify that the reference row is either equal (is_subset=False) or less than or equal (is_subset=True)
@@ -334,7 +350,7 @@ class Network(NetworkBase):
                 # Must satisfy conditions for both reactant and product
                 assignment_arr = checkAssignments(assignment_arr, participant=cn.PR_REACTANT)
                 assignment_arr = checkAssignments(assignment_arr, participant=cn.PR_PRODUCT)
-            checkAssignment(pos)
+            self._validateAssignments(assignment_arr, pos, expected_assignment_arr)
             final_sizes.append(assignment_arr.shape[0])
         #
         if all([s > 0 for s in final_sizes]):
@@ -358,6 +374,29 @@ class Network(NetworkBase):
         """
         return bool(np.any(np.all(big_arr == small_arr, axis=1)))
     
+    def _makeCompatibilityVectorPermutedNetwork(self, target:'Network', identity:str, is_subsets:bool
+              )->Tuple['Network', AssignmentPair]:
+        """
+        Creates a permuted network that is compatible with the target network such that
+        species are ordered by the size of their compatibility sets with the target network
+        and similarly reactions are ordered by the size of their compatibility sets with the target network.
+
+        Args:
+            target (Network): _description_
+
+        Returns:
+            Network: _description_
+        """
+        species_compatible_sets = self.makeCompatibilitySetVector(target, orientation=cn.OR_SPECIES,
+              identity=identity, is_subsets=is_subsets)
+        reaction_compatible_sets = self.makeCompatibilitySetVector(target, orientation=cn.OR_REACTION,
+              identity=identity, is_subsets=is_subsets)
+        species_perm = np.argsort([len(s) for s in species_compatible_sets])
+        reaction_perm = np.argsort([len(r) for r in reaction_compatible_sets])
+        permutation_pair = AssignmentPair(species_assignment=species_perm, reaction_assignment=reaction_perm)
+        network, assignment_pair = self.permute(assignment_pair=permutation_pair)
+        return network, assignment_pair
+    
     def isStructurallyIdentical(self, target:'Network', is_subsets:bool=False,
             max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT, identity:str=cn.ID_WEAK,
             expected_assignment_pair:Optional[AssignmentPair]=None)->StructurallyIdenticalResult:
@@ -374,24 +413,33 @@ class Network(NetworkBase):
         Returns:
             StructurallyIdenticalResult: _description_
         """
+        # Construct a new reference network such that the compatibility sets with the reference
+        # are ordered by increasing size. This is a heuristic to reduce the number of assignments.
+        permuted_reference, inverse_permutation_pair = self._makeCompatibilityVectorPermutedNetwork(target,
+              identity, is_subsets)
+        reaction_perm = np.argsort(inverse_permutation_pair.reaction_assignment)
+        species_perm = np.argsort(inverse_permutation_pair.species_assignment)
         # Initializations
         if expected_assignment_pair is not None:
-            expected_reaction_assignment = expected_assignment_pair.reaction_assignment
-            expected_species_assignment = expected_assignment_pair.species_assignment
+            expected_reaction_assignment_arr = expected_assignment_pair.reaction_assignment[reaction_perm]
+            expected_species_assignment_arr = expected_assignment_pair.species_assignment[species_perm]
         else:
-            expected_reaction_assignment = None
-            expected_species_assignment = None
+            expected_reaction_assignment_arr = None
+            expected_species_assignment_arr = None
         # Get the compatible assignments for species and reactions
-        species_assignment_result = self.makeCompatibleAssignments(target, cn.OR_SPECIES, identity=identity,
+        species_assignment_result = permuted_reference.makeCompatibleAssignments(target, cn.OR_SPECIES, identity=identity,
               is_subsets=is_subsets, max_num_assignment=max_num_assignment,
-              expected_assignment_arr=expected_species_assignment)
+              expected_assignment_arr=expected_species_assignment_arr)
         species_assignment_arr = species_assignment_result.assignment_arr
-        reaction_assignment_result = self.makeCompatibleAssignments(target, cn.OR_REACTION, identity=identity,
+        reaction_assignment_result = permuted_reference.makeCompatibleAssignments(target,
+              cn.OR_REACTION, identity=identity,
               is_subsets=is_subsets, max_num_assignment=max_num_assignment,
-              expected_assignment_arr=expected_reaction_assignment)
+              expected_assignment_arr=expected_reaction_assignment_arr)
         reaction_assignment_arr = reaction_assignment_result.assignment_arr
         is_truncated = species_assignment_result.is_truncated or reaction_assignment_result.is_truncated
         if len(species_assignment_arr) == 0 or len(reaction_assignment_arr) == 0:
+            if IS_DEBUG:
+                import pdb; pdb.set_trace()
             return StructurallyIdenticalResult(assignment_pairs=[], is_truncated=is_truncated)
         #####
         def compare(participant:Optional[str]=None)->Tuple[np.ndarray[bool], bool]:
@@ -409,8 +457,8 @@ class Network(NetworkBase):
                 bool: True if the number of assignments exceeds the maximum number of assignments.
             """
             is_truncated = False
-            reference_matrix = self.getNetworkMatrix(matrix_type=cn.MT_STOICHIOMETRY, orientation=cn.OR_SPECIES,
-                  participant=participant, identity=identity)
+            reference_matrix = permuted_reference.getNetworkMatrix(matrix_type=cn.MT_STOICHIOMETRY,
+                  orientation=cn.OR_SPECIES, participant=participant, identity=identity)
             target_matrix = target.getNetworkMatrix(matrix_type=cn.MT_STOICHIOMETRY, orientation=cn.OR_SPECIES,
                   participant=participant, identity=identity)
             # Size the comparison arrays used to make comparisons
@@ -432,7 +480,8 @@ class Network(NetworkBase):
                 is_truncated = is_truncated or species_truncated or reaction_truncated
                 num_assignment =  num_species_assignment*num_reaction_assignment
             # Set up the comparison arrays. These are referred to as 'big' arrays.
-            big_reference_arr = np.vstack([reference_matrix.values]*num_assignment)
+            #big_reference_arr = np.vstack([reference_matrix.values]*num_assignment)
+            big_reference_arr = np.concatenate([reference_matrix.values]*num_assignment, axis=0)
             species_idxs = species_assignment_arr.flatten()
             reaction_idxs = reaction_assignment_arr.flatten()
             #   The following constructs the re-arranged target matrix.
@@ -443,28 +492,35 @@ class Network(NetworkBase):
             #   Create the sequence of reaction indices that is paired with the sequence of species indices
             #   This repeat the reaction indices for each species (row), and does this for each
             #   reaction assignment.
-            structured_reaction_idxs = np.reshape(reaction_idxs, (num_reaction_assignment, self.num_reaction))
-            big_structured_reaction1_idxs = np.hstack([structured_reaction_idxs]*self.num_species)
-            big_structured_reaction2_idxs = np.vstack([big_structured_reaction1_idxs]*num_species_assignment)
+            structured_reaction_idxs = np.reshape(reaction_idxs, (num_reaction_assignment,
+                  permuted_reference.num_reaction))
+            #big_structured_reaction1_idxs = np.hstack([structured_reaction_idxs]*permuted_reference.num_species)
+            big_structured_reaction1_idxs = np.concatenate([structured_reaction_idxs]*permuted_reference.num_species,
+                  axis=1)
+            #big_structured_reaction2_idxs = np.vstack([big_structured_reaction1_idxs]*num_species_assignment)
+            big_structured_reaction2_idxs = np.concatenate([big_structured_reaction1_idxs]*num_species_assignment,
+                  axis=0)
             big_reaction_idxs = big_structured_reaction2_idxs.flatten()
             #  Create the sequence of species indices that is paired with the sequence of reaction indices
-            big_species1_idxs = np.repeat(species_idxs, self.num_reaction)
+            big_species1_idxs = np.repeat(species_idxs, permuted_reference.num_reaction)
             #  Reshape to the shape of the stoichiometry matrix
             big_species2_idxs = np.reshape(big_species1_idxs,
-                  (num_species_assignment, self.num_species*self.num_reaction))
+                  (num_species_assignment, permuted_reference.num_species*permuted_reference.num_reaction))
             #  Replicate for each reaction assignment
-            big_species3_idxs = np.hstack([big_species2_idxs]*num_reaction_assignment)
+            #big_species3_idxs = np.hstack([big_species2_idxs]*num_reaction_assignment)
+            big_species3_idxs = np.concatenate([big_species2_idxs]*num_reaction_assignment,
+                  axis=1)
             #  Convert to a single array
             big_species_idxs = big_species3_idxs.flatten()
             #   The following constructs the re-arranged target matrix.
             big_target_arr = np.reshape(target_matrix.values[big_species_idxs, big_reaction_idxs],
-                  (num_assignment*self.num_species, self.num_reaction))
+                  (num_assignment*permuted_reference.num_species, permuted_reference.num_reaction))
             # Compare each row
             big_compatible_arr = np.isclose(big_reference_arr, big_target_arr)
             big_row_sum = np.sum(big_compatible_arr, axis=1)
-            big_row_satisfy = big_row_sum == self.num_reaction
+            big_row_satisfy = big_row_sum == permuted_reference.num_reaction
             # Rows are results of the comparison of the reference and target; columns are assignments
-            assignment_pair_satisfy_arr = np.reshape(big_row_satisfy, (num_assignment, self.num_species))
+            assignment_pair_satisfy_arr = np.reshape(big_row_satisfy, (num_assignment, permuted_reference.num_species))
             # Index is True if the assignment-pair results in an identical matrix
             assignment_satisfy_arr = np.sum(assignment_pair_satisfy_arr, axis=1) == target.num_species
             return assignment_satisfy_arr, is_truncated  # Booleans indicating acceptable assignments
@@ -488,10 +544,18 @@ class Network(NetworkBase):
         reaction_assignment_idxs = np.mod(assignment_idxs[assignment_pair_arr], num_reaction_assignment)
         assignment_pairs = []
         for species_idx, reaction_idx in zip(species_assignment_idxs, reaction_assignment_idxs):
-            species_assignment = species_assignment_arr[species_idx, :]
-            reaction_assignment = reaction_assignment_arr[reaction_idx, :]
-            assignment_pair = AssignmentPair(species_assignment=species_assignment,
-                                            reaction_assignment=reaction_assignment)
+            if species_assignment_arr.ndim == 2:
+                species_assignment = species_assignment_arr[species_idx, :]
+            else:
+                species_assignment = species_assignment_arr
+            true_species_assignment = species_assignment[inverse_permutation_pair.species_assignment]
+            if reaction_assignment_arr.ndim == 2:
+                reaction_assignment = reaction_assignment_arr[reaction_idx, :]
+            else:
+                reaction_assignment = reaction_assignment_arr
+            true_reaction_assignment = reaction_assignment[inverse_permutation_pair.reaction_assignment]
+            assignment_pair = AssignmentPair(species_assignment=true_species_assignment,
+                                            reaction_assignment=true_reaction_assignment)
             assignment_pairs.append(assignment_pair)
         # Construct the result
         return StructurallyIdenticalResult(assignment_pairs=assignment_pairs,

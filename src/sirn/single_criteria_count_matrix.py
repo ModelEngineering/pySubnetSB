@@ -21,6 +21,7 @@ class SingleCriteriaCountMatrix(CriteriaCountMatrix):
             criteria_vector = CriteriaVector()
         values = self._makeSingleCriteriaCountMatrix(array, criteria_vector)
         super().__init__(values, criteria_vector=criteria_vector)
+        self.row_order_independent_hash = util.makeRowOrderIndependentHash(self.values)
 
 #    def _getRowHashes(self, array:np.ndarray)->np.ndarray:
 #        """

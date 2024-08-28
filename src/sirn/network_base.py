@@ -7,6 +7,7 @@ from sirn.named_matrix import NamedMatrix  # type: ignore
 from sirn.pair_criteria_count_matrix import PairCriteriaCountMatrix  # type: ignore
 from sirn.single_criteria_count_matrix import SingleCriteriaCountMatrix  # type: ignore
 from sirn.stoichometry import Stoichiometry  # type: ignore
+from sirn import util  # type: ignore
 
 import collections
 import itertools
@@ -42,9 +43,11 @@ class NetworkBase(object):
         self.num_species, self.num_reaction = np.shape(reactant_arr)
         self.criteria_vec = criteria_vector
         self.reactant_mat = NamedMatrix(reactant_arr, row_names=species_names, column_names=reaction_names,
-                                        row_description="species", column_description="reactions")
+              row_description="species", column_description="reactions")
         self.product_mat = NamedMatrix(product_arr, row_names=species_names, column_names=reaction_names,
-                                        row_description="species", column_description="reactions")
+              row_description="species", column_description="reactions")
+        self.standard_mat = NamedMatrix(product_arr - reactant_arr, row_names=species_names,
+              column_names=reaction_names, row_description="species", column_description="reactions")
         # The following are deferred execution for efficiency considerations
         self._species_names = species_names
         self._reaction_names = reaction_names
@@ -72,19 +75,19 @@ class NetworkBase(object):
         return self._reaction_names
 
     @property
-    def weak_hash(self)->int:
+    def weak_hash(self):
         if self._weak_hash is None:
             single_criteria_matrices = [self.getNetworkMatrix(
                                   matrix_type=cn.MT_SINGLE_CRITERIA, orientation=o,
                                   identity=cn.ID_WEAK)
                                   for o in [cn.OR_SPECIES, cn.OR_REACTION]]
             # Maintain the order of species and reactions
-            hash_arr = np.array([s.row_order_independent_hash for s in single_criteria_matrices])
-            self._weak_hash = hash(str(hash_arr))
+            hash_arr = np.sort([s.row_order_independent_hash for s in single_criteria_matrices])
+            self._weak_hash = util.makeRowOrderIndependentHash(hash_arr)
         return self._weak_hash
         
     @property
-    def strong_hash(self)->int:
+    def strong_hash(self):
         if self._strong_hash is None:
             orientations = [cn.OR_SPECIES, cn.OR_REACTION]
             participants = [cn.PR_REACTANT, cn.PR_PRODUCT]
@@ -92,8 +95,8 @@ class NetworkBase(object):
             single_criteria_matrices = [self.getNetworkMatrix(
                   matrix_type=cn.MT_SINGLE_CRITERIA, orientation=o, identity=cn.ID_STRONG, participant=p)
                   for o, p in combinations]
-            hash_arr = np.array([s.row_order_independent_hash for s in single_criteria_matrices])
-            self._strong_hash = hash(str(hash_arr))
+            hash_arr = np.sort([s.row_order_independent_hash for s in single_criteria_matrices])
+            self._strong_hash = util.makeRowOrderIndependentHash(hash_arr)
         return self._strong_hash
         
     @property
@@ -251,7 +254,7 @@ class NetworkBase(object):
         then a random permutation is used.
 
         Returns:
-            BaseNetwork
+            BaseNetwork (class of caller)
             AssignmentPair (species_assignment, reaction_assignment) for reconstructing the original network.
         """
         if assignment_pair is None:
@@ -269,7 +272,7 @@ class NetworkBase(object):
         reaction_names = np.array([self.reaction_names[i] for i in reaction_perm])
         species_names = np.array([self.species_names[i] for i in species_perm])
         assignment_pair = AssignmentPair(np.argsort(species_perm), np.argsort(reaction_perm))
-        return NetworkBase(reactant_arr, product_arr, network_name=self.network_name,
+        return self.__class__(reactant_arr, product_arr, network_name=self.network_name,
               reaction_names=reaction_names, species_names=species_names), assignment_pair
     
     def isStructurallyCompatible(self, other:'NetworkBase', identity:str=cn.ID_WEAK)->bool:
@@ -291,7 +294,7 @@ class NetworkBase(object):
         is_identity = self.weak_hash == other.weak_hash
         if identity == cn.ID_STRONG:
             is_identity = self.strong_hash == other.strong_hash
-        return is_identity
+        return bool(is_identity)
 
     # FIXME: More sophisticated subset checking? 
     def isSubsetCompatible(self, other:'NetworkBase')->bool:
@@ -412,10 +415,7 @@ class NetworkBase(object):
                 str: Reaction type
             """
             pos = np.sum(CULMULATIVE_ARR < frac)
-            try:
-                reaction_type = REACTION_TYPES[pos]
-            except:
-                import pdb; pdb.set_trace()
+            reaction_type = REACTION_TYPES[pos]
             return reaction_type
         #######
         # Initialize the reactant and product matrices

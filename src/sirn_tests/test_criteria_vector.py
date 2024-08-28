@@ -26,6 +26,18 @@ class TestCriteriaVector(unittest.TestCase):
         self.assertFalse(self.criteria_vector.criteria_functions[0](2))
         self.assertEqual(len(self.criteria_vector.criteria_strs), len(self.criteria_vector.criteria_functions))
 
+    def testFunctions(self):
+        if IGNORE_TEST:
+            return
+        self.assertTrue(self.criteria_vector.criteria_functions[0](-1))
+        self.assertFalse(self.criteria_vector.criteria_functions[0](2))
+        self.assertTrue(self.criteria_vector.criteria_functions[1](0))
+        self.assertFalse(self.criteria_vector.criteria_functions[1](2))
+        self.assertTrue(self.criteria_vector.criteria_functions[2](1))
+        self.assertFalse(self.criteria_vector.criteria_functions[2](2))
+        self.assertTrue(self.criteria_vector.criteria_functions[3](2))
+        self.assertFalse(self.criteria_vector.criteria_functions[3](0))
+
 
 if __name__ == '__main__':
     unittest.main()

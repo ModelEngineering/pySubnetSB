@@ -20,6 +20,7 @@ BOUNDARY_VALUES = [-1.0, 0.0, 1.0]
 class CriteriaVector(object):
     # Creates a vector of criteria that is a partition of the real line. Criteria are functions that test
     # for equality with a boundary or being between boundary values.
+    # The partitions are: (a) equality for boundary values and (b) all other values in one categor
     def __init__(self, boundary_values: List[float]=BOUNDARY_VALUES):
         """
         Args:
@@ -51,26 +52,13 @@ class CriteriaVector(object):
             exec(f'def {function_name}(x):\n    return x == {val}')
             criteria.append(locals()[function_name])
             criteria_strs.append(f'={val}')
-        # Construct criteria for being between boundary values
-        for i in range(len(self.boundary_values) - 1):
-            idx = len(criteria)
-            function_name = f'function_{idx}'
-            lower = self.boundary_values[i]
-            upper = self.boundary_values[i+1]
-            exec(f'def {function_name}(x):\n    return np.logical_and((x > {lower}), (x < {upper}))')
-            criteria.append(locals()[function_name])
-            criteria_strs.append(f'{self.boundary_values[i]}<,<{self.boundary_values[i+1]}')
-        # Construct criteria for endpoints
-        idx = len(criteria)
+        # Catch anything else
+        idx += 1
         function_name = f'function_{idx}'
-        exec(f'def {function_name}(x):\n    return x < {self.boundary_values[0]}')
+        repeat_statement = " & ".join([f'(x != {v})' for v in self.boundary_values])
+        statement = f'def {function_name}(x):\n    return {repeat_statement}'
+        exec(statement)
         criteria.append(locals()[function_name])
-        criteria_strs.append(f'<{self.boundary_values[0]}')
-        #
-        idx = len(criteria)
-        function_name = f'function_{idx}'
-        exec(f'def {function_name}(x):\n    return x > {self.boundary_values[-1]}')
-        criteria.append(locals()[function_name])
-        criteria_strs.append(f'>{self.boundary_values[-1]}')
+        criteria_strs.append(f'!=others')
         #
         return criteria, criteria_strs

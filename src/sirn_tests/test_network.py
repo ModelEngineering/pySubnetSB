@@ -224,7 +224,7 @@ class TestNetwork(unittest.TestCase):
     def testIsStructurallyIdenticalScaleRandomlyPermuteTrue(self):
         if IGNORE_TEST:
             return
-        def test(reference_size, target_factor=1, num_iteration=10):
+        def test(reference_size, target_factor=1, num_iteration=100):
             success_cnt = 0
             total_cnt = 0
             for _ in range(num_iteration):
@@ -243,7 +243,9 @@ class TestNetwork(unittest.TestCase):
                         if result.is_truncated:
                             continue
                         success_cnt += 1
-                        self.assertTrue(result)
+                        if not result:
+                            import pdb; pdb.set_trace()
+                        self.assertTrue(bool(result))
                         first_matched_network = target.makeNetworkFromAssignmentPair(result.assignment_pairs[0])
                         if (not is_subsets) and (identity == cn.ID_STRONG):
                             first_matched_network = target.makeNetworkFromAssignmentPair(result.assignment_pairs[0])
@@ -254,8 +256,8 @@ class TestNetwork(unittest.TestCase):
             if IGNORE_TEST:
                 print(f"Total count: {total_cnt}; Success count: {success_cnt}; reference_size: {reference_size}; target_factor: {target_factor}")
         #
-        for target_factor in [10, 20]:
-            for size in [3, 4, 5]:
+        for target_factor in [1, 2]:
+            for size in [3, 5, 8]:
                 test(size, target_factor=target_factor)
 
     def testIsStructurallyIdenticalScaleRandomlyPermuteFalse(self):
@@ -286,6 +288,28 @@ class TestNetwork(unittest.TestCase):
         #
         for size in [5, 10, 20, 40]:
             test(size)
+
+    def testMakeCompatibilityVectorPermutedNetwork(self):
+        if IGNORE_TEST:
+            return
+        identity = cn.ID_WEAK
+        is_subsets = False
+        for _ in range(10):
+            reference = Network.makeRandomNetworkByReactionType(10)
+            target, _ = reference.permute()
+            # FIXME: Check both reaction and species permutation
+            compatibility_vector = reference.makeCompatibilitySetVector(target, identity=identity,
+                                                                        is_subsets=is_subsets)
+            # Check that sets are not the same size
+            std = np.std([len(s) for s in compatibility_vector])
+            if std > 0.1:
+                break
+        else:
+            raise RuntimeError("All sets are the same size")
+        permuted_network, inversion_permutation = reference._makeCompatibilityVectorPermutedNetwork(target,
+              identity=identity, is_subsets=is_subsets)
+        original_network, _ = permuted_network.permute(assignment_pair=inversion_permutation)
+        self.assertEqual(reference, original_network)
 
 
 if __name__ == '__main__':

@@ -112,8 +112,8 @@ def arrayProd(arr:np.ndarray)->float:
     """
     return np.exp(np.sum(np.log(arr)))
 
-def makeRowOrderIndependentHash(array:np.ndarray)->int:
-    """Creates a single integer hash for a 1, 2, or 3 dimensional array
+def deprecatedmakeRowOrderIndependentHash(array:np.ndarray)->int:
+    """Creates a single integer hash for a 1 or 2, or 3 dimensional array
     that depends only on the order of values in the columns (last dimension in the array).
     So, the resulting hash is invariant to permutations of the rows.
 
@@ -140,6 +140,34 @@ def makeRowOrderIndependentHash(array:np.ndarray)->int:
         return hash(str(np.sort(np.array(result))))
     else:
         raise ValueError("Array must be 1, 2, or 3 dimensional.")
+    
+def makeRowOrderIndependentHash(array:np.ndarray)->int:
+    """Creates a single integer hash for a 1 or 2 dimensional array
+    that depends only on the order of values in the columns (last dimension in the array).
+    So, the resulting hash is invariant to permutations of the rows.
+
+    Args:
+        array (np.array): An array.
+
+    Returns:
+        int: Hash value.
+    """
+    #####
+    def hashRow(row):
+        return np.sum(pd.util.hash_array(row))
+    #####
+    def hash2DArray(array):
+        result = []
+        for row in array:
+            result.append(hashRow(row))
+        return np.sum(result)
+    #
+    if array.ndim == 1:
+        return hashRow(array)
+    elif array.ndim == 2:
+        return hash2DArray(array)
+    else:
+        raise ValueError("Array must be 1, 2 dimensional.")
     
 def isArrayLessEqual(left_arr:np.ndarray, right_arr:np.ndarray)->bool:
     """Determines if one array is less than another.

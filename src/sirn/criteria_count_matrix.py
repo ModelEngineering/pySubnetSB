@@ -22,8 +22,6 @@ class CriteriaCountMatrix(Matrix):
         """
         self.criteria_vec = criteria_vector
         super().__init__(array)
-        self.row_order_independent_hash = util.makeRowOrderIndependentHash(self.values)
-        #self.sorted_hash_arr = self._sortMatrix()
 
 #    def _sortMatrix(self)->Matrix:
 #        """

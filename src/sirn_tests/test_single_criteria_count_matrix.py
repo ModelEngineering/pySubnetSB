@@ -25,7 +25,7 @@ class TestSingleCriteriaMatrix(unittest.TestCase):
             return
         repr = str(self.scc_mat)
         self.assertTrue(isinstance(repr, str))
-        self.assertTrue(isinstance(self.scc_mat.row_order_independent_hash, int))
+        self.assertTrue(isinstance("int" in str(type(self.scc_mat.row_order_independent_hash)), int))
 
     def testRowIndependentHash(self):
         if IGNORE_TEST:

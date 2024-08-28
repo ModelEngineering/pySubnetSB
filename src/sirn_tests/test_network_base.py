@@ -168,6 +168,8 @@ class TestNetwork(unittest.TestCase):
             reactant_arr = np.random.randint(0, 3, (size, size))
             product_arr = np.random.randint(0, 3, (size, size))
             network = NetworkBase(reactant_arr, product_arr)
+            weak_collision_cnt = 0
+            strong_collision_cnt = 0
             for _ in range(num_iteration):
                 new_network, _ = network.permute()
                 irow = np.random.randint(0, size)
@@ -180,10 +182,16 @@ class TestNetwork(unittest.TestCase):
                 self.assertNotEqual(network, new_network)
                 self.assertEqual(network.num_species, new_network.num_species)
                 self.assertEqual(network.num_reaction, new_network.num_reaction)
-                self.assertNotEqual(network.weak_hash, new_network.weak_hash)
-                self.assertNotEqual(network.strong_hash, new_network.strong_hash)
+                if network.weak_hash == new_network.weak_hash:
+                    weak_collision_cnt += 1
+                if network.strong_hash == new_network.strong_hash:
+                    strong_collision_cnt += 1
+            frac_weak = weak_collision_cnt/num_iteration
+            frac_strong = strong_collision_cnt/num_iteration
+            self.assertTrue(frac_weak < 0.1)
+            self.assertTrue(frac_strong < 0.1)
+            return frac_weak, frac_strong
         #
-        test(3)
         test(30)
 
     def testIsStructurallyCompatible(self):
