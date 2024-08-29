@@ -7,24 +7,25 @@ import pandas as pd # type: ignore
 from typing import List, Tuple, Union
 
 IS_TIMEIT = False
+ArrayContext = collections.namedtuple('ArrayContext', "string, num_row, num_column")
 
-def string2Array(array_str: str)->np.ndarray:
-    """Converts a string to an array.
-
-    Args:
-        array_str (str): An string constructed by str(np.array).
-
-    Returns:
-        np.array: An array.
-    """
-    array_str = array_str.replace('\n', ',')
-    array_str = array_str.replace(' ', ', ')
-    array_str = array_str.replace('\n', '')
-    while True:
-        if ",," not in array_str:
-            break
-        array_str = array_str.replace(",,", ",")
-    return np.array(eval(array_str))
+#def string2Array(array_str: str)->np.ndarray:
+#    """Converts a string to an array.
+#
+#    Args:
+#        array_str (str): An string constructed by str(np.array).
+#
+#    Returns:
+#        np.array: An array.
+#    """
+#    array_str = array_str.replace('\n', ',')
+#    array_str = array_str.replace(' ', ', ')
+#    array_str = array_str.replace('\n', '')
+#    while True:
+#        if ",," not in array_str:
+#            break
+#        array_str = array_str.replace(",,", ",")
+#    return np.array(eval(array_str))
 
 def isInt(val: str)->bool:
     """Determines if a string is an integer.
@@ -226,3 +227,22 @@ def pruneArray(array:np.ndarray, max_size:int)->Tuple[np.ndarray, bool]:
         return array, False
     idxs = np.random.permutation(array.shape[0])[:max_size]
     return array[idxs], True
+
+def array2Context(array:np.ndarray)->ArrayContext:
+    array = np.array(array)
+    if array.ndim == 1:
+        num_column = len(array)
+        num_row = 1
+    elif array.ndim == 2:
+        num_row, num_column = np.shape(array)
+    else:
+        raise ValueError("Array must be 1 or 2 dimensional.")
+    flat_array = np.reshape(array, num_row*num_column)
+    str_arr = [str(i) for i in flat_array]
+    array_str = "[" + ",".join(str_arr) + "]"
+    return ArrayContext(array_str, num_row, num_column)
+
+def string2Array(array_context:ArrayContext)->np.ndarray:
+    array = np.array(eval(array_context.string))
+    array = np.reshape(array, (array_context.num_row, array_context.num_column))
+    return array

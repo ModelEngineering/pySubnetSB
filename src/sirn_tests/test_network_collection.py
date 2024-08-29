@@ -1,7 +1,7 @@
 from sirn import constants as cn  # type: ignore
 from sirn.network import Network # type: ignore
-from sirn.pmatrix import PMatrix # type: ignore
 from sirn.network_collection import NetworkCollection # type: ignore
+from sirn.matrix import Matrix  # type: ignore
 
 import copy
 import os
@@ -41,13 +41,11 @@ class TestNetworkCollection(unittest.TestCase):
         collection = NetworkCollection.makeRandomCollection(num_network=size)
         self.assertTrue(len(collection) == size)
 
-    def makeStructurallyIdenticalCollection(self, num_network:int=5, num_row:int=5, num_column:int=7,
-                                            structural_identity_type=cn.STRUCTURAL_IDENTITY_TYPE_STRONG):
-        array1 = PMatrix.makeTrinaryMatrix(num_row=num_row, num_column=num_column)
-        array2 = PMatrix.makeTrinaryMatrix(num_row=num_row, num_column=num_column)
+    def makeStructurallyIdenticalCollection(self, num_network:int=5, num_row:int=5, num_column:int=7):
+        array1 = Matrix.makeTrinaryMatrix(num_row=num_row, num_column=num_column)
+        array2 = Matrix.makeTrinaryMatrix(num_row=num_row, num_column=num_column)
         network = Network(array1, array2)
-        networks = [network.randomize(structural_identity_type=structural_identity_type)
-                    for _ in range(num_network)]
+        networks = [network.permute()[0] for _ in range(num_network)]
         return NetworkCollection(networks)
     
     def testAdd(self):
@@ -84,7 +82,7 @@ class TestNetworkCollection(unittest.TestCase):
         if IGNORE_TEST:
             return
         def test(num_network:int=5, array_size:int=5, is_structural_identity:bool=True):
-            collection = NetworkCollection.makeRandomCollection(array_size=array_size,
+            collection = NetworkCollection.makeRandomCollection(num_species=array_size, num_reaction=array_size,
                 num_network=num_network)
             self.checkSerializeDeserialize(collection)
         #
@@ -95,4 +93,4 @@ class TestNetworkCollection(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(failfast=True)

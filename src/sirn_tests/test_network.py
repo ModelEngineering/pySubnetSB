@@ -3,6 +3,7 @@ from sirn.network import Network # type: ignore
 
 import numpy as np
 import copy
+import pandas as pd # type: ignore
 import tellurium as te  # type: ignore
 import time
 import unittest
@@ -243,8 +244,6 @@ class TestNetwork(unittest.TestCase):
                         if result.is_truncated:
                             continue
                         success_cnt += 1
-                        if not result:
-                            import pdb; pdb.set_trace()
                         self.assertTrue(bool(result))
                         first_matched_network = target.makeNetworkFromAssignmentPair(result.assignment_pairs[0])
                         if (not is_subsets) and (identity == cn.ID_STRONG):
@@ -310,6 +309,16 @@ class TestNetwork(unittest.TestCase):
               identity=identity, is_subsets=is_subsets)
         original_network, _ = permuted_network.permute(assignment_pair=inversion_permutation)
         self.assertEqual(reference, original_network)
+
+    def testSerializeDeserialize(self):
+        if IGNORE_TEST:
+            return
+        for _ in range(10):
+            network = self.makeRandomNetwork(10, 10)
+            ser = network.serialize()
+            self.assertTrue(isinstance(ser, pd.Series))
+            new_network = Network.deserialize(ser)
+            self.assertEqual(network, new_network)
 
 
 if __name__ == '__main__':

@@ -9,19 +9,19 @@ For an input of N boundary values, the functions appear in the vector in the fol
 """
 
 from sirn.matrix import Matrix # type: ignore
+import sirn.util as util # type: ignore
+import sirn.constants as cn # type: ignore
 
 import numpy as np
 import pickle
 from typing import List, Union
-
-BOUNDARY_VALUES = [-1.0, 0.0, 1.0]
 
 
 class CriteriaVector(object):
     # Creates a vector of criteria that is a partition of the real line. Criteria are functions that test
     # for equality with a boundary or being between boundary values.
     # The partitions are: (a) equality for boundary values and (b) all other values in one categor
-    def __init__(self, boundary_values: List[float]=BOUNDARY_VALUES):
+    def __init__(self, boundary_values: List[float]=cn.CRITERIA_BOUNDARY_VALUES):
         """
         Args:
             criteria (np.array): A vector of criteria.
@@ -33,9 +33,9 @@ class CriteriaVector(object):
     def copy(self):
         return CriteriaVector(self.boundary_values)
     
-    def serialize(self)->str:
+    def serialize(self)->util.ArrayContext:
         # Creates a pickle string for the input object
-        return pickle.dumps(self.boundary_values)   # type: ignore
+        return util.array2Context(self.boundary_values)
 
     def _makeCriteria(self):
         """"

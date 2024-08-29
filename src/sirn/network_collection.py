@@ -2,10 +2,10 @@
 
 
 from sirn import constants as cn   # type: ignore
-from src.sirn.network_base import NetworkBase   # type: ignore
-from sirn.pmatrix import PMatrix   # type: ignore
+from src.sirn.network import Network   # type: ignore
 
 import collections
+import copy
 import os
 import pandas as pd # type: ignore
 import numpy as np
@@ -13,16 +13,7 @@ from typing import List, Optional, Dict
 
 
 ANTIMONY_EXTS = [".ant", ".txt", ""]  # Antimony file extensions
-MODEL_NAME = 'model_name'
-REACTANT_ARRAY_STR = 'reactant_array_str'
-PRODUCT_ARRAY_STR = 'product_array_str'
-NUM_ROW = 'num_row'
-NUM_COL = 'num_col'
-ROW_NAMES = 'row_names'
-COLUMN_NAMES = 'column_names'
-STRUCTURALLY_IDENTICAL_TYPE = 'structurally_identical_type'
-SERIALIZATION_NAMES = [MODEL_NAME, REACTANT_ARRAY_STR, PRODUCT_ARRAY_STR, ROW_NAMES,
-                       COLUMN_NAMES, NUM_ROW, NUM_COL, NUM_ROW, NUM_COL]
+
 
 ArrayContext = collections.namedtuple('ArrayContext', "string, num_row, num_column")
 
@@ -30,7 +21,7 @@ ArrayContext = collections.namedtuple('ArrayContext', "string, num_row, num_colu
 ####################################
 class NetworkCollection(object):
         
-    def __init__(self, networks: List[NetworkBase], directory:Optional[str]=None)->None:
+    def __init__(self, networks: List[Network], directory:Optional[str]=None)->None:
         """
         Args:
             networks (List[Network]): Networks in the collection
@@ -39,7 +30,7 @@ class NetworkCollection(object):
         self.network_dct = {n.network_name: n for n in networks}
         self.directory = directory
 
-    def add(self, network:NetworkBase)->None:
+    def add(self, network:Network)->None:
         self.networks.append(network)
 
     def __eq__(self, other:'NetworkCollection')->bool:  # type: ignore
@@ -95,7 +86,7 @@ class NetworkCollection(object):
         if len(common_names) > 0:
             raise ValueError(f"Common names between collections: {common_names}")
         # Construct the new collection
-        networks = self.networks.copy()
+        networks = copy.deepcopy(self.networks)
         networks.extend(other.networks)
         directory = None
         if self.directory == other.directory:
@@ -103,34 +94,22 @@ class NetworkCollection(object):
         return NetworkCollection(networks, directory=directory)
     
     def copy(self)->'NetworkCollection':
-        return NetworkCollection(self.networks.copy())
+        return copy.deepcopy(self)
     
     @classmethod
-    def makeRandomCollection(cls, array_size:int=3, num_network:int=10,
-            structural_identity_type:str=cn.STRUCTURAL_IDENTITY_TYPE_NOT)->'NetworkCollection':
+    def makeRandomCollection(cls, num_species:int=3, num_reaction:int=3, num_network:int=10)->'NetworkCollection':
         """
         Make a collection of random networks according to the specified parameters.
 
         Args:
             array_size (int, optional): Size of the square matrix
             num_network (int, optional): Number of networks
-            is_structurally_identical (bool, optional): _description_
 
         Returns:
             NetworkCollection
         """
-        def _make():
-            reactant_mat = np.random.randint(-1, 2, (array_size, array_size))
-            product_mat = np.random.randint(-1, 2, (array_size, array_size))
-            return NetworkBase(reactant_mat, product_mat)
-        #
-        networks = [_make()]
-        for _ in range(num_network-1):
-            if structural_identity_type:
-                network = networks[0].randomize(structural_identity_type=structural_identity_type)
-            else:
-                network = _make()
-            networks.append(network)
+        networks = [Network.makeRandomNetworkByReactionType(num_species=num_species, num_reaction=num_reaction)
+                    for _ in range(num_network)]
         return cls(networks)
 
     @classmethod
@@ -142,7 +121,7 @@ class NetworkCollection(object):
         Args:
             indir_path (str): Path to the antimony model directory
             max_file (int): Maximum number of files to process
-            processed_model_names (List[str]): Names of models already processed
+            processed_network_names (List[str]): Names of models already processed
             report_interval (int): Report interval
 
         Returns:
@@ -168,7 +147,7 @@ class NetworkCollection(object):
             if not any([ffile.endswith(ext) for ext in ANTIMONY_EXTS]):
                 continue
             path = os.path.join(indir_path, ffile)
-            network = NetworkBase.makeFromAntimonyFile(path, network_name=network_name)
+            network = Network.makeFromAntimonyFile(path, network_name=network_name)
             networks.append(network)
             if is_report:
                 print(f"Processed {count} files.")
@@ -196,26 +175,8 @@ class NetworkCollection(object):
                DataFrame.metadata: Dictionary of metadata
                     "directory": Directory of the Antimony files
         """
-        dct: Dict[str, list] = {n: [] for n in SERIALIZATION_NAMES}
-        for network in self.networks:
-            if len(network.reactant_pmatrix.row_names) != network.reactant_pmatrix.num_row:
-                raise ValueError("row_names and column_names must have the same length.")
-            if len(network.reactant_pmatrix.column_names) != network.reactant_pmatrix.num_column:
-                raise ValueError("column_names and column_names must have the same length.")
-            dct[MODEL_NAME].append(network.network_name)
-            reactant_pmatrix = network.reactant_pmatrix
-            product_pmatrix = network.product_pmatrix
-            reactant_array_context = self._array2Context(reactant_pmatrix.array)
-            dct[REACTANT_ARRAY_STR].append(reactant_array_context.string)
-            product_array_context = self._array2Context(product_pmatrix.array)
-            dct[PRODUCT_ARRAY_STR].append(product_array_context.string)
-            dct[NUM_ROW].append(reactant_array_context.num_row)
-            dct[NUM_COL].append(reactant_array_context.num_column)
-            dct[ROW_NAMES].append(str(reactant_pmatrix.row_names))  # type: ignore
-            dct[COLUMN_NAMES].append(str(reactant_pmatrix.column_names))  # type: ignore
-        df = pd.DataFrame(dct)
-        df.attrs["directory"] = self.directory
-        return df
+        sers = [n.serialize() for n in self.networks]
+        return pd.concat(sers, axis=1).transpose()
 
     @classmethod 
     def deserialize(cls, df:pd.DataFrame)->'NetworkCollection':
@@ -225,25 +186,14 @@ class NetworkCollection(object):
             df: pd.DataFrame
 
         Returns:
-            PMatrixCollection
+            NetworkCollection
         """
-        def _makePMatrix(array_str:str, num_row:int, num_column:int, row_names:str,
-                         column_names:str):
+        def _makeArray(array_str:str, num_row:int, num_column:int):
             array_context = ArrayContext(array_str, num_row, num_column)
-            array = cls._string2Array(array_context)
-            return PMatrix(array, row_names=eval(row_names), column_names=eval(column_names))
+            return cls._string2Array(array_context)
         #
         networks = []
         for _, row in df.iterrows():
-            row_names:str = row[ROW_NAMES]  # type: ignore
-            column_names:str = row[COLUMN_NAMES]  # type: ignore
-            num_row = row[NUM_ROW]
-            num_col = row[NUM_COL]
-            reactant_array_str = row[REACTANT_ARRAY_STR]
-            reactant_pmatrix = _makePMatrix(reactant_array_str,
-                                            num_row, num_col, row_names, column_names) 
-            product_pmatrix = _makePMatrix(row[PRODUCT_ARRAY_STR],
-                                            num_row, num_col, row_names, column_names) 
-            network = NetworkBase(reactant_pmatrix, product_pmatrix, network_name=row[MODEL_NAME])
+            network = Network.deserialize(row)
             networks.append(network)
         return NetworkCollection(networks)

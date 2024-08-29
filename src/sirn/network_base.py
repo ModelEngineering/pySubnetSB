@@ -8,14 +8,19 @@ from sirn.pair_criteria_count_matrix import PairCriteriaCountMatrix  # type: ign
 from sirn.single_criteria_count_matrix import SingleCriteriaCountMatrix  # type: ignore
 from sirn.stoichometry import Stoichiometry  # type: ignore
 from sirn import util  # type: ignore
+import sirn.constants as cn # type: ignore
 
 import collections
 import itertools
 import os
+import pandas as pd  # type: ignore
 import numpy as np
 from typing import Optional, Tuple
 
+
 AssignmentPair = collections.namedtuple('AssignmentPair', 'species_assignment reaction_assignment')
+
+CRITERIA_VECTOR = CriteriaVector()
 
 
 class NetworkBase(object):
@@ -28,7 +33,7 @@ class NetworkBase(object):
                  reaction_names:Optional[np.ndarray[str]]=None,
                  species_names:Optional[np.ndarray[str]]=None,
                  network_name:Optional[str]=None,
-                 criteria_vector:Optional[CriteriaVector]=None)->None:
+                 criteria_vector:CriteriaVector=CRITERIA_VECTOR)->None:
         """
         Args:
             reactant_mat (np.ndarray): Reactant matrix.
@@ -41,7 +46,7 @@ class NetworkBase(object):
         if not np.all(reactant_arr.shape == product_arr.shape):
             raise ValueError("Reactant and product matrices must have the same shape.")
         self.num_species, self.num_reaction = np.shape(reactant_arr)
-        self.criteria_vec = criteria_vector
+        self.criteria_vector = criteria_vector
         self.reactant_mat = NamedMatrix(reactant_arr, row_names=species_names, column_names=reaction_names,
               row_description="species", column_description="reactions")
         self.product_mat = NamedMatrix(product_arr, row_names=species_names, column_names=reaction_names,
@@ -184,9 +189,9 @@ class NetworkBase(object):
             raise ValueError("Invalid orientation: {orientation}.")
         #   Matrix type
         if matrix_type == cn.MT_SINGLE_CRITERIA:
-            matrix = SingleCriteriaCountMatrix(matrix.values, criteria_vector=self.criteria_vec)
+            matrix = SingleCriteriaCountMatrix(matrix.values, criteria_vector=self.criteria_vector)
         elif matrix_type == cn.MT_PAIR_CRITERIA:
-            matrix = PairCriteriaCountMatrix(matrix.values, criteria_vector=self.criteria_vec)
+            matrix = PairCriteriaCountMatrix(matrix.values, criteria_vector=self.criteria_vector)
         elif matrix_type == cn.MT_STOICHIOMETRY:
             pass
         else:
@@ -199,7 +204,7 @@ class NetworkBase(object):
         return NetworkBase(self.reactant_mat.values.copy(), self.product_mat.values.copy(),
                        network_name=self.network_name, reaction_names=self.reaction_names,
                        species_names=self.species_names,
-                       criteria_vector=self.criteria_vec)  # type: ignore
+                       criteria_vector=self.criteria_vector)  # type: ignore
 
     def __repr__(self)->str:
         repr = f"{self.network_name}: {self.num_species} species, {self.num_reaction} reactions"
@@ -513,3 +518,51 @@ class NetworkBase(object):
         product_arr = product_arr[:, reaction_assignment]
         return NetworkBase(reactant_arr, product_arr, reaction_names=self.reaction_names[reaction_assignment],
                         species_names=self.species_names[species_assignment])
+    
+    def serialize(self):
+        """
+        Serialize the network.
+
+        Returns:
+            Series: See SERIALIZATION_NAMES
+        """
+        reactant_array_context = util.array2Context(self.reactant_mat.values)
+        product_array_context = util.array2Context(self.product_mat.values)
+        criteria_serialization = self.criteria_vector.serialize()
+        dct = {cn.NETWORK_NAME: self.network_name,
+               cn.NUM_SPECIES: self.num_species,
+               cn.NUM_REACTION: self.num_reaction,
+               cn.REACTANT_ARRAY_STR: reactant_array_context.string,
+               cn.PRODUCT_ARRAY_STR: product_array_context.string,
+               cn.REACTION_NAMES: self.reaction_names.tolist(),
+               cn.SPECIES_NAMES: self.species_names.tolist(),
+               cn.CRITERIA_ARRAY_STR: criteria_serialization.string,
+               cn.CRITERIA_ARRAY_LEN: criteria_serialization.num_column,
+               }
+        return pd.Series(dct)
+    
+    @classmethod
+    def deserialize(cls, ser:pd.Series):
+        """
+        Deserialize the network.
+
+        Args:
+            ser (Series): Serialized network.
+
+        Returns:
+            Network
+        """
+        reactant_array_context = util.ArrayContext(ser[cn.REACTANT_ARRAY_STR], ser[cn.NUM_SPECIES],
+              ser[cn.NUM_REACTION])
+        product_array_context = util.ArrayContext(ser[cn.PRODUCT_ARRAY_STR], ser[cn.NUM_SPECIES],
+              ser[cn.NUM_REACTION])
+        reactant_arr = util.string2Array(reactant_array_context)
+        product_arr = util.string2Array(product_array_context)
+        boundary_array_context = util.ArrayContext(ser[cn.CRITERIA_ARRAY_STR], 1,
+              ser[cn.CRITERIA_ARRAY_LEN])
+        boundary_arr = util.string2Array(boundary_array_context).flatten()
+        criteria_vector = CriteriaVector(boundary_arr)
+        return cls(reactant_arr, product_arr, network_name=ser[cn.NETWORK_NAME],
+                       reaction_names=np.array(ser[cn.REACTION_NAMES]),
+                       species_names=np.array(ser[cn.SPECIES_NAMES]),
+                       criteria_vector=criteria_vector)

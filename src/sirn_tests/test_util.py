@@ -14,17 +14,17 @@ IS_PLOT = False
 #############################
 class TestFunctions(unittest.TestCase):
 
-    def testString2Array(self):
-        if IGNORE_TEST:
-            return
-        def test(array):
-            array_str = str(array)
-            arr = util.string2Array(array_str)
-            self.assertTrue(np.all(arr == arr))
-        #
-        array = np.array(range(10))
-        test(array)
-        test(np.reshape(array, (2,5)))
+#    def testString2Array(self):
+#        if IGNORE_TEST:
+#            return
+#        def test(array):
+#            array_str = str(array)
+#            arr = util.string2Array(array_str)
+#            self.assertTrue(np.all(arr == arr))
+#        #
+#        array = np.array(range(10))
+#        test(array)
+#        test(np.reshape(array, (2,5)))
 
     def testTimeit(self):
         if IGNORE_TEST:
@@ -115,11 +115,21 @@ class TestFunctions(unittest.TestCase):
     def testArrayToStr(self):
         if IGNORE_TEST:
             return
-        big_array = np.random.randint(0, 10, 100)
-        big_array = np.reshape(big_array, (10, 10))
-        sorted_arr = sorted(big_array, key=util.arrayToStr)
-        for idx in range(1, len(sorted_arr)-1):
-            self.assertTrue(util.isArrayLessEqual(sorted_arr[idx-1], sorted_arr[idx]))
+        for _ in range(10):
+            big_array = np.random.randint(0, 10, 100)
+            big_array = np.reshape(big_array, (10, 10))
+            context = util.array2Context(big_array)
+            other_array = util.string2Array(context)
+            self.assertTrue(np.all(big_array == other_array))
+    
+    def testArrayToStr2(self):
+        if IGNORE_TEST:
+            return
+        for _ in range(10):
+            big_array = np.random.randint(0, 10, 100)
+            context = util.array2Context(big_array)
+            other_array = util.string2Array(context)
+            self.assertTrue(np.all(big_array == other_array.flatten()))
 
     def testPruneArray(self):
         if IGNORE_TEST:

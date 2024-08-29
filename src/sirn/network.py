@@ -6,7 +6,7 @@ from sirn.criteria_vector import CriteriaVector  # type: ignore
 from sirn.matrix import Matrix  # type: ignore
 from sirn.pair_criteria_count_matrix import PairCriteriaCountMatrix  # type: ignore
 from sirn.single_criteria_count_matrix import SingleCriteriaCountMatrix  # type: ignore
-from sirn.network_base import NetworkBase, AssignmentPair  # type: ignore
+from sirn.network_base import NetworkBase, AssignmentPair, CRITERIA_VECTOR  # type: ignore
 
 import collections
 import numpy as np
@@ -68,7 +68,7 @@ class Network(NetworkBase):
                  reaction_names:Optional[np.ndarray[str]]=None,
                  species_names:Optional[np.ndarray[str]]=None,
                  network_name:Optional[str]=None,
-                 criteria_vector:Optional[CriteriaVector]=None)->None:
+                 criteria_vector:Optional[CriteriaVector]=CRITERIA_VECTOR)->None:
         """
         Args:
             reactant_mat (np.ndarray): Reactant matrix.
@@ -106,37 +106,6 @@ class Network(NetworkBase):
                         reaction_names=self.reaction_names,
                         species_names=self.species_names,
                         criteria_vector=self.criteria_vector)
-
-    # FIXME: Test 
-    def serialize(self)->List[str]:
-        """
-        Returns:
-            List[str]: Pickle string that is sufficient to reconsitute the object.
-        """
-        lst = [self.criteria_vector.serialize()]
-        for key in ATTRS:
-            lst.append(pickle.dumps(getattr(self, key)))
-        return lst
-    
-    # FIXME: Test 
-    @classmethod
-    def deserialize(cls, pickle_strs:List[str])->'Network':
-        """
-        Reconstitutes the object from pickle strings.
-
-        Args:
-            pickle_str (str): Pickle string.
-
-        Returns:
-            Network: Network object.
-        """
-        criteria_vector = CriteriaVector.deserialize(pickle_strs[0])
-        for idx, key in enumerate(ATTRS):
-            statement = f"{key} = {pickle.loads(pickle_strs[idx+1])}"  # type: ignore
-            exec(statement)
-        return cls(reactant_arr=reactant_mat, product_arr=product_mat,  # type: ignore
-                   network_name=network_name, reaction_names=reaction_names,  # type: ignore
-                   species_names=species_names, criteria_vector=criteria_vector)   # type: ignore
     
     def _validateAssignments(self, assignment_arr:np.ndarray[int], pos:int,
           expected_assignment_arr:Optional[np.ndarray]=None):
@@ -190,7 +159,8 @@ class Network(NetworkBase):
             if is_subsets:
                 big_compatible_arr = np.less_equal(big_reference_arr, big_target_arr)
             else:
-                big_compatible_arr = np.isclose(big_reference_arr, big_target_arr)
+                #big_compatible_arr = np.isclose(big_reference_arr, big_target_arr)
+                big_compatible_arr = big_reference_arr == big_target_arr
             satisfy_arr = np.sum(big_compatible_arr, axis=1) == num_criteria
             # Construct the sets
             target_indices = np.array(range(target_num_row))
@@ -276,7 +246,8 @@ class Network(NetworkBase):
                 if is_subsets:
                     compatible_arr = np.less_equal(reference_arr, target_arr)
                 else:
-                    compatible_arr = np.isclose(reference_arr, target_arr)
+                    #compatible_arr = np.isclose(reference_arr, target_arr)
+                    compatible_arr = reference_arr == target_arr
                 # Find the rows that are compatible
                 satisfy_arr = np.sum(compatible_arr, axis=1) == num_column
                 # Reshape so can count satisfying each position in the assignment
