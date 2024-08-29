@@ -118,7 +118,7 @@ class ClusterBuilder(object):
             # Create list of new collections for this key of hash_dct
             new_clustered_network_collections =  \
                 [ClusteredNetworkCollection([first_clustered_network],
-                     is_structural_identity_strong=self.is_structural_identity_strong,
+                     identity=self.is_structural_identity_strong,
                      hash_val=hash_val)]
             # Find structurally identical networks and add to the appropriate ClusteredNetworkCollection,
             # creating new ClusteredNetworkCollections as needed.a
@@ -128,7 +128,7 @@ class ClusterBuilder(object):
                     selected_clustered_network_collection = None
                     first_clustered_network = clustered_network_collection.clustered_networks[0]
                     first_network = self.clustered2Network(first_clustered_network)
-                    adjusted_max_num_perm = self.max_num_perm - clustered_network.num_perm
+                    adjusted_max_num_perm = self.max_num_perm - clustered_network.num_assignment
                     result = first_network.isStructurallyIdentical(network,
                             max_num_perm=adjusted_max_num_perm, is_sirn=self.is_sirn,
                             is_structural_identity_weak=not self.is_structural_identity_strong)
@@ -139,7 +139,7 @@ class ClusterBuilder(object):
                     if result.is_structural_identity_weak and (not self.is_structural_identity_strong):
                         selected_clustered_network_collection = clustered_network_collection
                         break
-                    if clustered_network.num_perm >= self.max_num_perm:
+                    if clustered_network.num_assignment >= self.max_num_perm:
                         clustered_network.is_indeterminate = True
                         break
                 # Process the result of the search
@@ -149,7 +149,7 @@ class ClusterBuilder(object):
                 else:
                     # Not structurally identical to any ClusteredNetworkCollection with this hash
                     clustered_network_collection = ClusteredNetworkCollection([clustered_network],
-                        is_structural_identity_strong=self.is_structural_identity_strong,
+                        identity=self.is_structural_identity_strong,
                         hash_val=hash_val)
                     new_clustered_network_collections.append(clustered_network_collection)
             self.clustered_network_collections.extend(new_clustered_network_collections)

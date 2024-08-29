@@ -152,20 +152,6 @@ class NetworkCollection(object):
             if is_report:
                 print(f"Processed {count} files.")
         return NetworkCollection(networks, directory=indir_path)
-    
-    @staticmethod 
-    def _array2Context(array:np.ndarray)->ArrayContext:
-        num_row, num_column = np.shape(array)
-        flat_array = np.reshape(array, num_row*num_column)
-        str_arr = [str(i) for i in flat_array]
-        array_str = "[" + ",".join(str_arr) + "]"
-        return ArrayContext(array_str, num_row, num_column)
-    
-    @staticmethod
-    def _string2Array(array_context:ArrayContext)->np.ndarray:
-        array = np.array(eval(array_context.string))
-        array = np.reshape(array, (array_context.num_row, array_context.num_column))
-        return array
 
     def serialize(self)->pd.DataFrame:
         """Constructs a DataFrame from a NetworkCollection
@@ -188,10 +174,6 @@ class NetworkCollection(object):
         Returns:
             NetworkCollection
         """
-        def _makeArray(array_str:str, num_row:int, num_column:int):
-            array_context = ArrayContext(array_str, num_row, num_column)
-            return cls._string2Array(array_context)
-        #
         networks = []
         for _, row in df.iterrows():
             network = Network.deserialize(row)
