@@ -28,7 +28,7 @@ class TestClusterBuilder(unittest.TestCase):
             return
         network_collection = copy.deepcopy(NETWORK_COLLECTION)
         self.builder = ClusterBuilder(network_collection, is_report=IS_PLOT,
-                                      max_num_perm=100, is_structural_identity_strong=True)
+                                      max_num_assignment=100, identity=True)
 
     def testConstructor(self):
         if IGNORE_TEST:
@@ -85,7 +85,7 @@ class TestClusterBuilder(unittest.TestCase):
             for network in network_collections[1:]:
                 network_collection += network
             #
-            builder = ClusterBuilder(network_collection, max_num_perm=100, is_report=IS_PLOT)
+            builder = ClusterBuilder(network_collection, max_num_assignment=100, is_report=IS_PLOT)
             builder.cluster()
             self.assertEqual(len(network_collections), num_collection)
             for network_collection in network_collections:
@@ -120,7 +120,7 @@ class TestClusterBuilder(unittest.TestCase):
             collection = NetworkCollection.makeRandomCollection(array_size=array_size,
                 num_network=num_network)
             cluster = ClusterBuilder(collection, is_report=IS_PLOT,
-                                     is_structural_identity_strong=is_structural_identity_strong)
+                                     identity=is_structural_identity_strong)
             self.checkSerializeDeserialize(cluster)
         #
         test(is_structural_identity_strong=False)
@@ -150,7 +150,7 @@ class TestClusterBuilder(unittest.TestCase):
                 network_collection = network_collections[0]
                 for new_network_collection in network_collections[1:]:
                     network_collection += new_network_collection
-                builder = ClusterBuilder(network_collection, max_num_perm=max_num_perm,
+                builder = ClusterBuilder(network_collection, max_num_assignment=max_num_perm,
                                         is_report=IS_PLOT)
                 builder.cluster()
                 count =  np.sum(["?" in str(c) for c in builder.clustered_network_collections]) 

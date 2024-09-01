@@ -9,12 +9,12 @@ For an input of N boundary values, the functions appear in the vector in the fol
 """
 
 from sirn.matrix import Matrix # type: ignore
+from sirn.csv_maker import CSVMaker # type: ignore
 import sirn.util as util # type: ignore
 import sirn.constants as cn # type: ignore
 
 import numpy as np
-import pickle
-from typing import List, Union
+from typing import List
 
 
 class CriteriaVector(object):

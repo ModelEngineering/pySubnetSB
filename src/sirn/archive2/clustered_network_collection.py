@@ -63,7 +63,7 @@ class ClusteredNetworkCollection(object):
         else:
             prefix = cn.IDENTITY_PREFIX_WEAK
         reprs = [cn.__repr__() for cn in self.clustered_networks]   
-        clustered_networks_str = cn.NETWORK_NAME_DELIMITER.join(reprs)
+        clustered_networks_str = cn.NETWORK_DELIMITER.join(reprs)
         result = f"{self.hash_val}{prefix}{clustered_networks_str}"
         return result
 
@@ -86,7 +86,7 @@ class ClusteredNetworkCollection(object):
         hash_val = int(repr_str[:pos])
         is_structural_identity_strong = repr_str[pos] == cn.IDENTITY_PREFIX_STRONG 
         # Find the ClasteredNetwork.repr
-        reprs = repr_str[pos+1:].split(cn.NETWORK_NAME_DELIMITER)
+        reprs = repr_str[pos+1:].split(cn.NETWORK_DELIMITER)
         clustered_networks = [ClusteredNetwork.makeFromRepr(repr) for repr in reprs]
         return Repr(is_structural_identity_strong=is_structural_identity_strong,
                 hash_val=hash_val, clustered_networks=clustered_networks)

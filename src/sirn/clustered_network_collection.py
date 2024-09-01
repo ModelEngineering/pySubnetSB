@@ -73,9 +73,9 @@ class ClusteredNetworkCollection(object):
             prefix = cn.IDENTITY_PREFIX_STRONG
         else:
             prefix = cn.IDENTITY_PREFIX_WEAK
-        reprs = [cn.__repr__() for cn in self.clustered_networks]   
-        clustered_networks_str = cn.NETWORK_NAME_DELIMITER.join(reprs)
-        result = f"{self.hash_val}{prefix}{clustered_networks_str}"
+        reprs = [cn.__repr__() for cn in self.clustered_networks]
+        clustered_networks_str = cn.NETWORK_DELIMITER.join(reprs)
+        result = f"{prefix}{cn.COMMA}{self.hash_val}{cn.COMMA}{clustered_networks_str}"
         return result
 
     @staticmethod 
@@ -100,7 +100,7 @@ class ClusteredNetworkCollection(object):
         else:
             identity = cn.ID_WEAK
         # Find the ClasteredNetwork.repr
-        reprs = repr_str[pos+1:].split(cn.NETWORK_NAME_DELIMITER)
+        reprs = repr_str[pos+1:].split(cn.NETWORK_DELIMITER)
         clustered_networks = [ClusteredNetwork.makeFromRepr(repr) for repr in reprs]
         return Repr(identity=identity,
                 hash_val=hash_val, clustered_networks=clustered_networks)
@@ -116,10 +116,24 @@ class ClusteredNetworkCollection(object):
         Returns:
             ClusteredNetworkCollection: _description_
         """
-        repr = cls.parseRepr(repr_str)
-        return ClusteredNetworkCollection(repr.clustered_networks,
-                identity=repr.identity,
-                hash_val=repr.hash_val)
+        def get(stg):
+            pos = stg.find(cn.COMMA)
+            prefix = stg[0:pos]
+            new_stg = stg[pos+1:]
+            return prefix, new_stg
+        #####
+        prefix, new_repr_str = get(repr_str)
+        hash_val, new_repr_str = get(new_repr_str)
+        network_reprs = new_repr_str.split(cn.NETWORK_DELIMITER)
+        clustered_networks = [ClusteredNetwork.makeFromRepr(r) for r in network_reprs]
+        if prefix == cn.IDENTITY_PREFIX_STRONG:
+            identity = cn.ID_STRONG
+        else:
+            identity = cn.ID_WEAK
+        return ClusteredNetworkCollection(clustered_networks,
+                identity=identity,
+                hash_val=int(hash_val))
+
     
     def add(self, clustered_network:ClusteredNetwork):
         self.clustered_networks.append(clustered_network)

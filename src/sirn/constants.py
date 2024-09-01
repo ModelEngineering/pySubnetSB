@@ -1,3 +1,4 @@
+import numpy as np
 import os
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -25,7 +26,7 @@ MAX_NUM_ASSIGNMENT = 10000  # Maximum number of permutations to search
 #STRUCTURAL_IDENTITY_TYPE_WEAK = "identity_collection_type_weak"
 #STRUCTURAL_IDENTITY_TYPE_STRONG = "identity_collection_type_strong"
 UNKNOWN_STRUCTURAL_IDENTITY_NAME = "*" # Used for networks whose structural identity cannot be determined
-NETWORK_NAME_DELIMITER = "---"
+NETWORK_DELIMITER = "---"
 NETWORK_NAME_PREFIX_KNOWN = "!"
 NETWORK_NAME_PREFIX_UNKNOWN = "?"
 NETWORK_NAME_SUFFIX = "_"
@@ -66,3 +67,4 @@ CRITERIA_ARRAY_LEN = 'boundary_array_len'
 SERIALIZATION_NAMES = [NETWORK_NAME, REACTANT_ARRAY_STR, PRODUCT_ARRAY_STR, SPECIES_NAMES,
                        REACTION_NAMES, NUM_SPECIES, NUM_REACTION]
 CRITERIA_BOUNDARY_VALUES = [-1.0, 0.0, 1.0]
+COMMA = ","

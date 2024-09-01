@@ -1,9 +1,9 @@
 from sirn.network_collection import NetworkCollection # type: ignore
 from sirn.clustered_network import ClusteredNetwork # type: ignore
 from sirn.clustered_network_collection import ClusteredNetworkCollection # type: ignore
+import sirn.constants as cn  # type: ignore
 
 import copy
-import os
 import pandas as pd # type: ignore
 import numpy as np # type: ignore
 import unittest
@@ -23,8 +23,8 @@ class TestClusteredNetworkCollection(unittest.TestCase):
 
     def setUp(self):
         network_collection = copy.deepcopy(NETWORK_COLLECTION.networks)
-        clustered_networks = [ClusteredNetwork(n) for n in network_collection]
-        self.clustered_network_collection = ClusteredNetworkCollection(clustered_networks,
+        self.clustered_networks = [ClusteredNetwork(n.network_name) for n in network_collection]
+        self.clustered_network_collection = ClusteredNetworkCollection(self.clustered_networks,
                                                                        hash_val=HASH_VAL)
         collection = NetworkCollection.makeRandomCollection(num_network=1)
         self.other_clustered_network = ClusteredNetwork(collection.networks[0])
@@ -44,15 +44,12 @@ class TestClusteredNetworkCollection(unittest.TestCase):
     def testMakeFromRepr(self):
         if IGNORE_TEST:
             return
-        repr_str = self.clustered_network_collection.__repr__()
-        new_collection = self.clustered_network_collection.makeFromRepr(repr_str)
-        self.assertEqual(self.clustered_network_collection, new_collection)
-
-    def testRepr(self):
-        if IGNORE_TEST:
-            return
-        repr_str = str(self.clustered_network_collection)
-        self.assertTrue("+" in repr_str)
+        for identity in [cn.ID_WEAK, cn.ID_STRONG]:
+            clustered_network_collection = ClusteredNetworkCollection(self.clustered_networks,
+                 hash_val=HASH_VAL, identity=identity)
+            repr_str = clustered_network_collection.__repr__()
+            new_collection = clustered_network_collection.makeFromRepr(repr_str)
+            self.assertEqual(clustered_network_collection, new_collection)
 
     def testAdd(self):
         if IGNORE_TEST:

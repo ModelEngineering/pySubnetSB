@@ -17,7 +17,7 @@ class TestClusteredNetwork(unittest.TestCase):
 
     def setUp(self):
         network = copy.deepcopy(NETWORK_COLLECTION.networks[0])
-        self.clustered_network = ClusteredNetwork(network)
+        self.clustered_network = ClusteredNetwork(network.network_name)
 
     def testConstructor(self):
         if IGNORE_TEST:
@@ -29,12 +29,6 @@ class TestClusteredNetwork(unittest.TestCase):
             return
         copy_network = self.clustered_network.copy()
         self.assertTrue(copy_network == self.clustered_network)
-
-    def testAdd(self):
-        if IGNORE_TEST:
-            return
-        self.clustered_network.add(5)
-        self.assertTrue(self.clustered_network.num_assignment == 5)
 
     def testParseMake(self):
         if IGNORE_TEST:

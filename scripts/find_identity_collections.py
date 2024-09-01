@@ -20,8 +20,8 @@ def find_identity_collections(directory_name, is_sirn=True,
     df = pd.read_csv(csv_file)
     network_collection = NetworkCollection.deserialize(df)
     builder = ClusterBuilder(network_collection,
-               is_structural_identity_strong=is_strong, is_sirn=is_sirn,
-               max_num_perm=max_num_perm)
+               identity=is_strong, is_sirn=is_sirn,
+               max_num_assignment=max_num_perm)
     builder.cluster()
     output_path = os.path.join(cn.DATA_DIR, f'{prefix}{directory_name}.txt')
     with open(output_path, 'w') as f:

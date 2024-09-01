@@ -143,7 +143,7 @@ class ClusterBuilder(object):
                         clustered_network.is_indeterminate = True
                         break
                 # Process the result of the search
-                clustered_network.finished()
+                clustered_network.setProcessingTime()
                 if selected_clustered_network_collection is not None:
                     selected_clustered_network_collection.add(clustered_network)
                 else:

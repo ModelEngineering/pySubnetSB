@@ -9,6 +9,7 @@ from sirn.single_criteria_count_matrix import SingleCriteriaCountMatrix  # type:
 from sirn.stoichometry import Stoichiometry  # type: ignore
 from sirn import util  # type: ignore
 import sirn.constants as cn # type: ignore
+from sirn.assignment_pair import AssignmentPair  # type: ignore
 
 import collections
 import itertools
@@ -17,8 +18,6 @@ import pandas as pd  # type: ignore
 import numpy as np
 from typing import Optional, Tuple
 
-
-AssignmentPair = collections.namedtuple('AssignmentPair', 'species_assignment reaction_assignment')
 
 CRITERIA_VECTOR = CriteriaVector()
 

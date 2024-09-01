@@ -34,3 +34,4 @@ STRUCTURAL_IDENTITY_PREFIX_WEAK = "-"
 NUM_HASH = 'num_hash'
 MAX_HASH = 'max_hash'
 NON_SIRN_HASH = 1
+COMMA = ","
