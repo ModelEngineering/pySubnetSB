@@ -85,8 +85,8 @@ class TestNetwork(unittest.TestCase):
         if IGNORE_TEST:
             return
         self.assertEqual(self.network.network_name, NETWORK_NAME)
-        self.assertTrue("int" in str(type(self.network.weak_hash)))
-        self.assertTrue("int" in str(type(self.network.strong_hash)))
+        self.assertTrue("int" in str(type(self.network._weak_hash)))
+        self.assertTrue("int" in str(type(self.network._strong_hash)))
 
     def testMakeCompatibilitySetVector(self):
         if IGNORE_TEST:

@@ -54,7 +54,7 @@ class NetworkCollection(object):
         return len(self.networks)
     
     def __repr__(self)->str:
-        names = [str(n) for n in self.networks]
+        names = [n.network_name for n in self.networks]
         return "---".join(names)
     
     def _findCommonType(self, collection_identity_type1:str, collection_identity_type2:str)->str:

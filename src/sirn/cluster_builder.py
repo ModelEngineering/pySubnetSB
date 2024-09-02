@@ -5,12 +5,11 @@ from src.sirn.network import Network  # type: ignore
 from sirn.network_collection import NetworkCollection  # type: ignore
 from sirn.clustered_network import ClusteredNetwork # type: ignore
 from sirn.clustered_network_collection import ClusteredNetworkCollection # type: ignore
+from sirn.assignment_pair import AssignmentCollection  # type: ignore
 
 import numpy as np
 import pandas as pd  # type: ignore
 from typing import List, Dict
-
-IS_STRUCTURAL_IDENTITY_STRONG = 'is_structural_identity_strong'
 
 
 ###############################################
@@ -34,10 +33,6 @@ class ClusterBuilder(object):
         self.is_report = is_report # Progress reporting
         self.max_num_assignment = max_num_assignment  # Maximum number of assignments permitted before indeterminate
         self.identity = identity
-        if self.identity:
-            self.structural_identity_type = cn.STRUCTURAL_IDENTITY_TYPE_STRONG
-        else:
-            self.structural_identity_type = cn.STRUCTURAL_IDENTITY_TYPE_WEAK
         # Statistics
         self.hash_dct = self._makeHashDct()
         self.num_hash = len(self.hash_dct)
@@ -82,9 +77,9 @@ class ClusterBuilder(object):
             return hash_dct
         #
         if self.is_sirn:
-            hash_simple_dct = makeDct('simple_hash')
+            hash_simple_dct = makeDct('weak_hash')
             simple_max = self.sequenceMax([len(networks) for networks in hash_simple_dct.values()])
-            hash_nonsimple_dct = makeDct('nonsimple_hash')
+            hash_nonsimple_dct = makeDct('strong_hash')
             nonsimple_max = self.sequenceMax([len(networks) for networks in hash_nonsimple_dct.values()])
             if simple_max < nonsimple_max:
                 hash_dct = hash_simple_dct
@@ -125,14 +120,14 @@ class ClusterBuilder(object):
             if self.is_report:
                 print(f" {np.round((idx+1)/self.num_hash, 2)}.", end="")
             # No processing time for the first network in a hash
-            first_clustered_network = ClusteredNetwork(str(hash_networks[0]), processing_time=0.0)
+            first_clustered_network = ClusteredNetwork(hash_networks[0].network_name, processing_time=0.0)
             # Create list of new collections for this key of hash_dct
             new_clustered_network_collections =  \
                 [ClusteredNetworkCollection([first_clustered_network],
                      identity=self.identity,
                      hash_val=hash_val)]
             # Find structurally identical networks and add to the appropriate ClusteredNetworkCollection,
-            # creating new ClusteredNetworkCollections as needed.a
+            # creating new ClusteredNetworkCollections as needed.
             for network in hash_networks[1:]:
                 clustered_network = ClusteredNetwork(network)  # Wrapper for clustering networks
                 is_any_indeterminate = False
@@ -152,11 +147,12 @@ class ClusterBuilder(object):
                 # Process the result of the search
                 clustered_network.setProcessingTime()
                 if is_selected:
-                    clustered_network.is_indeterminate.setIndeterminate(False)
+                    clustered_network.setIndeterminate(False)
                 else:
                     # Not structurally identical to any ClusteredNetworkCollection with this hash
-                    clustered_network.is_indeterminate.setIndeterminate(is_any_indeterminate)
-                    clustered_network.setAssignmentPairs(result.assignment_pairs)
+                    assignment_collection = AssignmentCollection(result.assignment_pairs)
+                    clustered_network.setIndeterminate(is_any_indeterminate)
+                    clustered_network.setAssignmentCollection(assignment_collection)
                     clustered_network_collection = ClusteredNetworkCollection([clustered_network],
                         identity=self.identity,
                         hash_val=hash_val)
@@ -180,7 +176,7 @@ class ClusterBuilder(object):
         dct = {"clustered_network_repr": values}
         df = pd.DataFrame(dct)
         # Augment the dataframe
-        df.attrs = {cn.STRUCTURAL_IDENTITY_TYPE_STRONG: self.identity,
+        df.attrs = {cn.STRUCTURAL_IDENTITY: self.identity,
                        cn.NUM_HASH: self.num_hash,
                        cn.MAX_HASH: self.max_hash}
         return df
@@ -209,4 +205,5 @@ class ClusterBuilder(object):
         Returns:
             Network: _description_
         """
-        return self.network_collection.network_dct[clustered_network.network_name]  
+        network_name = ClusteredNetwork.convertToNetworkName(clustered_network)
+        return self.network_collection.network_dct[network_name]  

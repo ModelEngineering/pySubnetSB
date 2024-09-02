@@ -10,7 +10,6 @@ from sirn.network_base import NetworkBase, AssignmentPair, CRITERIA_VECTOR  # ty
 
 import collections
 import numpy as np
-import pickle
 from typing import Optional, List, Tuple, Union
 
 

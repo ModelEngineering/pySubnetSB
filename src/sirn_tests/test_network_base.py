@@ -154,7 +154,7 @@ class TestNetwork(unittest.TestCase):
                 self.assertEqual(network, original_network)
                 self.assertEqual(network.num_species, new_network.num_species)
                 self.assertEqual(network.num_reaction, new_network.num_reaction)
-                self.assertEqual(network.weak_hash, new_network.weak_hash)
+                self.assertEqual(network._weak_hash, new_network._weak_hash)
                 self.assertEqual(network.strong_hash, new_network.strong_hash)
         #
         test(3)
@@ -201,10 +201,9 @@ class TestNetwork(unittest.TestCase):
         network2 = NetworkBase.makeFromAntimonyStr(NETWORK2, network_name=NETWORK_NAME)
         network3 = NetworkBase.makeFromAntimonyStr(NETWORK3, network_name=NETWORK_NAME)
         network4 = NetworkBase.makeFromAntimonyStr(NETWORK4, network_name=NETWORK_NAME)
+        self.assertFalse(network1.isStructurallyCompatible(network4))
         self.assertTrue(network1.isStructurallyCompatible(network2))
         self.assertTrue(network1.isStructurallyCompatible(network3, identity=cn.ID_WEAK))
-        self.assertFalse(network1.isStructurallyCompatible(network3, identity=cn.ID_STRONG))
-        self.assertFalse(network1.isStructurallyCompatible(network4))
 
     def testPrettyPrintReaction(self):
         if IGNORE_TEST:

@@ -20,15 +20,34 @@ CSV_DCT = {NETWORK_NAME: str, PROCESSING_TIME: float,
 class ClusteredNetwork(object):
     _CSV_MAKER = CSVMaker(CSV_DCT)
 
-    def __init__(self, network_name:Union[Network, str])->None:
-        self.network_name = network_name 
+    def __init__(self, network_name:Union[Network, str], processing_time:Optional[float]=None)->None:
+        self.network_name = self.convertToNetworkName(network_name)
         # Calculated
-        self.processing_time = self._getInitialTime()
+        if processing_time is None:
+            self.processing_time = self._getInitialTime()
+        else:
+            self.processing_time = processing_time
         self.is_indeterminate:bool = False
         self.assignment_collection:AssignmentCollection = AssignmentCollection([])
 
     def _getInitialTime(self)->float:
         return time.process_time()
+
+    @staticmethod 
+    def convertToNetworkName(network:Union[Network, str])->str:
+        """Returns the network name
+
+        Args:
+            network (Union[Network, str]): _description_
+
+        Returns:
+            str: _description_
+        """
+        if isinstance(network, str):
+            network_name = network
+        else:
+            network_name = network.network_name
+        return network_name
 
     def setIndeterminate(self, value)->None:
         self.is_indeterminate = value

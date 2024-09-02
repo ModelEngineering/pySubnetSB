@@ -21,10 +21,7 @@ OSCILLATOR_DIRS = [
         "Oscillators_DOE_JUNE_12_C_27662",
         ]
 MAX_NUM_ASSIGNMENT = 10000  # Maximum number of permutations to search
-#STRUCTURAL_IDENTITY_TYPE = "structural_identity_type"
-#STRUCTURAL_IDENTITY_TYPE_NOT = "identity_collection_type_not"
-#STRUCTURAL_IDENTITY_TYPE_WEAK = "identity_collection_type_weak"
-#STRUCTURAL_IDENTITY_TYPE_STRONG = "identity_collection_type_strong"
+STRUCTURAL_IDENTITY = "structural_identity"
 UNKNOWN_STRUCTURAL_IDENTITY_NAME = "*" # Used for networks whose structural identity cannot be determined
 NETWORK_DELIMITER = "---"
 NETWORK_NAME_PREFIX_KNOWN = "!"

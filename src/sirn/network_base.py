@@ -126,6 +126,9 @@ class NetworkBase(object):
             self._network_name = str(np.random.randint(0, 10000000))
         return self._network_name
     
+    def resetNetworkName(self)->None:
+        self._network_name = None
+
     @property
     def stoichiometry_mat(self)->NamedMatrix:
         if self._stoichiometry_mat is None:
@@ -229,6 +232,8 @@ class NetworkBase(object):
                 participant=participant, identity=identity)
             matrix2 = other.getNetworkMatrix(matrix_type=matrix_type, orientation=cn.OR_SPECIES,
                 participant=participant, identity=identity)
+            if not np.all(matrix1.shape == matrix2.shape):
+                return False
             return np.all(matrix1.values == matrix2.values)
         #
         if identity == cn.ID_WEAK:
@@ -276,7 +281,7 @@ class NetworkBase(object):
         reaction_names = np.array([self.reaction_names[i] for i in reaction_perm])
         species_names = np.array([self.species_names[i] for i in species_perm])
         assignment_pair = AssignmentPair(np.argsort(species_perm), np.argsort(reaction_perm))
-        return self.__class__(reactant_arr, product_arr, network_name=self.network_name,
+        return self.__class__(reactant_arr, product_arr,
               reaction_names=reaction_names, species_names=species_names), assignment_pair
     
     def isStructurallyCompatible(self, other:'NetworkBase', identity:str=cn.ID_WEAK)->bool:
@@ -356,19 +361,19 @@ class NetworkBase(object):
         return cls.makeFromAntimonyStr(antimony_str, network_name=network_name)
     
     @classmethod
-    def makeRandomNetwork(cls, species_array_size:int=5, reaction_array_size:int=5)->'NetworkBase':
+    def makeRandomNetwork(cls, num_species:int=5, num_reaction:int=5)->'NetworkBase':
         """
         Makes a random network.
 
         Args:
-            species_array_size (int): Number of species.
-            reaction_array_size (int): Number of reactions.
+            num_species (int): Number of species.
+            num_reaction (int): Number of reactions.
 
         Returns:
             Network
         """
-        reactant_mat = np.random.randint(0, 3, (species_array_size, reaction_array_size))
-        product_mat = np.random.randint(0, 3, (species_array_size, reaction_array_size))
+        reactant_mat = np.random.randint(0, 3, (num_species, num_reaction))
+        product_mat = np.random.randint(0, 3, (num_species, num_reaction))
         return cls(reactant_mat, product_mat)
     
     @classmethod
