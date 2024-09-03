@@ -20,7 +20,7 @@ FILENAME = f"{STRONG}{MAX_NUM_PERM}_{OSCILLATOR_DIR}.txt"
 ANALYSIS_RESULT_PATH = os.path.join(cn.TEST_DIR, FILENAME)
 IS_STRONG = True
 MAX_NUM_PERM = 100
-COLUMN_DCT = {cn.COL_HASH: int, cn.COL_MODEL_NAME: str,
+COLUMN_DCT = {cn.COL_HASH: int, cn.COL_NETWORK_NAME: str,
                  cn.COL_PROCESSING_TIME: float, cn.COL_NUM_PERM: int,
            cn.COL_IS_INDETERMINATE: np.bool_, cn.COL_COLLECTION_IDX: int}
 
@@ -43,7 +43,7 @@ class TestResultAccessor(unittest.TestCase):
     def testDataframe(self):
         if IGNORE_TEST:
             return
-        self.assertEqual(self.accessor.df.shape[1], len(cn.RESULT_ACCESSOR_COLUMNS))
+        self.assertEqual(self.accessor.df.shape[1], len(cn.RESULT_ACCESSOR_CLUSTERED_NETWORK_COLUMNS))
         self.assertGreater(self.accessor.df.shape[0], 0)
         for column, data_type in COLUMN_DCT.items():
             value = self.accessor.df.loc[0, column]
@@ -88,7 +88,7 @@ class TestResultAccessor(unittest.TestCase):
             return
         df = self.accessor.df.loc[0, :]
         antimony1_str = self.accessor.getAntimonyFromCollectionidx(df[cn.COL_COLLECTION_IDX])[0]
-        antimony2_str = self.accessor.getAntimonyFromModelname(df[cn.COL_MODEL_NAME])
+        antimony2_str = self.accessor.getAntimonyFromModelname(df[cn.COL_NETWORK_NAME])
         self.assertEqual(antimony1_str, antimony2_str)
 
     def testGetClusterResultPath(self):

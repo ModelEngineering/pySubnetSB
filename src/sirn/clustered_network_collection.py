@@ -6,7 +6,9 @@ Has a string representation and can construct from its string representation.
 
 from sirn import constants as cn # type: ignore
 from sirn.clustered_network import ClusteredNetwork  # type: ignore
+from sirn.assignment_pair import AssignmentPair  # type: ignore
 
+import json
 import collections
 import numpy as np
 import pandas as pd  # type: ignore
@@ -21,11 +23,15 @@ class ClusteredNetworkCollection(object):
 
     def __init__(self, clustered_networks:List[ClusteredNetwork],
                  identity:str=cn.ID_WEAK, hash_val:int=-1,
-                 antimony_dir:Optional[str]=None):
+                 antimony_directory:Optional[str]=None):
         self.clustered_networks = clustered_networks  # type: ignore
         self.identity = identity
         self.hash_val = hash_val
-        self.directory = antimony_dir # Directory where the network is stored
+        self.antimony_directory = antimony_directory # Directory where the network is stored
+
+    @property
+    def processing_time(self)->float:
+        return np.sum([c.processing_time for c in self.clustered_networks])
 
     def copy(self)->'ClusteredNetworkCollection':
         return ClusteredNetworkCollection([cn.copy() for cn in self.clustered_networks],
@@ -46,9 +52,6 @@ class ClusteredNetworkCollection(object):
                 import pdb; pdb.set_trace()
                 return False
         return True
-        """ return all([n1 == n2 for n1, n2 in zip(self.clustered_networks, other.clustered_networks)]) and \
-                (self.identity == other.identity) and \
-                (self.hash_val == other.hash_val) """
     
     def isSubset(self, other:object)->bool:
         # Is this a subset of other?
@@ -68,72 +71,50 @@ class ClusteredNetworkCollection(object):
         return len(self.clustered_networks)
     
     def __repr__(self)->str:
-        # String encoding sufficient to reconstruct the object
+        # Summary of the object
         if self.identity == cn.ID_STRONG:
             prefix = cn.IDENTITY_PREFIX_STRONG
         else:
             prefix = cn.IDENTITY_PREFIX_WEAK
-        reprs = [cn.__repr__() for cn in self.clustered_networks]
-        clustered_networks_str = cn.NETWORK_DELIMITER.join(reprs)
-        result = f"{prefix}{cn.COMMA}{self.hash_val}{cn.COMMA}{clustered_networks_str}"
+        names = [c.network_name for c in self.clustered_networks]
+        clustered_networks_str = cn.NETWORK_DELIMITER.join(names)
+        result = f"{prefix}{self.processing_time}_{self.hash_val}__{clustered_networks_str}"
         return result
 
-    @staticmethod 
-    def parseRepr(repr_str:str)->Repr:
-        """
-        Parses a string representation of a ClusteredNetworkCollection.
+    def add(self, clustered_network:ClusteredNetwork):
+        self.clustered_networks.append(clustered_network)
 
-        Args:
-            repr_str (str): _description_
+    def serialize(self)->str:
+        """Creates a JSON string for the object.
 
         Returns:
             str
         """
-        # Find the hash_val
-        positions = np.array([-1, -1])
-        for idx, stg in enumerate([cn.IDENTITY_PREFIX_STRONG, cn.IDENTITY_PREFIX_WEAK]):
-            positions[idx] = repr_str.find(stg)
-        pos = np.min([p for p in positions if p != -1])
-        hash_val = int(repr_str[:pos])
-        if repr_str[pos] == cn.IDENTITY_PREFIX_STRONG:
-            identity = cn.ID_STRONG
-        else:
-            identity = cn.ID_WEAK
-        # Find the ClasteredNetwork.repr
-        reprs = repr_str[pos+1:].split(cn.NETWORK_DELIMITER)
-        clustered_networks = [ClusteredNetwork.makeFromRepr(repr) for repr in reprs]
-        return Repr(identity=identity,
-                hash_val=hash_val, clustered_networks=clustered_networks)
-
-    @classmethod 
-    def makeFromRepr(cls, repr_str:str)->'ClusteredNetworkCollection':
-        """
-        Constructs a ClusteredNetworkCollection from a string representation
+        dct = {cn.S_ID: str(self.__class__),
+               cn.S_CLUSTERED_NETWORKS: [c.serialize() for c in self.clustered_networks],
+               cn.S_IDENITY: self.identity,
+               cn.S_HASH_VAL: int(self.hash_val),  # Cannot serialize numpy.int64
+               cn.S_ANTIMONY_DIRECTORY: self.antimony_directory,
+        }
+        return json.dumps(dct)
+    
+    @classmethod
+    def deserialize(cls, serialization_str)->'ClusteredNetworkCollection':
+        """Creates a ClusteredNetworkCollection from a JSON serialization string.
 
         Args:
-            repr_str (str): _description_
+            serialization_str
 
         Returns:
-            ClusteredNetworkCollection: _description_
+            ClusteredNetworkCollection
         """
-        def get(stg):
-            pos = stg.find(cn.COMMA)
-            prefix = stg[0:pos]
-            new_stg = stg[pos+1:]
-            return prefix, new_stg
-        #####
-        prefix, new_repr_str = get(repr_str)
-        hash_val, new_repr_str = get(new_repr_str)
-        network_reprs = new_repr_str.split(cn.NETWORK_DELIMITER)
-        clustered_networks = [ClusteredNetwork.makeFromRepr(r) for r in network_reprs]
-        if prefix == cn.IDENTITY_PREFIX_STRONG:
-            identity = cn.ID_STRONG
-        else:
-            identity = cn.ID_WEAK
-        return ClusteredNetworkCollection(clustered_networks,
-                identity=identity,
-                hash_val=int(hash_val))
-
-    
-    def add(self, clustered_network:ClusteredNetwork):
-        self.clustered_networks.append(clustered_network)
+        dct = json.loads(serialization_str)
+        if not str(cls) in dct[cn.S_ID]:
+            raise ValueError(f"Expected {cls} but got {dct[cn.S_ID]}")
+        identity = dct[cn.S_IDENITY]
+        antimony_directory =  dct[cn.S_ANTIMONY_DIRECTORY]
+        clustered_networks = [ClusteredNetwork.deserialize(s) for s in dct[cn.S_CLUSTERED_NETWORKS]]
+        hash_val = dct[cn.S_HASH_VAL]
+        clustered_network_collection = ClusteredNetworkCollection(clustered_networks, identity=identity,
+                                          hash_val=hash_val, antimony_directory=antimony_directory)
+        return clustered_network_collection

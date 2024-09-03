@@ -9,10 +9,10 @@ For an input of N boundary values, the functions appear in the vector in the fol
 """
 
 from sirn.matrix import Matrix # type: ignore
-from sirn.csv_maker import CSVMaker # type: ignore
 import sirn.util as util # type: ignore
 import sirn.constants as cn # type: ignore
 
+import json
 import numpy as np
 from typing import List
 
@@ -30,12 +30,31 @@ class CriteriaVector(object):
         self.criteria_functions, self.criteria_strs = self._makeCriteria()
         self.num_criteria = len(self.criteria_functions)
 
+    def __repr__(self)->str:
+        return str(self.boundary_values)
+
+    def __eq__(self, other)->bool:
+        if not isinstance(other, CriteriaVector):
+            return False
+        if len(self.boundary_values) != len(other.boundary_values):
+            return False
+        return bool(np.all(self.boundary_values == other.boundary_values))
+
     def copy(self):
         return CriteriaVector(self.boundary_values)
     
-    def serialize(self)->util.ArrayContext:
-        # Creates a pickle string for the input object
-        return util.array2Context(self.boundary_values)
+    def serialize(self)->str:
+        """Serializes the boundary values."""
+        return json.dumps({cn.S_ID: str(self.__class__), cn.S_BOUNDARY_VALUES: self.boundary_values})
+        #return util.array2Context(self.boundary_values)
+
+    @classmethod
+    def deserialize(cls, string:str)->'CriteriaVector':
+        """Deserializes the boundary values."""
+        dct = json.loads(string)
+        if not str(cls) in dct[cn.S_ID]:
+            raise ValueError(f"Expected {cls} but got {dct[cn.S_ID]}")
+        return cls(dct[cn.S_BOUNDARY_VALUES])
 
     def _makeCriteria(self):
         """"

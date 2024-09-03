@@ -41,16 +41,6 @@ class TestClusteredNetworkCollection(unittest.TestCase):
         copy_collection = self.clustered_network_collection.copy()
         self.assertEqual(self.clustered_network_collection, copy_collection)
 
-    def testMakeFromRepr(self):
-        if IGNORE_TEST:
-            return
-        for identity in [cn.ID_WEAK, cn.ID_STRONG]:
-            clustered_network_collection = ClusteredNetworkCollection(self.clustered_networks,
-                 hash_val=HASH_VAL, identity=identity)
-            repr_str = clustered_network_collection.__repr__()
-            new_collection = clustered_network_collection.makeFromRepr(repr_str)
-            self.assertEqual(clustered_network_collection, new_collection)
-
     def testAdd(self):
         if IGNORE_TEST:
             return
@@ -67,6 +57,15 @@ class TestClusteredNetworkCollection(unittest.TestCase):
         clustered_network_collection.clustered_networks =  \
               clustered_network_collection.clustered_networks[1:]
         self.assertFalse(self.clustered_network_collection.isSubset(clustered_network_collection))
+    
+    def testSerializeDeserialize(self):
+        if IGNORE_TEST:
+            return
+        for identity in [cn.ID_WEAK, cn.ID_STRONG]:
+            self.clustered_network_collection.identity = identity
+            serialization_str = self.clustered_network_collection.serialize()
+            clustered_network_collection = self.clustered_network_collection.deserialize(serialization_str)
+            self.assertEqual(self.clustered_network_collection, clustered_network_collection)
 
 
 if __name__ == '__main__':

@@ -4,6 +4,7 @@
 from sirn import constants as cn   # type: ignore
 from src.sirn.network import Network   # type: ignore
 
+import json
 import collections
 import copy
 import os
@@ -112,6 +113,7 @@ class NetworkCollection(object):
                     for _ in range(num_network)]
         return cls(networks)
 
+    # FIXME: Handle XML files
     @classmethod
     def makeFromAntimonyDirectory(cls, indir_path:str, max_file:Optional[int]=None,
                 processed_network_names:Optional[List[str]]=None,
@@ -153,29 +155,77 @@ class NetworkCollection(object):
                 print(f"Processed {count} files.")
         return NetworkCollection(networks, directory=indir_path)
 
-    def serialize(self)->pd.DataFrame:
-        """Constructs a DataFrame from a NetworkCollection
+#    def serialize(self)->pd.DataFrame:
+#        """Constructs a DataFrame from a NetworkCollection
+#
+#        Returns:
+#            pd.DataFrame: See SERIALIZATION_NAMES
+#               DataFrame.metadata: Dictionary of metadata
+#                    "directory": Directory of the Antimony files
+#        """
+#        sers = [n.serialize() for n in self.networks]
+#        return pd.concat(sers, axis=1).transpose()
+#
+#    @classmethod 
+#    def deserialize(cls, df:pd.DataFrame)->'NetworkCollection':
+#        """Deserializes a DataFrame to a NetworkCollection
+#
+#        Args:
+#            df: pd.DataFrame
+#
+#        Returns:
+#            NetworkCollection
+#        """
+#        networks = []
+#        for _, row in df.iterrows():
+#            import pdb; pdb.set_trace()
+#            network = Network.deserialize(row)
+#            networks.append(network)
+#        return NetworkCollection(networks)
+
+    def serialize(self)->str:
+        """Constructs a json string that serializes the object.
 
         Returns:
-            pd.DataFrame: See SERIALIZATION_NAMES
-               DataFrame.metadata: Dictionary of metadata
-                    "directory": Directory of the Antimony files
+            str
         """
-        sers = [n.serialize() for n in self.networks]
-        return pd.concat(sers, axis=1).transpose()
+        dct = {cn.S_ID: str(self.__class__),
+               cn.S_NETWORKS: [n.serialize() for n in self.networks],
+               cn.S_DIRECTORY: self.directory}
+        return json.dumps(dct)
 
     @classmethod 
-    def deserialize(cls, df:pd.DataFrame)->'NetworkCollection':
-        """Deserializes a DataFrame to a NetworkCollection
+    def deserialize(cls, serialization_str:str)->'NetworkCollection':
+        """Deserializes a json string to a NetworkCollection
 
         Args:
-            df: pd.DataFrame
+            str
 
         Returns:
             NetworkCollection
         """
-        networks = []
-        for _, row in df.iterrows():
-            network = Network.deserialize(row)
-            networks.append(network)
-        return NetworkCollection(networks)
+        dct = json.loads(serialization_str)
+        if not str(cls) in dct[cn.S_ID]:
+            raise ValueError(f"Expected {cls} but got {dct[cn.S_ID]}")
+        networks = [Network.deserialize(n) for n in dct[cn.S_NETWORKS]]
+        if cn.S_DIRECTORY in dct:
+            directory = dct[cn.S_DIRECTORY]
+        else:
+            directory = None
+        return NetworkCollection(networks, directory=directory)
+    
+    @classmethod
+    def dataframeToJson(cls, df:pd.DataFrame)->str:
+        """Converts a DataFrame to a json string.
+
+        Args:
+            df (pd.DataFrame)
+
+        Returns:
+            str
+        """
+        dct = {cn.S_ID: str(cls),
+               cn.S_NETWORKS: [Network.seriesToJson(row) for _, row in df.iterrows()],
+               cn.S_ANTIMONY_DIRECTORY: None,
+        }
+        return json.dumps(dct)

@@ -40,9 +40,16 @@ When $N_P = 1 = M_P$, we get $O(N!M!)$. When $N_P = N$, $M_P =M$, we get 1.
 # Design
 
 * A **``Matrix``** is a two dimensional numpy array.
-* An **``ArrayCollection``** is a collection of one dimensional arrays of the same length. An ``ArrayCollection`` knows the OIEs of its arrays.
-* A **``PMatrix``** is ``Matrix`` that provides an efficient test for permutably identical matrices. ``PMatrix`` has an ``ArrayCollection`` for it rows and another for its columns. ``PMatrix`` uses ``ArrayCollection`` to obtain OIEs from which it constructs partitions of rows (columns) to do efficient checking for permutably identical matrices.
 * A **``Network``** represents a CRN. It has a reactant ``PMatrix`` that represents the reactant stoichiometry matrix, and a product ``PMatrix`` that represents the product stoichiometry matrix. ``Network`` has a hash that is calculated from the reactant and product ``PMatrix``.
 * and product stoichiometry matrices.
 * A **``NetworkCollection``** is a collection of ``Network``. ``NetworkCollection`` provides a way to discover subsets that are structurally identical. The boolean attribute``NetworkCollection.is_structurally_identical indicates if all ``Network`` in the collection are structurally identical.
-* A **``NCSerializer``** provides a way to save and restore a ``NetworkCollection``. It also provides for creating a ``NetworkCollection`` from a directory of Antimony Files.
+* **``ClusterBuilder``** clusters identical (or subsnetwork) networks in a ``NetworkCollection``.
+
+## Structure of classes
+Each major class has the following methods:
+* ``copy`` produces a replica of the object that is a deepcopy
+* ``__repr`` provides a human readable representation of the object's content
+* ``__eq__`` tests for exact equality
+* ``isEquivalent`` tests for identity except for the object name
+* ``serialize`` creates a JSON string representation of the object and its subobjects
+* ``deserialize`` reconstitutes an object (and its subsobjects) from a JSON string serialization

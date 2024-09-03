@@ -38,6 +38,13 @@ class TestCriteriaVector(unittest.TestCase):
         self.assertTrue(self.criteria_vector.criteria_functions[3](2))
         self.assertFalse(self.criteria_vector.criteria_functions[3](0))
 
+    def testSerializeDeserialize(self):
+        if IGNORE_TEST:
+            return
+        string = self.criteria_vector.serialize()
+        criteria_vector = CriteriaVector.deserialize(string)
+        self.assertEqual(self.criteria_vector, criteria_vector)
+
 
 if __name__ == '__main__':
     unittest.main()

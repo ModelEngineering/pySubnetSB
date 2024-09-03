@@ -30,12 +30,14 @@ class TestClusteredNetwork(unittest.TestCase):
         copy_network = self.clustered_network.copy()
         self.assertTrue(copy_network == self.clustered_network)
 
-    def testParseMake(self):
+    def testSerializeDeserialize(self):
         if IGNORE_TEST:
             return
-        repr_str = self.clustered_network.__repr__()
-        network = ClusteredNetwork.makeFromRepr(repr_str)
-        self.assertTrue(network == self.clustered_network)
+        for is_indeterminate in [False, True]:
+            self.clustered_network.setIndeterminate(is_indeterminate)
+            serialization_str = self.clustered_network.serialize()
+            clustered_network = self.clustered_network.deserialize(serialization_str)
+            self.assertEqual(self.clustered_network, clustered_network)
 
 
 if __name__ == '__main__':

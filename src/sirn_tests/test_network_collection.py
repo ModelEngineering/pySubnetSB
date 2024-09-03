@@ -65,11 +65,10 @@ class TestNetworkCollection(unittest.TestCase):
         self.assertTrue(len(network_collection) > 0)
 
     def checkSerializeDeserialize(self, collection:NetworkCollection):
-        df = collection.serialize()
-        self.assertTrue(isinstance(df, pd.DataFrame))
-        self.assertTrue(len(df) == len(collection))
+        serialization_str = collection.serialize()
+        self.assertTrue(isinstance(serialization_str, str))
         #
-        new_collection = NetworkCollection.deserialize(df)
+        new_collection = NetworkCollection.deserialize(serialization_str)
         self.assertTrue(isinstance(new_collection, NetworkCollection))
         self.assertTrue(collection == new_collection)
     
@@ -81,13 +80,12 @@ class TestNetworkCollection(unittest.TestCase):
     def testSerializeDeserialize2(self):
         if IGNORE_TEST:
             return
-        def test(num_network:int=5, array_size:int=5, is_structural_identity:bool=True):
+        def test(num_network:int=5, array_size:int=5):
             collection = NetworkCollection.makeRandomCollection(num_species=array_size, num_reaction=array_size,
                 num_network=num_network)
             self.checkSerializeDeserialize(collection)
         #
-        test(is_structural_identity=False)
-        test(is_structural_identity=True)
+        test()
         test(num_network=10, array_size=10)
 
 

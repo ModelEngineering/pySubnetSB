@@ -83,6 +83,19 @@ class Network(NetworkBase):
         super().__init__(reactant_arr, product_arr, network_name=network_name,
                             reaction_names=reaction_names, species_names=species_names,
                             criteria_vector=criteria_vector) 
+        
+    def isEquivalent(self, other)->bool:
+        """Same except for the network name.
+
+        Args:
+            other (_type_): _description_
+
+        Returns:
+            bool: _description_
+        """
+        if not isinstance(other, self.__class__):
+            return False
+        return super().isEquivalent(other)
 
     def __eq__(self, other)->bool:
         """
@@ -91,7 +104,7 @@ class Network(NetworkBase):
         Returns:
             bool: True if equal.
         """
-        if not isinstance(other, Network):
+        if not isinstance(other, self.__class__):
             return False
         return super().__eq__(other)
     

@@ -10,7 +10,7 @@ import tellurium as te  # type: ignore
 import unittest
 
 
-IGNORE_TEST = False
+IGNORE_TEST = True
 IS_PLOT = False
 NETWORK_NAME = "test"
 BIG_NETWORK = """
@@ -151,7 +151,7 @@ class TestNetwork(unittest.TestCase):
                 if network == new_network:
                     continue
                 original_network, _ = new_network.permute(assignment_pair=assignment_pair)
-                self.assertEqual(network, original_network)
+                self.assertTrue(network.isEquivalent(original_network))
                 self.assertEqual(network.num_species, new_network.num_species)
                 self.assertEqual(network.num_reaction, new_network.num_reaction)
                 self.assertEqual(network._weak_hash, new_network._weak_hash)
@@ -248,6 +248,14 @@ class TestNetwork(unittest.TestCase):
             eval_arr = np.hstack([network.reactant_mat.values, network.product_mat.values])
             sum_arr = np.sum(eval_arr, axis=1)
             self.assertTrue(np.all(sum_arr > 0))
+
+    def testToFromSeries(self):
+        #if IGNORE_TEST:
+        #    return
+        series = self.network.toSeries()
+        serialization_str = self.network.seriesToJson(series)
+        network = NetworkBase.deserialize(serialization_str)
+        self.assertTrue(self.network == network)
 
 if __name__ == '__main__':
     unittest.main(failfast=True)

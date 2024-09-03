@@ -11,8 +11,8 @@ from sirn import util  # type: ignore
 import sirn.constants as cn # type: ignore
 from sirn.assignment_pair import AssignmentPair  # type: ignore
 
-import collections
 import itertools
+import json
 import os
 import pandas as pd  # type: ignore
 import numpy as np
@@ -247,9 +247,22 @@ class NetworkBase(object):
         return True
     
     def __eq__(self, other)->bool:
-        if not self.isMatrixEqual(other, identity=cn.ID_STRONG):
-            return False
         if self.network_name != other.network_name:
+            return False
+        return self.isEquivalent(other)
+    
+    def isEquivalent(self, other)->bool:
+        """Same except for the network name.
+
+        Args:
+            other (_type_): _description_
+
+        Returns:
+            bool: _description_
+        """
+        if not isinstance(other, self.__class__):
+            return False
+        if not self.isMatrixEqual(other, identity=cn.ID_STRONG):
             return False
         if not np.all(self.species_names == other.species_names):
             return False
@@ -523,50 +536,127 @@ class NetworkBase(object):
         return NetworkBase(reactant_arr, product_arr, reaction_names=self.reaction_names[reaction_assignment],
                         species_names=self.species_names[species_assignment])
     
-    def serialize(self):
+    def serialize(self)->str:
         """
         Serialize the network.
 
         Returns:
-            Series: See SERIALIZATION_NAMES
+            str: string representation of json structure
         """
-        reactant_array_context = util.array2Context(self.reactant_mat.values)
-        product_array_context = util.array2Context(self.product_mat.values)
-        criteria_serialization = self.criteria_vector.serialize()
-        dct = {cn.NETWORK_NAME: self.network_name,
-               cn.NUM_SPECIES: self.num_species,
-               cn.NUM_REACTION: self.num_reaction,
-               cn.REACTANT_ARRAY_STR: reactant_array_context.string,
-               cn.PRODUCT_ARRAY_STR: product_array_context.string,
-               cn.REACTION_NAMES: self.reaction_names.tolist(),
-               cn.SPECIES_NAMES: self.species_names.tolist(),
-               cn.CRITERIA_ARRAY_STR: criteria_serialization.string,
-               cn.CRITERIA_ARRAY_LEN: criteria_serialization.num_column,
+        reactant_lst = self.reactant_mat.values.tolist()
+        product_lst = self.product_mat.values.tolist()
+        criteria_vector_serialization = self.criteria_vector.serialize()
+        dct = {cn.S_ID: str(self.__class__),
+               cn.S_NETWORK_NAME: self.network_name,
+               cn.S_REACTANT_LST: reactant_lst,
+               cn.S_PRODUCT_LST: product_lst,
+               cn.S_REACTION_NAMES: self.reaction_names.tolist(),
+               cn.S_SPECIES_NAMES: self.species_names.tolist(),
+               cn.S_CRITERIA_VECTOR: criteria_vector_serialization,
                }
-        return pd.Series(dct)
-    
-    @classmethod
-    def deserialize(cls, ser:pd.Series):
+        return json.dumps(dct)
+
+    @classmethod 
+    def seriesToJson(cls, series:pd.Series)->str:
         """
-        Deserialize the network.
+        Convert a Series to a JSON serialization string.
 
         Args:
-            ser (Series): Serialized network.
+            ser: Series columns
+                network_name, reactant_array_str, product_array_str, species_names, reaction_names,
+                num_speces, um_reaction
 
         Returns:
-            Network
+            str: string representation of json structure
         """
-        reactant_array_context = util.ArrayContext(ser[cn.REACTANT_ARRAY_STR], ser[cn.NUM_SPECIES],
-              ser[cn.NUM_REACTION])
-        product_array_context = util.ArrayContext(ser[cn.PRODUCT_ARRAY_STR], ser[cn.NUM_SPECIES],
-              ser[cn.NUM_REACTION])
-        reactant_arr = util.string2Array(reactant_array_context)
-        product_arr = util.string2Array(product_array_context)
-        boundary_array_context = util.ArrayContext(ser[cn.CRITERIA_ARRAY_STR], 1,
-              ser[cn.CRITERIA_ARRAY_LEN])
-        boundary_arr = util.string2Array(boundary_array_context).flatten()
-        criteria_vector = CriteriaVector(boundary_arr)
-        return cls(reactant_arr, product_arr, network_name=ser[cn.NETWORK_NAME],
-                       reaction_names=np.array(ser[cn.REACTION_NAMES]),
-                       species_names=np.array(ser[cn.SPECIES_NAMES]),
+        def convert(name):
+            values = series[name]
+            if isinstance(values, str):
+                values = eval(values)
+            return list(values)
+        #####
+        reactant_names = convert(cn.S_REACTION_NAMES)
+        species_names = convert(cn.S_SPECIES_NAMES)
+        num_reaction = len(reactant_names)
+        num_species = len(species_names)
+        product_arr = np.array(convert(cn.S_PRODUCT_LST))
+        reactant_arr = np.array(convert(cn.S_REACTANT_LST))
+        reactant_arr = np.reshape(reactant_arr, (num_species, num_reaction))
+        product_arr = np.reshape(product_arr, (num_species, num_reaction))
+        dct = {cn.S_ID: str(cls),
+               cn.S_NETWORK_NAME: series[cn.S_NETWORK_NAME],
+               cn.S_REACTANT_LST: reactant_arr.tolist(),
+               cn.S_PRODUCT_LST: product_arr.tolist(),
+               cn.S_REACTION_NAMES: reactant_names,
+               cn.S_SPECIES_NAMES: species_names,
+               }
+        return json.dumps(dct)
+
+    def toSeries(self)->pd.Series:
+        """
+        Serialize the network.
+
+        Args:
+            ser: Series columns
+                network_name, reactant_array_str, product_array_str, species_names, reaction_names,
+                num_speces, um_reaction
+
+        Returns:
+            str: string representation of json structure
+        """
+        dct = {cn.S_REACTANT_LST: self.reactant_mat.values.flatten().tolist(),
+               cn.S_PRODUCT_LST: self.product_mat.values.flatten().tolist(),
+               cn.S_NETWORK_NAME: self.network_name,
+               cn.S_REACTION_NAMES: self.reaction_names,
+               cn.S_SPECIES_NAMES: self.species_names}
+        return pd.Series(dct)
+
+    @classmethod 
+    def deserialize(cls, serialization_str)->'NetworkBase':
+        """
+        Serialize the network.
+
+        Returns:
+            str: string representation of json structure
+        """
+        dct = json.loads(serialization_str)
+        if not str(cls) in dct[cn.S_ID]:
+            raise ValueError(f"Expected {cls} but got {dct[cn.S_ID]}")
+        network_name = dct[cn.S_NETWORK_NAME]
+        reactant_arr = np.array(dct[cn.S_REACTANT_LST])
+        product_arr = np.array(dct[cn.S_PRODUCT_LST])
+        reaction_names = np.array(dct[cn.S_REACTION_NAMES])
+        species_names = np.array(dct[cn.S_SPECIES_NAMES])
+        if cn.S_CRITERIA_VECTOR in dct.keys():
+            criteria_vector = CriteriaVector.deserialize(dct[cn.S_CRITERIA_VECTOR])
+        else:
+            criteria_vector = None
+        return cls(reactant_arr, product_arr, network_name=network_name,
+                       reaction_names=reaction_names, species_names=species_names,
                        criteria_vector=criteria_vector)
+    
+#   @classmethod
+#    def deserialize(cls, ser:pd.Series):
+#        """
+#        Deserialize the network.
+#
+#        Args:
+#            ser (Series): Serialized network.
+#
+#        Returns:
+#            Network
+#        """
+#        reactant_array_context = util.ArrayContext(ser[cn.REACTANT_ARRAY_STR], ser[cn.NUM_SPECIES],
+#              ser[cn.NUM_REACTION])
+#        product_array_context = util.ArrayContext(ser[cn.PRODUCT_ARRAY_STR], ser[cn.NUM_SPECIES],
+#              ser[cn.NUM_REACTION])
+#        reactant_arr = util.string2Array(reactant_array_context)
+#        product_arr = util.string2Array(product_array_context)
+#        boundary_array_context = util.ArrayContext(ser[cn.CRITERIA_ARRAY_STR], 1,
+#              ser[cn.CRITERIA_ARRAY_LEN])
+#        boundary_arr = util.string2Array(boundary_array_context).flatten()
+#        criteria_vector = CriteriaVector(boundary_arr)
+#        return cls(reactant_arr, product_arr, network_name=ser[cn.NETWORK_NAME],
+#                       reaction_names=np.array(ser[cn.REACTION_NAMES]),
+#                       species_names=np.array(ser[cn.SPECIES_NAMES]),
+#                       criteria_vector=criteria_vector)

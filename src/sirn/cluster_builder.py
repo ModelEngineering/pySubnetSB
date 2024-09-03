@@ -5,10 +5,10 @@ from src.sirn.network import Network  # type: ignore
 from sirn.network_collection import NetworkCollection  # type: ignore
 from sirn.clustered_network import ClusteredNetwork # type: ignore
 from sirn.clustered_network_collection import ClusteredNetworkCollection # type: ignore
-from sirn.assignment_pair import AssignmentCollection  # type: ignore
 
 import numpy as np
 import pandas as pd  # type: ignore
+import time
 from typing import List, Dict
 
 
@@ -144,15 +144,15 @@ class ClusterBuilder(object):
                         break
                     if (not result) and result.is_truncated:
                         is_any_indeterminate = True
-                # Process the result of the search
+                # Add statistics to the clustered network
                 clustered_network.setProcessingTime()
                 if is_selected:
                     clustered_network.setIndeterminate(False)
+                    clustered_network.setAssignmentCollection(result.assignment_pairs)
                 else:
-                    # Not structurally identical to any ClusteredNetworkCollection with this hash
-                    assignment_collection = AssignmentCollection(result.assignment_pairs)
+                    # Not structurally identical to any ClusteredNetworkCollection with this hash.
+                    # Create a new ClusteredNetworkCollection for this hash.
                     clustered_network.setIndeterminate(is_any_indeterminate)
-                    clustered_network.setAssignmentCollection(assignment_collection)
                     clustered_network_collection = ClusteredNetworkCollection([clustered_network],
                         identity=self.identity,
                         hash_val=hash_val)

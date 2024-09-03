@@ -13,23 +13,21 @@ from zipfile import ZipFile
 class ClusterAnalyzer(object):
     def __init__(self,
                  oscillator_dir:str,
-                 is_strong:bool=True,
-                 max_num_perm:int=10000,
-                 is_sirn:bool=True,
+                 identity:str=cnn.ID_WEAK,
+                 max_num_assignment:int=cnn.MAX_NUM_ASSIGNMENT,
     )->None:
         """
         Args:
-            is_strong: True for strong, False for weak
-            max_num_perm: Maximum number of permutations
-            is_sirn: True for SIRN, False for naive
+            identity: kind of identity: cn.ID_WEAK or cn.ID_STRONG
+            max_num_assignment: Maximum number of assignments considred
             oscillator_dirs: List of oscillator directory (optional)
         """
         self.oscillator_dir = oscillator_dir
-        self.is_strong = is_strong
-        self.max_num_perm = max_num_perm
+        self.identity = identity
+        self.max_num_assignment = max_num_assignment
         self.is_sirn = is_sirn
         path = ResultAccessor.makeDirPath(oscillator_dir,
-                is_strong=is_strong, max_num_perm=max_num_perm, is_sirn=is_sirn)
+                is_strong=is_strong, max_num_assignment=max_num_assignment, is_sirn=is_sirn)
         self.summary_statistics = SummaryStatistics(path)
         self.result_accessor = self.summary_statistics.result_accessor
         self.df = self.result_accessor.df

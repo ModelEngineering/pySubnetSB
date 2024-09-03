@@ -19,7 +19,7 @@ FILENAME = f"{STRONG}{MAX_NUM_PERM}_{OSCILLATOR_DIR}.txt"
 DATA_PATH = os.path.join(CONDITION_DIR, FILENAME)
 IS_STRONG = True
 MAX_NUM_PERM = 100
-COLUMN_DCT = {cn.COL_HASH: int, cn.COL_MODEL_NAME: str,
+COLUMN_DCT = {cn.COL_HASH: int, cn.COL_NETWORK_NAME: str,
               cn.COL_PROCESSING_TIME: float, cn.COL_NUM_PERM: int,
               cn.COL_IS_INDETERMINATE: np.bool_, cn.COL_COLLECTION_IDX: int}
 

@@ -65,3 +65,26 @@ SERIALIZATION_NAMES = [NETWORK_NAME, REACTANT_ARRAY_STR, PRODUCT_ARRAY_STR, SPEC
                        REACTION_NAMES, NUM_SPECIES, NUM_REACTION]
 CRITERIA_BOUNDARY_VALUES = [-1.0, 0.0, 1.0]
 COMMA = ","
+# Serialization
+S_ANTIMONY_DIRECTORY = "s_antimony_directory"
+S_ASSIGNMENT_COLLECTION = 's_assignment_collection'
+S_BOUNDARY_VALUES = "s_boundary_values"
+S_CLUSTERED_NETWORKS = "s_clustered_networks"
+S_CRITERIA_VECTOR = "s_criteria_vector"
+S_DIRECTORY = "s_directory"
+S_HASH_VAL = "s_hash_val"
+S_ID = "s_id"  # Class being serialized
+S_IDENITY = "s_identity"
+S_IS_INDETERMINATE = 's_is_indeterminate'
+S_MODEL_NAME = "s_model_name"
+S_NETWORKS = "s_networks"
+S_NETWORK_NAME = "s_network_name"
+S_NUM_REACTION = "s_num_reaction"
+S_NUM_SPECIES = "s_num_species"
+S_PROCESSING_TIME = 's_processing_time'
+S_PRODUCT_LST = "s_product_lst"
+S_REACTANT_LST = "s_reactant_lst"
+S_REACTION_ASSIGNMENT_LST = "s_reaction_assignment_lst"
+S_REACTION_NAMES = "s_reaction_names"
+S_SPECIES_ASSIGNMENT_LST = "s_species_assignment_lst"
+S_SPECIES_NAMES = "s_species_names"

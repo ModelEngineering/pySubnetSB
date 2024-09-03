@@ -109,35 +109,6 @@ class TestClusterBuilder(unittest.TestCase):
         test()
         test(num_collection=5)
         test(num_collection=15, identity=cn.ID_WEAK)
-
-    def checkSerializeDeserialize(self, cluster_builder:ClusterBuilder):
-        cluster_builder.cluster()
-        df = cluster_builder.serializeClusteredNetworkCollections()
-        self.assertTrue(isinstance(df, pd.DataFrame))
-        self.assertTrue(isinstance(df.attrs, dict))
-        self.assertTrue(len(df) == len(cluster_builder.clustered_network_collections))
-        #
-        clustered_network_collections = ClusterBuilder.deserializeClusteredNetworkCollections(df)
-        trues = [c1 == c2 for c1, c2 in zip(clustered_network_collections,
-                                            cluster_builder.clustered_network_collections)]
-        self.assertTrue(all(trues))
-    
-    def testSerializeDeserialize1(self):
-        if IGNORE_TEST:
-            return
-        self.checkSerializeDeserialize(self.builder)
-
-    def testSerializeDeserialize2(self):
-        if IGNORE_TEST:
-            return
-        def test(num_network:int=5, size:int=5):
-            collection = NetworkCollection.makeRandomCollection(num_species=size, num_reaction=size,
-                num_network=num_network)
-            cluster = ClusterBuilder(collection, is_report=IS_PLOT, identity=cn.ID_STRONG)
-            self.checkSerializeDeserialize(cluster)
-        #
-        test()
-        test(num_network=10, size=10)
             
     def testMakeNetworkCollection(self):
         if IGNORE_TEST:

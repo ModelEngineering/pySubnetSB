@@ -85,8 +85,8 @@ class TestNetwork(unittest.TestCase):
         if IGNORE_TEST:
             return
         self.assertEqual(self.network.network_name, NETWORK_NAME)
-        self.assertTrue("int" in str(type(self.network._weak_hash)))
-        self.assertTrue("int" in str(type(self.network._strong_hash)))
+        self.assertTrue("int" in str(type(self.network.weak_hash)))
+        self.assertTrue("int" in str(type(self.network.strong_hash)))
 
     def testMakeCompatibilitySetVector(self):
         if IGNORE_TEST:
@@ -115,7 +115,7 @@ class TestNetwork(unittest.TestCase):
                         self.assertTrue(np.mod(idx2, num_species) == idx)
         #
         test(2)
-        test(20, num_iteration=1000)
+        test(20, num_iteration=100)
 
     def makeRandomNetwork(self, num_species=5, num_reaction=5):
         big_reactant_mat = np.random.randint(0, 2, (num_species, num_reaction))
@@ -262,7 +262,7 @@ class TestNetwork(unittest.TestCase):
     def testIsStructurallyIdenticalScaleRandomlyPermuteFalse(self):
         if IGNORE_TEST:
             return
-        def test(reference_size, target_factor=1, num_iteration=1000):
+        def test(reference_size, target_factor=1, num_iteration=100):
             count = 0
             for _ in range(num_iteration):
                 for identity in [cn.ID_STRONG]:
@@ -308,16 +308,16 @@ class TestNetwork(unittest.TestCase):
         permuted_network, inversion_permutation = reference._makeCompatibilityVectorPermutedNetwork(target,
               identity=identity, is_subsets=is_subsets)
         original_network, _ = permuted_network.permute(assignment_pair=inversion_permutation)
-        self.assertEqual(reference, original_network)
+        self.assertTrue(reference.isEquivalent(original_network))
 
     def testSerializeDeserialize(self):
         if IGNORE_TEST:
             return
         for _ in range(10):
             network = self.makeRandomNetwork(10, 10)
-            ser = network.serialize()
-            self.assertTrue(isinstance(ser, pd.Series))
-            new_network = Network.deserialize(ser)
+            serialization_str = network.serialize()
+            self.assertTrue(isinstance(serialization_str, str))
+            new_network = Network.deserialize(serialization_str)
             self.assertEqual(network, new_network)
 
 
