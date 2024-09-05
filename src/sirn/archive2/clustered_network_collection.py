@@ -5,7 +5,7 @@ Has a string representation and can construct from its string representation.
 
 
 from sirn import constants as cn # type: ignore
-from sirn.clustered_network import ClusteredNetwork  # type: ignore
+from sirn.processed_network import ProcessedNetwork  # type: ignore
 
 import collections
 import numpy as np
@@ -19,7 +19,7 @@ Repr = collections.namedtuple('Repr',
 class ClusteredNetworkCollection(object):
     # Collection of networks that are structurally identical
 
-    def __init__(self, clustered_networks:List[ClusteredNetwork],
+    def __init__(self, clustered_networks:List[ProcessedNetwork],
                  is_structural_identity_strong:bool=True, hash_val:int=-1,
                  antimony_dir:Optional[str]=None):
         self.clustered_networks = clustered_networks  # type: ignore
@@ -87,7 +87,7 @@ class ClusteredNetworkCollection(object):
         is_structural_identity_strong = repr_str[pos] == cn.IDENTITY_PREFIX_STRONG 
         # Find the ClasteredNetwork.repr
         reprs = repr_str[pos+1:].split(cn.NETWORK_DELIMITER)
-        clustered_networks = [ClusteredNetwork.makeFromRepr(repr) for repr in reprs]
+        clustered_networks = [ProcessedNetwork.makeFromRepr(repr) for repr in reprs]
         return Repr(is_structural_identity_strong=is_structural_identity_strong,
                 hash_val=hash_val, clustered_networks=clustered_networks)
 
@@ -107,5 +107,5 @@ class ClusteredNetworkCollection(object):
                 is_structural_identity_strong=repr.is_structural_identity_strong,
                 hash_val=repr.hash_val)
     
-    def add(self, clustered_network:ClusteredNetwork):
+    def add(self, clustered_network:ProcessedNetwork):
         self.clustered_networks.append(clustered_network)

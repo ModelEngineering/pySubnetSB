@@ -11,7 +11,7 @@ TODO
 
 import analysis.constants as cn  # type: ignore
 import sirn.constants as cnn  # type: ignore
-from sirn.clustered_network_collection import ClusteredNetworkCollection  # type: ignore
+from sirn.processed_network_collection import ProcessedNetworkCollection  # type: ignore
 from sirn.network_collection import NetworkCollection  # type: ignore
 
 import collections
@@ -36,34 +36,34 @@ class ResultAccessor(object):
             cluster_result_path: Path to the directory with analysis results from sirn.ClusterBuilder
         """
         self.cluster_result_path = cluster_result_path
-        self.clustered_network_collections = self._makeClusteredNetworkCollections()
+        self.processed_network_collections = self._makeProcessedNetworkCollections()
         datafile_structure = self.parseDirPath()
         self.oscillator_dir = datafile_structure.antimony_dir
         self.identity = datafile_structure.identity
         self.max_num_assignment = datafile_structure.max_num_assignment
         #
-        self.clustered_network_collection_df, self.clustered_network_df = self._makeDataframe()
+        self.processed_network_collection_df, self.processed_network_df = self._makeDataframe()
 
-    def _makeClusteredNetworkCollections(self)->List[ClusteredNetworkCollection]:
+    def _makeProcessedNetworkCollections(self)->List[ProcessedNetworkCollection]:
         """
-        Reads the result of identity matching and creates a list of ClusteredNetworkCollection.
+        Reads the result of identity matching and creates a list of ProcessedNetworkCollection.
 
         Returns:
-            List[ClusteredNetworkCollection]: List of ClusteredNetworkCollection
+            List[ProcessedNetworkCollection]: List of ProcessedNetworkCollection
         """
         with open(self.cluster_result_path, "r") as fd:
             serialization_strs = fd.readlines()
         #
-        clustered_nework_collections = []
+        processed_nework_collections = []
         for serialization_str in serialization_strs:
-            clustered_nework_collections.append(ClusteredNetworkCollection.deserialize(serialization_str))
-        return clustered_nework_collections
+            processed_nework_collections.append(ProcessedNetworkCollection.deserialize(serialization_str))
+        return processed_nework_collections
     
     def getNetworkCollections(self,
           idx:Optional[int]=None,
           network_name:Optional[str]=None,
-          min_size:Optional[int]=1)->List[ClusteredNetworkCollection]:
-        """Retrieves the ClusteredNetworkCollection(s) that meet the criteria.
+          min_size:Optional[int]=1)->List[ProcessedNetworkCollection]:
+        """Retrieves the ProcessedNetworkCollection(s) that meet the criteria.
              idx: index of the collection
              network_name: a particular network is in the collection
              min_size: minimum size of the collection
@@ -75,7 +75,7 @@ class ResultAccessor(object):
             min_size (Optional[int], optional): _description_. Defaults to 1.
 
         Returns:
-            List[ClusteredNetworkCollection]
+            List[ProcessedNetworkCollection]
         """
         num_none = (idx is None) + (network_name is None) + (min_size == 1)
         if num_none > 1:
@@ -84,11 +84,11 @@ class ResultAccessor(object):
             raise ValueError("One optional argument is required")
         #
         if idx is not None:
-            return [self.clustered_network_collections[idx]]
+            return [self.processed_network_collections[idx]]
         if network_name is not None:
-            return [c for c in self.clustered_network_collections if network_name in c.clustered_networks]
+            return [c for c in self.processed_network_collections if network_name in c.processed_networks]
         if min_size > 1:  # type: ignore
-            return [c for c in self.clustered_network_collections if len(c.clustered_networks) >= min_size]  # type: ignore
+            return [c for c in self.processed_network_collections if len(c.processed_networks) >= min_size]  # type: ignore
         raise ValueError("Invalid arguments")
 
     def parseDirPath(self)->DataFileStructure:
@@ -124,34 +124,34 @@ class ResultAccessor(object):
         Reads the result of identity matching and creates a dataframe.
 
         Returns:
-            pd.DataFrame: DataFrame of ClusteredNetworkCollections
-            pd.DataFrame: DataFrame of constituent ClusteredNetworks 
+            pd.DataFrame: DataFrame of ProcessedNetworkCollections
+            pd.DataFrame: DataFrame of constituent ProcessedNetworks 
         """
         with open(self.cluster_result_path, "r") as fd:
             repr_strs = fd.readlines()
         #
-        clustered_network_dct:dict = {c: [] for c in cn.RESULT_ACCESSOR_CLUSTERED_NETWORK_COLUMNS}
-        clustered_network_collection_dct:dict = {c: [] for c in cn.RESULT_ACCESSOR_CLUSTERED_NETWORK_COLLECTION_COLUMNS}
+        processed_network_dct:dict = {c: [] for c in cn.RESULT_ACCESSOR_PROCESSED_NETWORK_COLUMNS}
+        processed_network_collection_dct:dict = {c: [] for c in cn.RESULT_ACCESSOR_PROCESSED_NETWORK_COLLECTION_COLUMNS}
         collection_idx = 0
-        for clustered_network_collection in self.clustered_network_collections:
-            clustered_networks = clustered_network_collection.clustered_networks
-            clustered_network_collection_dct[cn.COL_COLLECTION_IDX].append(collection_idx)
-            clustered_network_collection_dct[cn.COL_NUM_NETWORK].append(len(clustered_networks))
-            clustered_network_collection_dct[cn.COL_HASH].append(clustered_network_collection.hash_val)
-            for clustered_network in clustered_networks:
-                clustered_network_dct[cn.COL_NETWORK_NAME].append(clustered_network.network_name)
-                clustered_network_dct[cn.COL_PROCESSING_TIME].append(clustered_network.processing_time)
-                clustered_network_dct[cn.COL_IS_INDETERMINATE].append(clustered_network.is_indeterminate)
-                clustered_network_dct[cn.COL_LEN_ASSIGNMENT_COLLECTION].append(
-                      len(clustered_network.assignment_collection))
-                clustered_network_dct[cn.COL_COLLECTION_IDX].append(collection_idx)
+        for processed_network_collection in self.processed_network_collections:
+            processed_networks = processed_network_collection.processed_networks
+            processed_network_collection_dct[cn.COL_COLLECTION_IDX].append(collection_idx)
+            processed_network_collection_dct[cn.COL_NUM_NETWORK].append(len(processed_networks))
+            processed_network_collection_dct[cn.COL_HASH].append(processed_network_collection.hash_val)
+            for processed_network in processed_networks:
+                processed_network_dct[cn.COL_NETWORK_NAME].append(processed_network.network_name)
+                processed_network_dct[cn.COL_PROCESSING_TIME].append(processed_network.processing_time)
+                processed_network_dct[cn.COL_IS_INDETERMINATE].append(processed_network.is_indeterminate)
+                processed_network_dct[cn.COL_LEN_ASSIGNMENT_COLLECTION].append(
+                      len(processed_network.assignment_collection))
+                processed_network_dct[cn.COL_COLLECTION_IDX].append(collection_idx)
             collection_idx += 1
-        clustered_network_collection_df = pd.DataFrame(clustered_network_collection_dct)
-        clustered_network_df = pd.DataFrame(clustered_network_dct)
-        clustered_network_collection_df.attrs[cn.META_IS_STRONG] = self.identity
-        clustered_network_collection_df.attrs[cn.META_MAX_NUM_ASSIGNMENT] = self.max_num_assignment
-        clustered_network_collection_df.attrs[cn.COL_OSCILLATOR_DIR] = self.oscillator_dir
-        return clustered_network_collection_df, clustered_network_df
+        processed_network_collection_df = pd.DataFrame(processed_network_collection_dct)
+        processed_network_df = pd.DataFrame(processed_network_dct)
+        processed_network_collection_df.attrs[cn.META_IS_STRONG] = self.identity
+        processed_network_collection_df.attrs[cn.META_MAX_NUM_ASSIGNMENT] = self.max_num_assignment
+        processed_network_collection_df.attrs[cn.COL_OSCILLATOR_DIR] = self.oscillator_dir
+        return processed_network_collection_df, processed_network_df
 
     @staticmethod 
     def iterateDir(result_dir:str, root_dir=cn.DATA_DIR):
@@ -164,15 +164,15 @@ class ResultAccessor(object):
 
         Returns:
             str: name of directory
-            clustered_network_collection_df: collection statistics
-            clustered_network_df: network statistics
+            processed_network_collection_df: collection statistics
+            processed_network_df: network statistics
         """
         dir_path = os.path.join(root_dir, result_dir)
         ffiles = [f for f in os.listdir(dir_path) if f.endswith(".txt")]
         for file in ffiles:
             full_path = os.path.join(dir_path, file)
             accessor = ResultAccessor(full_path)
-            yield accessor.oscillator_dir, accessor.clustered_network_collection_df, accessor.clustered_network_df
+            yield accessor.oscillator_dir, accessor.processed_network_collection_df, accessor.processed_network_df
 
     @classmethod
     def isClusterSubset(cls, superset_dir:str, subset_dir:str)->dict:
@@ -253,8 +253,8 @@ class ResultAccessor(object):
         Returns:
             str: Antimony file
         """
-        network_names = self.clustered_network_df[
-              self.clustered_network_df[cn.COL_COLLECTION_IDX] == collection_idx][cn.COL_NETWORK_NAME]
+        network_names = self.processed_network_df[
+              self.processed_network_df[cn.COL_COLLECTION_IDX] == collection_idx][cn.COL_NETWORK_NAME]
         antimony_strs = [self.getAntimonyFromNetworkname(n) for n in network_names]
         return antimony_strs
     
@@ -281,7 +281,7 @@ class ResultAccessor(object):
             return os.path.join(cn.SIRN_DIR, maxassignment_condition, filename)
 
     @staticmethod 
-    def getNetworkCollectionFromCSVFile(csv_file:str)->ClusteredNetworkCollection:
+    def getNetworkCollectionFromCSVFile(csv_file:str)->ProcessedNetworkCollection:
         """"
         Constructs a network collection a CSV file of serialized collection of Antimony models.
 
@@ -289,7 +289,7 @@ class ResultAccessor(object):
             file_path (str): Path to the serialized antimony models
 
         Returns:
-            ClusteredNetworkCollection
+            ProcessedNetworkCollection
         """
         df = pd.read_csv(csv_file)
         df = df.rename(columns={'num_col': cnn.S_NUM_REACTION, 'num_row': cnn.S_NUM_SPECIES,

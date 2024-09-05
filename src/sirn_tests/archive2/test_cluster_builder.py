@@ -2,7 +2,7 @@ from sirn import constants as cn  # type: ignore
 from sirn.network import Network # type: ignore
 from sirn.pmatrix import PMatrix # type: ignore
 from sirn.network_collection import NetworkCollection # type: ignore
-from sirn.clustered_network import ClusteredNetwork # type: ignore
+from sirn.processed_network import ProcessedNetwork # type: ignore
 from sirn.cluster_builder import ClusterBuilder # type: ignore
 
 import copy
@@ -169,7 +169,7 @@ class TestClusterBuilder(unittest.TestCase):
         ARRAY_SIZE = 5
         network_collection = NetworkCollection.makeRandomCollection(array_size=ARRAY_SIZE,
               num_network=COLLECTION_SIZE)
-        clustered_networks = [ClusteredNetwork(network) for network in network_collection.networks]
+        clustered_networks = [ProcessedNetwork(network) for network in network_collection.networks]
         builder = ClusterBuilder(network_collection, is_report=IS_PLOT)
         for idx, clustered_network in enumerate(clustered_networks):
             network = builder.makeNetworkFromClusteredNetwork(clustered_network)

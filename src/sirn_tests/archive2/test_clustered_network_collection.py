@@ -1,6 +1,6 @@
 from sirn.network_collection import NetworkCollection # type: ignore
-from sirn.clustered_network import ClusteredNetwork # type: ignore
-from sirn.clustered_network_collection import ClusteredNetworkCollection # type: ignore
+from sirn.processed_network import ProcessedNetwork # type: ignore
+from sirn.processed_network_collection import ProcessedNetworkCollection # type: ignore
 
 import copy
 import os
@@ -23,16 +23,16 @@ class TestClusteredNetworkCollection(unittest.TestCase):
 
     def setUp(self):
         network_collection = copy.deepcopy(NETWORK_COLLECTION.networks)
-        clustered_networks = [ClusteredNetwork(n) for n in network_collection]
-        self.clustered_network_collection = ClusteredNetworkCollection(clustered_networks,
+        clustered_networks = [ProcessedNetwork(n) for n in network_collection]
+        self.clustered_network_collection = ProcessedNetworkCollection(clustered_networks,
                                                                        hash_val=HASH_VAL)
         collection = NetworkCollection.makeRandomCollection(num_network=1)
-        self.other_clustered_network = ClusteredNetwork(collection.networks[0])
+        self.other_clustered_network = ProcessedNetwork(collection.networks[0])
 
     def testConstructor(self):
         if IGNORE_TEST:
             return
-        self.assertTrue(isinstance(self.clustered_network_collection, ClusteredNetworkCollection))
+        self.assertTrue(isinstance(self.clustered_network_collection, ProcessedNetworkCollection))
         self.assertEqual(len(self.clustered_network_collection), COLLECTION_SIZE)
 
     def testCopyEqual(self):

@@ -3,8 +3,8 @@
 from sirn import constants as cn  # type: ignore
 from src.sirn.network_base import NetworkBase  # type: ignore
 from sirn.network_collection import NetworkCollection  # type: ignore
-from sirn.clustered_network import ClusteredNetwork # type: ignore
-from sirn.clustered_network_collection import ClusteredNetworkCollection # type: ignore
+from sirn.processed_network import ProcessedNetwork # type: ignore
+from sirn.processed_network_collection import ProcessedNetworkCollection # type: ignore
 
 import numpy as np
 import pandas as pd  # type: ignore
@@ -43,7 +43,7 @@ class ClusterBuilder(object):
         self.num_hash = len(self.hash_dct)
         self.max_hash = max([len(l) for l in self.hash_dct.values()])  # Most NetworkCollection
         # Results
-        self.clustered_network_collections:List['ClusteredNetworkCollection'] = []
+        self.clustered_network_collections:List['ProcessedNetworkCollection'] = []
 
     @property
     def num_indeterminant(self)->int:
@@ -94,7 +94,7 @@ class ClusterBuilder(object):
             hash_dct = {cn.NON_SIRN_HASH: self.network_collection.networks}
         return hash_dct
 
-    def clustered2Network(self, clustered_network:ClusteredNetwork)->NetworkBase:
+    def clustered2Network(self, clustered_network:ProcessedNetwork)->NetworkBase:
         result = self.network_collection.network_dct[clustered_network.network_name]
         return result
 
@@ -114,16 +114,16 @@ class ClusterBuilder(object):
             if self.is_report:
                 print(f" {np.round((idx+1)/self.num_hash, 2)}.", end="")
             # No processing time for the first network in a hash
-            first_clustered_network = ClusteredNetwork(str(hash_networks[0]), processing_time=0.0)
+            first_clustered_network = ProcessedNetwork(str(hash_networks[0]), processing_time=0.0)
             # Create list of new collections for this key of hash_dct
             new_clustered_network_collections =  \
-                [ClusteredNetworkCollection([first_clustered_network],
+                [ProcessedNetworkCollection([first_clustered_network],
                      identity=self.is_structural_identity_strong,
                      hash_val=hash_val)]
             # Find structurally identical networks and add to the appropriate ClusteredNetworkCollection,
             # creating new ClusteredNetworkCollections as needed.a
             for network in hash_networks[1:]:
-                clustered_network = ClusteredNetwork(network)
+                clustered_network = ProcessedNetwork(network)
                 for clustered_network_collection in new_clustered_network_collections:
                     selected_clustered_network_collection = None
                     first_clustered_network = clustered_network_collection.clustered_networks[0]
@@ -143,12 +143,12 @@ class ClusterBuilder(object):
                         clustered_network.is_indeterminate = True
                         break
                 # Process the result of the search
-                clustered_network.setProcessingTime()
+                clustered_network.addProcessingTime()
                 if selected_clustered_network_collection is not None:
                     selected_clustered_network_collection.add(clustered_network)
                 else:
                     # Not structurally identical to any ClusteredNetworkCollection with this hash
-                    clustered_network_collection = ClusteredNetworkCollection([clustered_network],
+                    clustered_network_collection = ProcessedNetworkCollection([clustered_network],
                         identity=self.is_structural_identity_strong,
                         hash_val=hash_val)
                     new_clustered_network_collections.append(clustered_network_collection)
@@ -177,7 +177,7 @@ class ClusterBuilder(object):
         return df
     
     @classmethod
-    def deserializeClusteredNetworkCollections(cls, df:pd.DataFrame)->List[ClusteredNetworkCollection]:
+    def deserializeClusteredNetworkCollections(cls, df:pd.DataFrame)->List[ProcessedNetworkCollection]:
         """
         Deserializes the clustering result.
 
@@ -187,10 +187,10 @@ class ClusterBuilder(object):
         Returns:
             ClusterBuilder: Deserialized data
         """
-        return [ClusteredNetworkCollection.makeFromRepr(repr_str)
+        return [ProcessedNetworkCollection.makeFromRepr(repr_str)
                                          for repr_str in df.clustered_network_repr.values]
     
-    def makeNetworkFromClusteredNetwork(self, clustered_network:ClusteredNetwork)->NetworkBase:
+    def makeNetworkFromClusteredNetwork(self, clustered_network:ProcessedNetwork)->NetworkBase:
         """
         Makes a Network from a ClusteredNetwork
 

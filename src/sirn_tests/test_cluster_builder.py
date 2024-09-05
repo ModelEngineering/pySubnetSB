@@ -2,7 +2,7 @@ from sirn import constants as cn  # type: ignore
 from sirn.network import Network # type: ignore
 from sirn.matrix import Matrix # type: ignore
 from sirn.network_collection import NetworkCollection # type: ignore
-from sirn.clustered_network import ClusteredNetwork # type: ignore
+from sirn.processed_network import ProcessedNetwork # type: ignore
 from sirn.cluster_builder import ClusterBuilder # type: ignore
 
 import copy
@@ -100,7 +100,7 @@ class TestClusterBuilder(unittest.TestCase):
             builder = ClusterBuilder(network_collection, max_num_assignment=100000, is_report=IS_PLOT,
                                      identity=identity)
             builder.cluster()
-            self.assertEqual(len(builder.clustered_network_collections), num_collection)
+            self.assertEqual(len(builder.processed_network_collections), num_collection)
             for network_collection in network_collections:
                 self.assertTrue(str(network_collection) in str(network_collections))
         #
@@ -116,10 +116,10 @@ class TestClusterBuilder(unittest.TestCase):
         ARRAY_SIZE = 5
         network_collection = NetworkCollection.makeRandomCollection(num_species=ARRAY_SIZE,
               num_reaction=ARRAY_SIZE, num_network=COLLECTION_SIZE)
-        clustered_networks = [ClusteredNetwork(network) for network in network_collection.networks]
+        processed_networks = [ProcessedNetwork(network) for network in network_collection.networks]
         builder = ClusterBuilder(network_collection, is_report=IS_PLOT)
-        for idx, clustered_network in enumerate(clustered_networks):
-            network = builder.makeNetworkFromClusteredNetwork(clustered_network)
+        for idx, processed_network in enumerate(processed_networks):
+            network = builder.makeNetworkFromProcessedNetwork(processed_network)
             self.assertTrue(network == network_collection.networks[idx])
 
 if __name__ == '__main__':

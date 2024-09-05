@@ -10,7 +10,7 @@ import tellurium as te  # type: ignore
 import unittest
 
 
-IGNORE_TEST = True
+IGNORE_TEST = False
 IS_PLOT = False
 NETWORK_NAME = "test"
 BIG_NETWORK = """

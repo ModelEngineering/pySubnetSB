@@ -19,9 +19,9 @@ SERIALIZED_FILE = "Oscillators_DOE_JUNE_10_17565_serializers.csv"
 CLUSTER_RESULT_FILE = "strong100_Oscillators_JUNE_10_B_10507.txt"
 ANALYSIS_RESULT_PATH = os.path.join(cn.TEST_DIR, CLUSTER_RESULT_FILE)
 MAX_NUM_ASSIGNMENT = 100
-CLUSTERED_NETWORK_COLUMN_DCT = {cn.COL_NETWORK_NAME: str, cn.COL_PROCESSING_TIME: float,
+PROCESSED_NETWORK_COLUMN_DCT = {cn.COL_NETWORK_NAME: str, cn.COL_PROCESSING_TIME: float,
       cn.COL_LEN_ASSIGNMENT_COLLECTION: np.int64, cn.COL_IS_INDETERMINATE: np.bool_, cn.COL_COLLECTION_IDX: np.int64}
-CLUSTERED_NETWORK_COLLECTION_COLUMN_DCT = {cn.COL_HASH: np.uint64, cn.COL_COLLECTION_IDX: np.int64,
+PROCESSED_NETWORK_COLLECTION_COLUMN_DCT = {cn.COL_HASH: np.uint64, cn.COL_COLLECTION_IDX: np.int64,
       cn.COL_NUM_NETWORK:np.int64}
 
 
@@ -51,11 +51,11 @@ class TestResultAccessor(unittest.TestCase):
                     import pdb; pdb.set_trace()
                     self.assertTrue(False)
         #####
-        self.assertEqual(len(self.accessor.clustered_network_collection_df.columns),
-              len(cn.RESULT_ACCESSOR_CLUSTERED_NETWORK_COLLECTION_COLUMNS))
-        self.assertEqual(len(self.accessor.clustered_network_df.columns), len(cn.RESULT_ACCESSOR_CLUSTERED_NETWORK_COLUMNS))
-        checkDataFrame(self.accessor.clustered_network_df, CLUSTERED_NETWORK_COLUMN_DCT)
-        checkDataFrame(self.accessor.clustered_network_collection_df, CLUSTERED_NETWORK_COLLECTION_COLUMN_DCT)
+        self.assertEqual(len(self.accessor.processed_network_collection_df.columns),
+              len(cn.RESULT_ACCESSOR_PROCESSED_NETWORK_COLLECTION_COLUMNS))
+        self.assertEqual(len(self.accessor.processed_network_df.columns), len(cn.RESULT_ACCESSOR_PROCESSED_NETWORK_COLUMNS))
+        checkDataFrame(self.accessor.processed_network_df, PROCESSED_NETWORK_COLUMN_DCT)
+        checkDataFrame(self.accessor.processed_network_collection_df, PROCESSED_NETWORK_COLLECTION_COLUMN_DCT)
 
     def testIterateDir(self):
         if IGNORE_TEST:
@@ -93,8 +93,8 @@ class TestResultAccessor(unittest.TestCase):
             return
         if not cn.IS_OSCILLATOR_ZIP:
             return
-        df = self.accessor.clustered_network_collection_df[
-              self.accessor.clustered_network_collection_df[cn.COL_NUM_NETWORK] > 1]
+        df = self.accessor.processed_network_collection_df[
+              self.accessor.processed_network_collection_df[cn.COL_NUM_NETWORK] > 1]
         indices = list(df.index)
         collection_idx = df.loc[indices[0], cn.COL_COLLECTION_IDX]
         antimony_strs = self.accessor.getAntimonyFromCollectionidx(collection_idx)

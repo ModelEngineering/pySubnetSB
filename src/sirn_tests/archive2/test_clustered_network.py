@@ -1,5 +1,5 @@
 from sirn.network_collection import NetworkCollection # type: ignore
-from sirn.clustered_network import ClusteredNetwork # type: ignore
+from sirn.processed_network import ProcessedNetwork # type: ignore
 
 import copy
 import unittest
@@ -17,12 +17,12 @@ class TestClusteredNetwork(unittest.TestCase):
 
     def setUp(self):
         network = copy.deepcopy(NETWORK_COLLECTION.networks[0])
-        self.clustered_network = ClusteredNetwork(network)
+        self.clustered_network = ProcessedNetwork(network)
 
     def testConstructor(self):
         if IGNORE_TEST:
             return
-        self.assertTrue(isinstance(self.clustered_network, ClusteredNetwork))
+        self.assertTrue(isinstance(self.clustered_network, ProcessedNetwork))
 
     def testCopy(self):
         if IGNORE_TEST:
@@ -40,7 +40,7 @@ class TestClusteredNetwork(unittest.TestCase):
         if IGNORE_TEST:
             return
         repr_str = self.clustered_network.__repr__()
-        network = ClusteredNetwork.makeFromRepr(repr_str)
+        network = ProcessedNetwork.makeFromRepr(repr_str)
         self.assertTrue(network == self.clustered_network)
 
 
