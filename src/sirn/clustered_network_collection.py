@@ -78,7 +78,7 @@ class ClusteredNetworkCollection(object):
             prefix = cn.IDENTITY_PREFIX_WEAK
         names = [c.network_name for c in self.clustered_networks]
         clustered_networks_str = cn.NETWORK_DELIMITER.join(names)
-        result = f"{prefix}{self.processing_time}_{self.hash_val}__{clustered_networks_str}"
+        result = f"{prefix}{self.processing_time}--{self.hash_val}--{clustered_networks_str}"
         return result
 
     def add(self, clustered_network:ClusteredNetwork):

@@ -42,7 +42,7 @@ class ResultAccessor(object):
         self.identity = datafile_structure.identity
         self.max_num_assignment = datafile_structure.max_num_assignment
         #
-        self.df = self.makeDataframe()
+        self.clustered_network_collection_df, self.clustered_network_df = self._makeDataframe()
 
     def _makeClusteredNetworkCollections(self)->List[ClusteredNetworkCollection]:
         """
@@ -56,7 +56,7 @@ class ResultAccessor(object):
         #
         clustered_nework_collections = []
         for serialization_str in serialization_strs:
-            clustered_nework_collections.append(ClusteredNetworkCollection.parseRepr(serialization_str))
+            clustered_nework_collections.append(ClusteredNetworkCollection.deserialize(serialization_str))
         return clustered_nework_collections
     
     def getNetworkCollections(self,
@@ -104,10 +104,10 @@ class ResultAccessor(object):
         filename = filename[:-4]
         #
         if STRONG in filename:
-            identity = cn.ID_STRONG
+            identity = cnn.ID_STRONG
             remainder = filename[len(STRONG):]
         elif WEAK in filename:
-            identity = cn.ID_WEAK
+            identity = cnn.ID_WEAK
             remainder = filename[len(WEAK):]
         else:
             raise ValueError(f"Invalid filename: {filename}")
@@ -119,13 +119,13 @@ class ResultAccessor(object):
         return DataFileStructure(antimony_dir=antimony_dir, identity=identity,
                                  max_num_assignment=max_num_assignment)
 
-    # FIXME: Have 2 dataframes: collection and network 
-    def makeDataframe(self)->pd.DataFrame:
+    def _makeDataframe(self)->pd.DataFrame:
         """
         Reads the result of identity matching and creates a dataframe.
 
         Returns:
-            pd.DataFrame (see cn.RESULT_ACCESSOR_COLUMNS)
+            pd.DataFrame: DataFrame of ClusteredNetworkCollections
+            pd.DataFrame: DataFrame of constituent ClusteredNetworks 
         """
         with open(self.cluster_result_path, "r") as fd:
             repr_strs = fd.readlines()
@@ -135,19 +135,21 @@ class ResultAccessor(object):
         collection_idx = 0
         for clustered_network_collection in self.clustered_network_collections:
             clustered_networks = clustered_network_collection.clustered_networks
-            clustered_network_collection_dct[cn.COL_HASH].append(clustered_networks[0].hash_val)
             clustered_network_collection_dct[cn.COL_COLLECTION_IDX].append(collection_idx)
             clustered_network_collection_dct[cn.COL_NUM_NETWORK].append(len(clustered_networks))
+            clustered_network_collection_dct[cn.COL_HASH].append(clustered_network_collection.hash_val)
             for clustered_network in clustered_networks:
                 clustered_network_dct[cn.COL_NETWORK_NAME].append(clustered_network.network_name)
                 clustered_network_dct[cn.COL_PROCESSING_TIME].append(clustered_network.processing_time)
                 clustered_network_dct[cn.COL_IS_INDETERMINATE].append(clustered_network.is_indeterminate)
+                clustered_network_dct[cn.COL_LEN_ASSIGNMENT_COLLECTION].append(
+                      len(clustered_network.assignment_collection))
                 clustered_network_dct[cn.COL_COLLECTION_IDX].append(collection_idx)
             collection_idx += 1
-        clustered_network_collection_df = pd.DataFrame(clustered_network_dct)
+        clustered_network_collection_df = pd.DataFrame(clustered_network_collection_dct)
         clustered_network_df = pd.DataFrame(clustered_network_dct)
         clustered_network_collection_df.attrs[cn.META_IS_STRONG] = self.identity
-        clustered_network_collection_df.attrs[cn.META_max_num_assignment] = self.max_num_assignment
+        clustered_network_collection_df.attrs[cn.META_MAX_NUM_ASSIGNMENT] = self.max_num_assignment
         clustered_network_collection_df.attrs[cn.COL_OSCILLATOR_DIR] = self.oscillator_dir
         return clustered_network_collection_df, clustered_network_df
 
@@ -161,14 +163,16 @@ class ResultAccessor(object):
             root_dir (str, optional): path to the root directory. Defaults to cn.DATA_DIR.
 
         Returns:
-            Tuple[str, pd.DataFrame]: name of directory, dataframe of statistics
+            str: name of directory
+            clustered_network_collection_df: collection statistics
+            clustered_network_df: network statistics
         """
         dir_path = os.path.join(root_dir, result_dir)
         ffiles = [f for f in os.listdir(dir_path) if f.endswith(".txt")]
         for file in ffiles:
             full_path = os.path.join(dir_path, file)
             accessor = ResultAccessor(full_path)
-            yield accessor.oscillator_dir, accessor.df
+            yield accessor.oscillator_dir, accessor.clustered_network_collection_df, accessor.clustered_network_df
 
     @classmethod
     def isClusterSubset(cls, superset_dir:str, subset_dir:str)->dict:
@@ -216,7 +220,7 @@ class ResultAccessor(object):
         #
         return missing_dct
 
-    def getAntimonyFromModelname(self, model_name:str)->str:
+    def getAntimonyFromNetworkname(self, model_name:str)->str:
         """
         Returns a string, which is the content of the Antimony file.
 
@@ -249,43 +253,32 @@ class ResultAccessor(object):
         Returns:
             str: Antimony file
         """
-        model_names = self.df[self.df[cn.COL_COLLECTION_IDX] == collection_idx][cn.COL_NETWORK_NAME]
-        antimony_strs = [self.getAntimonyFromModelname(n) for n in model_names]
+        network_names = self.clustered_network_df[
+              self.clustered_network_df[cn.COL_COLLECTION_IDX] == collection_idx][cn.COL_NETWORK_NAME]
+        antimony_strs = [self.getAntimonyFromNetworkname(n) for n in network_names]
         return antimony_strs
     
     @staticmethod 
-    def getClusterResultPath(oscillator_dir:str="", is_strong:bool=True,
-                             is_sirn=True, max_num_assignment:int=10000)->str:
+    def getClusterResultPath(oscillator_dir:str="", identity:str=cnn.ID_STRONG,
+                             max_num_assignment:int=10000)->str:
         """
         Constructs the path to the cluster results.
 
         Args:
             oscillator_dir (str): Name of the oscillator directory or "" if not specified
-            is_strong (bool, optional): True for strong, False for weak. Defaults to True.
-            is_sirn (bool, optional): True for SIRN, False for naive. Defaults to True.
+            identity: True for strong, False for weak. Defaults to True.
             max_num_assignment (int, optional): Maximum number of permutations. Defaults to 10000.
 
         Returns:
             str: path to directory with the cluster results
-
-        Usage:
-            # Provide a complete path to the cluster results
-            ResultAccessor.getClusterResultPath(oscillator_dir="Oscillators_June_10",
-                is_strong=True, is_sirn=True, max_num_assignment=10000)
-            >> "/Users/jlheller/home/Technical/repos/OscillatorDatabase/sirn_analysis/strong10000/Oscillators_June_10.txt"
-            # Provide only the condition path
-            ResultAccessor.getClusterResultPath("Oscillators_June_10",
-                is_strong=True, is_sirn=True, max_num_assignment=10000)
-            >> "/Users/jlheller/home/Technical/repos/OscillatorDatabase/sirn_analysis/strong10000"
         """
-        prefix = cn.STRONG if is_strong else cn.WEAK
-        maxperm_condition = f"{prefix}{max_num_assignment}"
-        parent_dir = cn.SIRN_DIR if is_sirn else cn.NAIVE_DIR
-        filename = f"{maxperm_condition}_{oscillator_dir}.txt"
+        prefix = cn.STRONG if identity == cnn.ID_STRONG else cn.WEAK
+        maxassignment_condition = f"{prefix}{max_num_assignment}"
+        filename = f"{maxassignment_condition}_{oscillator_dir}.txt"
         if len(oscillator_dir) == 0:
-            return os.path.join(parent_dir, maxperm_condition)
+            return os.path.join(cn.SIRN_DIR, maxassignment_condition)
         else:
-            return os.path.join(parent_dir, maxperm_condition, filename)
+            return os.path.join(cn.SIRN_DIR, maxassignment_condition, filename)
 
     @staticmethod 
     def getNetworkCollectionFromCSVFile(csv_file:str)->ClusteredNetworkCollection:
@@ -299,9 +292,9 @@ class ResultAccessor(object):
             ClusteredNetworkCollection
         """
         df = pd.read_csv(csv_file)
-        df = df.rename(columns={'num_col': cn.S_NUM_REACTION, 'num_row': cn.S_NUM_SPECIES,
-            'column_names': cn.S_REACTION_NAMES, 'row_names': cn.S_SPECIES_NAMES,
-            'reactant_array_str': cn.S_REACTANT_LST, 'product_array_str': cn.S_PRODUCT_LST,
-            'model_name': cn.S_NETWORK_NAME})
+        df = df.rename(columns={'num_col': cnn.S_NUM_REACTION, 'num_row': cnn.S_NUM_SPECIES,
+            'column_names': cnn.S_REACTION_NAMES, 'row_names': cnn.S_SPECIES_NAMES,
+            'reactant_array_str': cnn.S_REACTANT_LST, 'product_array_str': cnn.S_PRODUCT_LST,
+            'model_name': cnn.S_NETWORK_NAME})
         serialization_str = NetworkCollection.dataframeToJson(df)
         return NetworkCollection.deserialize(serialization_str)

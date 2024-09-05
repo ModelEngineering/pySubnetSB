@@ -4,7 +4,7 @@ import os
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 for _ in range(2):
     PROJECT_DIR = os.path.dirname(PROJECT_DIR)
-TEST_DIR = os.path.join(PROJECT_DIR, 'analysis_tests')
+TEST_DIR = os.path.join(PROJECT_DIR, 'src', 'analysis_tests')
 DATA_DIR = os.path.join(PROJECT_DIR, 'data')
 SIRN_DIR = os.path.join(DATA_DIR, "sirn_analysis")
 NAIVE_DIR = os.path.join(DATA_DIR, "naive_analysis")
@@ -40,8 +40,8 @@ COL_IS_INDETERMINATE_MIN = "is_indeterminate_min"
 COL_IS_INDETERMINATE_MAX = "is_indeterminate_max"
 COL_IS_INDETERMINATE_COUNT = "is_indeterminate_count"
 COL_IS_INDETERMINATE_TOTAL = "is_indeterminate_total"
-COL_NUM_ASSIGNMENT_PAIR = "num_assignment_pair"
-COL_NUM_NETWORK = "num_assignment_pair"
+COL_LEN_ASSIGNMENT_COLLECTION = "len_assignment_collection"
+COL_NUM_NETWORK = "num_network"
 """ COL_NUM_PERM = "num_perm"
 COL_NUM_PERM_MEAN = "num_perm_mean"
 COL_NUM_PERM_MIN = "num_perm_min"
@@ -59,7 +59,7 @@ COL_CLUSTER_SIZE_GT1_TOTAL = "cluster_size_gt1_total"
 COL_CLUSTER_SIZE_GT1_MEAN = "cluster_size_gt1_mean"
 COL_CLUSTER_SIZE_GT1_MAX = "cluster_size_gt1_MAX"
 COL_CLUSTER_SIZE_GT1_COUNT = "cluster_size_gt1_count"
-RESULT_ACCESSOR_CLUSTERED_NETWORK_COLUMNS = [COL_NETWORK_NAME, COL_PROCESSING_TIME, COL_NUM_ASSIGNMENT_PAIR,
+RESULT_ACCESSOR_CLUSTERED_NETWORK_COLUMNS = [COL_NETWORK_NAME, COL_PROCESSING_TIME, COL_LEN_ASSIGNMENT_COLLECTION,
     COL_IS_INDETERMINATE, COL_COLLECTION_IDX]
 RESULT_ACCESSOR_CLUSTERED_NETWORK_COLLECTION_COLUMNS = [COL_HASH, COL_COLLECTION_IDX, COL_NUM_NETWORK]
 STATISTICS_COLUMNS = [
@@ -70,7 +70,7 @@ STATISTICS_COLUMNS = [
 STATISTICS_COLUMNS.extend(RESULT_ACCESSOR_CLUSTERED_NETWORK_COLUMNS)
 # Dataframe metadata
 META_IS_STRONG = "is_strong"
-META_MAX_NUM_PERM = "max_num_perm"
+META_MAX_NUM_ASSIGNMENT = "max_num_assignment"
 META_ANTIMONY_DIR = "antimony_dir"
 WEAK = "weak"
 STRONG = "strong"
