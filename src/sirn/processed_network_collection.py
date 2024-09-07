@@ -109,7 +109,7 @@ class ProcessedNetworkCollection(object):
             ProcessedNetworkCollection
         """
         dct = json.loads(serialization_str)
-        if not str(cls) in dct[cn.S_ID]:
+        if not cls.__name__ in dct[cn.S_ID]:
             raise ValueError(f"Expected {cls} but got {dct[cn.S_ID]}")
         identity = dct[cn.S_IDENITY]
         antimony_directory =  dct[cn.S_ANTIMONY_DIRECTORY]

@@ -3,7 +3,6 @@
 import sirn.constants as cn # type: ignore
 from sirn.network import Network  # type: ignore
 from sirn import constants as cn  # type: ignore
-from sirn.archive2.csv_maker import CSVMaker  # type: ignore
 from sirn.assignment_pair import AssignmentPair  # type: ignore
 
 import json
@@ -99,7 +98,7 @@ class ProcessedNetwork(object):
             str
         """
         assignment_collection = [a.serialize() for a in self.assignment_collection]
-        dct = {cn.S_ID: str(self.__class__),
+        dct = {cn.S_ID: self.__class__.__name__,
                cn.S_NETWORK_NAME: self.network_name,
                cn.S_PROCESSING_TIME: self.processing_time,
                cn.S_IS_INDETERMINATE: self.is_indeterminate,
@@ -117,7 +116,7 @@ class ProcessedNetwork(object):
             processedNetwork
         """
         dct = json.loads(serialization_str)
-        if not str(cls) in dct[cn.S_ID]:
+        if not cls.__name__ in dct[cn.S_ID]:
             raise ValueError(f"Expected {cls} but got {dct[cn.S_ID]}")
         processed_network = cls(dct[cn.S_NETWORK_NAME])
         processed_network.addProcessingTime(dct[cn.S_PROCESSING_TIME])

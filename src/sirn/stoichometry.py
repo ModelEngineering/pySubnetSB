@@ -30,7 +30,7 @@ class Stoichiometry(object):
         
     def calculate(self):
         roadrunner = te.loada(self.antimony_str)
-        roadrunner.conservedMoietyAnalysis = True
+        #roadrunner.conservedMoietyAnalysis = True
         sbml = roadrunner.getSBML()
         model = simplesbml.loadSBMLStr(sbml)
         # Model inforeactant_mation

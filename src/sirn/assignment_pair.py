@@ -41,7 +41,7 @@ class AssignmentPair(object):
         """
         species_assignment_lst = self.species_assignment.tolist()
         reaction_assignment_lst = self.reaction_assignment.tolist()
-        return json.dumps({cn.S_ID: str(self.__class__),
+        return json.dumps({cn.S_ID: self.__class__.__name__,
                            cn.S_SPECIES_ASSIGNMENT_LST: species_assignment_lst,
                            cn.S_REACTION_ASSIGNMENT_LST: reaction_assignment_lst})
     
@@ -56,19 +56,8 @@ class AssignmentPair(object):
             AssignmentPair
         """
         dct = json.loads(serialization_str)
-        if not str(cls) in dct[cn.S_ID]:
-            raise ValueError(f"Expected {cls} but got {dct[cn.S_ID]}")
+        if not cls.__name__ in dct[cn.S_ID]:
+            raise ValueError(f"Expected {cls.__name__} but got {dct[cn.S_ID]}")
         species_assignment = np.array(dct[cn.S_SPECIES_ASSIGNMENT_LST])
         reaction_assignment = np.array(dct[cn.S_REACTION_ASSIGNMENT_LST])
         return AssignmentPair(species_assignment=species_assignment, reaction_assignment=reaction_assignment)
-
-
-class AssignmentCollection(object):
-
-    def __init__(self, assignment_collection:List[AssignmentPair]):
-        self.pairs = assignment_collection
-
-    def __eq__(self, other):
-        if not isinstance(other, AssignmentCollection):
-            return False
-        return all([a1 == a2 for a1, a2 in zip(self.pairs, other.pairs)])

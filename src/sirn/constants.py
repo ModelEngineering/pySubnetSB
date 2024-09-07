@@ -20,6 +20,12 @@ OSCILLATOR_DIRS = [
         "Oscillators_DOE_JUNE_12_B_41373",
         "Oscillators_DOE_JUNE_12_C_27662",
         ]
+# Oscillator project
+OSCILLATOR_PROJECT = os.path.dirname(os.path.abspath(__file__))
+for _ in range(3):
+    OSCILLATOR_PROJECT = os.path.dirname(OSCILLATOR_PROJECT)
+OSCILLATOR_PROJECT = os.path.join(OSCILLATOR_PROJECT, 'OscillatorDatabase')
+#
 MAX_NUM_ASSIGNMENT = 10000  # Maximum number of permutations to search
 STRUCTURAL_IDENTITY = "structural_identity"
 UNKNOWN_STRUCTURAL_IDENTITY_NAME = "*" # Used for networks whose structural identity cannot be determined

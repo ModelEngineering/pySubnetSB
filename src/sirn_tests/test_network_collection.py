@@ -63,6 +63,10 @@ class TestNetworkCollection(unittest.TestCase):
         directory = os.path.join(cn.TEST_DIR, "oscillators")
         network_collection = NetworkCollection.makeFromAntimonyDirectory(directory)
         self.assertTrue(len(network_collection) > 0)
+        #
+        network_collection = NetworkCollection.makeFromAntimonyDirectory(directory,
+              first_file=5, max_file=10)
+        self.assertTrue(len(network_collection) == 5)
 
     def checkSerializeDeserialize(self, collection:NetworkCollection):
         serialization_str = collection.serialize()

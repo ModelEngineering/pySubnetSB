@@ -115,7 +115,8 @@ class NetworkCollection(object):
 
     # FIXME: Handle XML files
     @classmethod
-    def makeFromAntimonyDirectory(cls, indir_path:str, max_file:Optional[int]=None,
+    def makeFromAntimonyDirectory(cls, indir_path:str, 
+                batch_size:Optional[int]=None,
                 processed_network_names:Optional[List[str]]=None,
                 report_interval:Optional[int]=None)->'NetworkCollection':
         """Creates a NetworkCollection from a directory of Antimony files.
@@ -132,9 +133,12 @@ class NetworkCollection(object):
         ffiles = os.listdir(indir_path)
         networks = []
         network_names = []
+        num_processed = 0
         if processed_network_names is not None:
             network_names = list(processed_network_names)
         for count, ffile in enumerate(ffiles):
+            if (num_processed is not None) and (num_processed >= batch_size):  # type: ignore
+                break
             if report_interval is not None and count % report_interval == 0:
                 is_report = True
             else:
@@ -144,13 +148,12 @@ class NetworkCollection(object):
                 if is_report:
                     print(".", end='')
                 continue
-            if (max_file is not None) and (count >= max_file):
-                break
             if not any([ffile.endswith(ext) for ext in ANTIMONY_EXTS]):
                 continue
             path = os.path.join(indir_path, ffile)
             network = Network.makeFromAntimonyFile(path, network_name=network_name)
             networks.append(network)
+            num_processed += 1
             if is_report:
                 print(f"Processed {count} files.")
         return NetworkCollection(networks, directory=indir_path)
@@ -189,7 +192,7 @@ class NetworkCollection(object):
         Returns:
             str
         """
-        dct = {cn.S_ID: str(self.__class__),
+        dct = {cn.S_ID: self.__class__.__name__,
                cn.S_NETWORKS: [n.serialize() for n in self.networks],
                cn.S_DIRECTORY: self.directory}
         return json.dumps(dct)
@@ -205,7 +208,7 @@ class NetworkCollection(object):
             NetworkCollection
         """
         dct = json.loads(serialization_str)
-        if not str(cls) in dct[cn.S_ID]:
+        if not cls.__name__ in dct[cn.S_ID]:
             raise ValueError(f"Expected {cls} but got {dct[cn.S_ID]}")
         networks = [Network.deserialize(n) for n in dct[cn.S_NETWORKS]]
         if cn.S_DIRECTORY in dct:

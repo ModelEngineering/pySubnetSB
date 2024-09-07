@@ -1,4 +1,4 @@
-from sirn.assignment_pair import AssignmentPair, AssignmentCollection  # type: ignore
+from sirn.assignment_pair import AssignmentPair  # type: ignore
 
 import copy
 import numpy as np

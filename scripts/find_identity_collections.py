@@ -30,9 +30,9 @@ def find_identity_collections(directory_name,
     builder.cluster()
     output_path = os.path.join(cn.DATA_DIR, f'{prefix}{directory_name}.txt')
     with open(output_path, 'w') as f:
-        for clustered_network_collection in builder.clustered_network_collections:
-            f.write(clustered_network_collection.serialize() + '\n')
-            #f.write(str(clustered_network_collection) + '\n')
+        for processed_network_collection in builder.processed_network_collections:
+            f.write(processed_network_collection.serialize() + '\n')
+            #f.write(str(processed_network_collection) + '\n')
 
 
 if __name__ == '__main__':

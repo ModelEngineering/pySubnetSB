@@ -546,7 +546,7 @@ class NetworkBase(object):
         reactant_lst = self.reactant_mat.values.tolist()
         product_lst = self.product_mat.values.tolist()
         criteria_vector_serialization = self.criteria_vector.serialize()
-        dct = {cn.S_ID: str(self.__class__),
+        dct = {cn.S_ID: self.__class__.__name__,
                cn.S_NETWORK_NAME: self.network_name,
                cn.S_REACTANT_LST: reactant_lst,
                cn.S_PRODUCT_LST: product_lst,
@@ -620,7 +620,7 @@ class NetworkBase(object):
             str: string representation of json structure
         """
         dct = json.loads(serialization_str)
-        if not str(cls) in dct[cn.S_ID]:
+        if not cls.__name__ in dct[cn.S_ID]:
             raise ValueError(f"Expected {cls} but got {dct[cn.S_ID]}")
         network_name = dct[cn.S_NETWORK_NAME]
         reactant_arr = np.array(dct[cn.S_REACTANT_LST])
