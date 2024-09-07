@@ -39,6 +39,7 @@ class TestResultAccessor(unittest.TestCase):
         self.assertEqual(self.accessor.oscillator_dir, OSCILLATOR_DIR)
         self.assertEqual(self.accessor.identity, cnn.ID_STRONG)
         self.assertEqual(self.accessor.max_num_assignment, MAX_NUM_ASSIGNMENT)
+        self.assertTrue(isinstance(self.accessor._network_collection, NetworkCollection))
 
     def testDataframe(self):
         if IGNORE_TEST:
@@ -51,11 +52,11 @@ class TestResultAccessor(unittest.TestCase):
                     import pdb; pdb.set_trace()
                     self.assertTrue(False)
         #####
-        self.assertEqual(len(self.accessor.processed_network_collection_df.columns),
+        self.assertEqual(len(self.accessor._processed_network_collection_df.columns),
               len(cn.RESULT_ACCESSOR_PROCESSED_NETWORK_COLLECTION_COLUMNS))
-        self.assertEqual(len(self.accessor.processed_network_df.columns), len(cn.RESULT_ACCESSOR_PROCESSED_NETWORK_COLUMNS))
-        checkDataFrame(self.accessor.processed_network_df, PROCESSED_NETWORK_COLUMN_DCT)
-        checkDataFrame(self.accessor.processed_network_collection_df, PROCESSED_NETWORK_COLLECTION_COLUMN_DCT)
+        self.assertEqual(len(self.accessor._processed_network_df.columns), len(cn.RESULT_ACCESSOR_PROCESSED_NETWORK_COLUMNS))
+        checkDataFrame(self.accessor._processed_network_df, PROCESSED_NETWORK_COLUMN_DCT)
+        checkDataFrame(self.accessor._processed_network_collection_df, PROCESSED_NETWORK_COLLECTION_COLUMN_DCT)
 
     def testIterateDir(self):
         if IGNORE_TEST:
@@ -64,6 +65,33 @@ class TestResultAccessor(unittest.TestCase):
         for directory, df in iter:
             self.assertTrue(isinstance(directory, str))
             self.assertTrue(isinstance(df, pd.DataFrame))
+
+    def testGetNetworkCollection(self):
+        if IGNORE_TEST:
+            return
+        network_collection = self.accessor.getNetworkCollection()
+        self.assertTrue(isinstance(network_collection, NetworkCollection))
+        self.assertLessEqual(len(network_collection), len(self.accessor._processed_network_collection_df))
+
+    def testGetProcessedNetworkDataFrame(self):
+        if IGNORE_TEST:
+            return
+        network = self.accessor.getProcessedNetworkDataFrame()
+        self.assertTrue(isinstance(network, pd.DataFrame))
+
+    def testGetProcessedNetworkCollectionDataFrame(self):
+        if IGNORE_TEST:
+            return
+        network = self.accessor.getProcessedNetworkCollectionDataFrame()
+        self.assertTrue(isinstance(network, pd.DataFrame))
+
+    def testGetNetworkCollectionFromCollectionIdx(self):
+        if IGNORE_TEST:
+            return
+        collection_idx = self.accessor._processed_network_collection_df.loc[0, cn.COL_COLLECTION_IDX]
+        network_collection = self.accessor.getNetworkCollectionFromCollectionIdx(collection_idx)
+        self.assertTrue(isinstance(network_collection, NetworkCollection))
+        self.assertEqual(len(network_collection), self.accessor._processed_network_collection_df.loc[0, cn.COL_NUM_NETWORK])    
 
     def testIsClusterSubset(self):
         # FIXME: Tests disabled
@@ -93,8 +121,8 @@ class TestResultAccessor(unittest.TestCase):
             return
         if not cn.IS_OSCILLATOR_ZIP:
             return
-        df = self.accessor.processed_network_collection_df[
-              self.accessor.processed_network_collection_df[cn.COL_NUM_NETWORK] > 1]
+        df = self.accessor._processed_network_collection_df[
+              self.accessor._processed_network_collection_df[cn.COL_NUM_NETWORK] > 1]
         indices = list(df.index)
         collection_idx = df.loc[indices[0], cn.COL_COLLECTION_IDX]
         antimony_strs = self.accessor.getAntimonyFromCollectionidx(collection_idx)
@@ -110,13 +138,13 @@ class TestResultAccessor(unittest.TestCase):
         path = ResultAccessor.getClusterResultPath(OSCILLATOR_DIR)
         self.assertTrue(os.path.exists(path))
 
-    def testGetNetworkCollectionFromCSVFile(self):
-        if IGNORE_TEST:
-            return
-        file_path = os.path.join(cn.TEST_DIR, "Oscillators_DOE_JUNE_10_17565_serializers.csv")
-        network_collection = ResultAccessor.getNetworkCollectionFromCSVFile(file_path)
-        self.assertTrue(isinstance(network_collection, NetworkCollection))
-        self.assertEqual(len(network_collection.networks), 17565)
+#    def testGetNetworkCollectionFromCSVFile(self):
+#        if IGNORE_TEST:
+#            return
+#        file_path = os.path.join(cn.TEST_DIR, "Oscillators_DOE_JUNE_10_17565_serializers.csv")
+#        network_collection = ResultAccessor.getNetworkCollectionFromCSVFile(file_path)
+#        self.assertTrue(isinstance(network_collection, NetworkCollection))
+#        self.assertEqual(len(network_collection.networks), 17565)
 
 
 if __name__ == '__main__':

@@ -3,12 +3,10 @@ from sirn.network import Network # type: ignore
 
 import numpy as np
 
-
 IS_REPORT = True
 
-
-def profileIsStructurallyIdentical(reference_size, target_factor=1, max_num_assignment=100000000):
-    num_iteration = 100
+def profileIsStructurallyIdentical(reference_size, target_factor=1, max_num_assignment=10000000):
+    num_iteration = 10
     success_cnt = 0
     total_cnt = 0
     for _ in range(num_iteration):
@@ -34,4 +32,4 @@ def profileIsStructurallyIdentical(reference_size, target_factor=1, max_num_assi
         print(f"  max_num_assignment: {max_num_assignment}")
 
 if __name__ == '__main__':
-    profileIsStructurallyIdentical(6, target_factor=10)
+    profileIsStructurallyIdentical(17, target_factor=1)

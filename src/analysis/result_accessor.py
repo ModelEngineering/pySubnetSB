@@ -13,6 +13,7 @@ import analysis.constants as cn  # type: ignore
 import sirn.constants as cnn  # type: ignore
 from sirn.processed_network_collection import ProcessedNetworkCollection  # type: ignore
 from sirn.network_collection import NetworkCollection  # type: ignore
+from sirn.model_serializer import ModelSerializer  # type: ignore
 
 import collections
 import numpy as np
@@ -39,10 +40,39 @@ class ResultAccessor(object):
         self.processed_network_collections = self._makeProcessedNetworkCollections()
         datafile_structure = self.parseDirPath()
         self.oscillator_dir = datafile_structure.antimony_dir
+        model_serializer = ModelSerializer(self.oscillator_dir)
+        self._network_collection = model_serializer.deserialize()
         self.identity = datafile_structure.identity
         self.max_num_assignment = datafile_structure.max_num_assignment
         #
-        self.processed_network_collection_df, self.processed_network_df = self._makeDataframe()
+        self._processed_network_collection_df, self._processed_network_df = self._makeDataframe()
+
+    def getNetworkCollection(self)->NetworkCollection:
+        """
+        Returns the original NetworkCollection.
+
+        Returns:
+            NetworkCollection: Original NetworkCollection
+        """
+        return self._network_collection
+    
+    def getProcessedNetworkCollectionDataFrame(self)->pd.DataFrame:
+        """
+        Returns the DataFrame of ProcessedNetworkCollection.
+
+        Returns:
+            pd.DataFrame: DataFrame of ProcessedNetworkCollection
+        """
+        return self._processed_network_collection_df
+    
+    def getProcessedNetworkDataFrame(self)->pd.DataFrame:
+        """
+        Returns the DataFrame of ProcessedNetwork.
+
+        Returns:
+            pd.DataFrame: DataFrame of ProcessedNetwork
+        """
+        return self._processed_network_df 
 
     def _makeProcessedNetworkCollections(self)->List[ProcessedNetworkCollection]:
         """
@@ -172,7 +202,7 @@ class ResultAccessor(object):
         for file in ffiles:
             full_path = os.path.join(dir_path, file)
             accessor = ResultAccessor(full_path)
-            yield accessor.oscillator_dir, accessor.processed_network_collection_df, accessor.processed_network_df
+            yield accessor.oscillator_dir, accessor._processed_network_collection_df, accessor._processed_network_df
 
     @classmethod
     def isClusterSubset(cls, superset_dir:str, subset_dir:str)->dict:
@@ -253,8 +283,8 @@ class ResultAccessor(object):
         Returns:
             str: Antimony file
         """
-        network_names = self.processed_network_df[
-              self.processed_network_df[cn.COL_COLLECTION_IDX] == collection_idx][cn.COL_NETWORK_NAME]
+        network_names = self._processed_network_df[
+              self._processed_network_df[cn.COL_COLLECTION_IDX] == collection_idx][cn.COL_NETWORK_NAME]
         antimony_strs = [self.getAntimonyFromNetworkname(n) for n in network_names]
         return antimony_strs
     
@@ -280,21 +310,21 @@ class ResultAccessor(object):
         else:
             return os.path.join(cn.SIRN_DIR, maxassignment_condition, filename)
 
-    @staticmethod 
-    def getNetworkCollectionFromCSVFile(csv_file:str)->ProcessedNetworkCollection:
-        """"
-        Constructs a network collection a CSV file of serialized collection of Antimony models.
-
-        Args:
-            file_path (str): Path to the serialized antimony models
-
-        Returns:
-            ProcessedNetworkCollection
-        """
-        df = pd.read_csv(csv_file)
-        df = df.rename(columns={'num_col': cnn.S_NUM_REACTION, 'num_row': cnn.S_NUM_SPECIES,
-            'column_names': cnn.S_REACTION_NAMES, 'row_names': cnn.S_SPECIES_NAMES,
-            'reactant_array_str': cnn.S_REACTANT_LST, 'product_array_str': cnn.S_PRODUCT_LST,
-            'model_name': cnn.S_NETWORK_NAME})
-        serialization_str = NetworkCollection.dataframeToJson(df)
-        return NetworkCollection.deserialize(serialization_str)
+#    @staticmethod 
+#    def getNetworkCollectionFromCSVFile(csv_file:str)->ProcessedNetworkCollection:
+#        """"
+#        Constructs a network collection a CSV file of serialized collection of Antimony models.
+#
+#        Args:
+#            file_path (str): Path to the serialized antimony models
+#
+#        Returns:
+#            ProcessedNetworkCollection
+#        """
+#        df = pd.read_csv(csv_file)
+#        df = df.rename(columns={'num_col': cnn.S_NUM_REACTION, 'num_row': cnn.S_NUM_SPECIES,
+#            'column_names': cnn.S_REACTION_NAMES, 'row_names': cnn.S_SPECIES_NAMES,
+#            'reactant_array_str': cnn.S_REACTANT_LST, 'product_array_str': cnn.S_PRODUCT_LST,
+#            'model_name': cnn.S_NETWORK_NAME})
+#        serialization_str = NetworkCollection.dataframeToJson(df)
+#        return NetworkCollection.deserialize(serialization_str)
