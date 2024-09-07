@@ -6,11 +6,11 @@ import numpy as np
 IS_REPORT = True
 
 def profileIsStructurallyIdentical(reference_size, target_factor=1, max_num_assignment=10000000):
-    num_iteration = 10
+    num_iteration = 20
     success_cnt = 0
     total_cnt = 0
     for _ in range(num_iteration):
-        for identity in [cn.ID_WEAK, cn.ID_STRONG]:
+        for identity in [cn.ID_WEAK]:
             for is_subsets in [True, False]:
                 if (not is_subsets) and (target_factor > 1):
                     continue
@@ -32,4 +32,4 @@ def profileIsStructurallyIdentical(reference_size, target_factor=1, max_num_assi
         print(f"  max_num_assignment: {max_num_assignment}")
 
 if __name__ == '__main__':
-    profileIsStructurallyIdentical(17, target_factor=1)
+    profileIsStructurallyIdentical(25, target_factor=1)

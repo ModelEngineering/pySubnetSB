@@ -57,8 +57,7 @@ PR_LST = [PR_REACTANT, PR_PRODUCT]
 ID_WEAK = 'id_weak'
 ID_STRONG = 'id_strong'
 ID_LST = [ID_WEAK, ID_STRONG]
-# Network serialization format
-NETWORK_NAME = 'network_name'
+""" NETWORK_NAME = 'network_name'
 REACTANT_ARRAY_STR = 'reactant_array_str'
 PRODUCT_ARRAY_STR = 'product_array_str'
 NUM_SPECIES = 'num_species'
@@ -68,9 +67,8 @@ REACTION_NAMES = 'reaction_names'
 CRITERIA_ARRAY_STR = 'boundary_array_str'
 CRITERIA_ARRAY_LEN = 'boundary_array_len'
 SERIALIZATION_NAMES = [NETWORK_NAME, REACTANT_ARRAY_STR, PRODUCT_ARRAY_STR, SPECIES_NAMES,
-                       REACTION_NAMES, NUM_SPECIES, NUM_REACTION]
-CRITERIA_BOUNDARY_VALUES = [-1.0, 0.0, 1.0]
-COMMA = ","
+                       REACTION_NAMES, NUM_SPECIES, NUM_REACTION] """
+CRITERIA_BOUNDARY_VALUES = [-2, -1, 0, 1, 2]
 # Serialization
 S_ANTIMONY_DIRECTORY = "s_antimony_directory"
 S_ASSIGNMENT_COLLECTION = 's_assignment_collection'
