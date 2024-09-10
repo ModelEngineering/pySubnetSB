@@ -23,7 +23,7 @@ from analysis.result_accessor import ResultAccessor  # type: ignore
 from sirn import util # type: ignore
 
 import itertools
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # type: ignore
 import numpy as np
 import os
 import pandas as pd # type: ignore

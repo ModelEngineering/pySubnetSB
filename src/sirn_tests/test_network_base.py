@@ -4,6 +4,7 @@ from sirn.pair_criteria_count_matrix import PairCriteriaCountMatrix # type: igno
 from sirn.single_criteria_count_matrix import SingleCriteriaCountMatrix # type: ignore
 from sirn.named_matrix import NamedMatrix # type: ignore
 
+from pynauty import Graph  # type: ignore
 import numpy as np
 import copy
 import tellurium as te  # type: ignore
@@ -250,12 +251,45 @@ class TestNetwork(unittest.TestCase):
             self.assertTrue(np.all(sum_arr > 0))
 
     def testToFromSeries(self):
-        #if IGNORE_TEST:
-        #    return
+        if IGNORE_TEST:
+            return
         series = self.network.toSeries()
         serialization_str = self.network.seriesToJson(series)
         network = NetworkBase.deserialize(serialization_str)
         self.assertTrue(self.network == network)
+
+    def testMakePynautyNetwork(self):
+        if IGNORE_TEST:
+            return
+        graph = self.network.makePynautyNetwork()
+        self.assertTrue(isinstance(graph, Graph))
+
+    def testCSVNetwork(self):
+        if IGNORE_TEST:
+            return
+        csv_format = self.network.makeCSVNetwork()
+        self.assertTrue(isinstance(csv_format, str))
+        num_line = csv_format.count("\n")
+        num_sep = csv_format.count(">")
+        self.assertEqual(num_line+1,num_sep)
+    
+    def testGetGraphDct(self):
+        if IGNORE_TEST:
+            return
+        num_iteration = 100
+        size =10 
+        for _ in range(num_iteration):
+            for identity in cn.ID_LST:
+                network = NetworkBase.makeRandomNetwork(size, size)
+                graph_dct = network.getGraphDct(identity=identity)
+                self.assertTrue(isinstance(graph_dct, dict))
+                self.assertTrue(isinstance(graph_dct[0], list))
+                if identity == cn.ID_STRONG:
+                    num_edge = network.reactant_mat.values.sum() + network.product_mat.values.sum()
+                else:
+                    num_edge = np.abs(network.standard_mat.values).sum()
+                num_graph_edge = np.sum([len(e) for e in graph_dct.values()])
+                self.assertEqual(num_edge, num_graph_edge)
 
 if __name__ == '__main__':
     unittest.main(failfast=True)

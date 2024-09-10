@@ -319,6 +319,25 @@ class TestNetwork(unittest.TestCase):
             self.assertTrue(isinstance(serialization_str, str))
             new_network = Network.deserialize(serialization_str)
             self.assertEqual(network, new_network)
+    
+    def testIsIsomorphic(self):
+        if IGNORE_TEST:
+            return
+        def test(reference_size, is_isomorphic=True, num_iteration=100):
+            for _ in range(num_iteration):
+                    reference = Network.makeRandomNetworkByReactionType(reference_size)
+                    target, _ = reference.permute()
+                    if not is_isomorphic:
+                        if target.reactant_mat.values[0, 0] == 1:
+                            target.reactant_mat.values[0, 0] = 0
+                        else:
+                            target.reactant_mat.values[0, 0] = 1
+                    target = Network(target.reactant_mat.values, target.product_mat.values)
+                    result = reference.isIsomorphic(target)
+                    self.assertEqual(result, is_isomorphic)
+        #
+        test(10, is_isomorphic=True)
+        test(10, is_isomorphic=False)
 
 
 if __name__ == '__main__':

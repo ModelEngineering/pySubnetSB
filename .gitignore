@@ -9,6 +9,7 @@ __pycache__/
 .DS_Store
 *.swp
 *.zip
+src_archives
 
 
 irn/

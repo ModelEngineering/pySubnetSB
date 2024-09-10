@@ -9,6 +9,7 @@ from sirn.single_criteria_count_matrix import SingleCriteriaCountMatrix  # type:
 from sirn.network_base import NetworkBase, AssignmentPair, CRITERIA_VECTOR  # type: ignore
 
 import collections
+import pynauty  # type: ignore
 import numpy as np
 from typing import Optional, List, Tuple, Union
 
@@ -545,3 +546,16 @@ class Network(NetworkBase):
                 is_truncated=is_truncated,
                 species_compression_factor=species_assignment_result.compression_factor,
                 reaction_compression_factor=reaction_assignment_result.compression_factor)
+    
+    def isIsomorphic(self, target:'Network')->bool:
+        """Using pynauty to detect isomorphism of reaction networks.
+
+        Args:
+            target (Network)
+
+        Returns:
+            bool
+        """
+        self_graph = self.makePynautyNetwork()
+        target_graph = target.makePynautyNetwork()
+        return pynauty.isomorphic(self_graph, target_graph)

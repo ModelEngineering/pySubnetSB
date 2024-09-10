@@ -11,15 +11,18 @@ from sirn import util  # type: ignore
 import sirn.constants as cn # type: ignore
 from sirn.assignment_pair import AssignmentPair  # type: ignore
 
+import collections
 import itertools
 import json
 import os
 import pandas as pd  # type: ignore
+from pynauty import Graph  # type: ignore
 import numpy as np
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List, Dict
 
 
 CRITERIA_VECTOR = CriteriaVector()
+Edge = collections.namedtuple('Edge', ['source', 'destination'])
 
 
 class NetworkBase(object):
@@ -390,37 +393,52 @@ class NetworkBase(object):
         return cls(reactant_mat, product_mat)
     
     @classmethod
-    def makeRandomNetworkByReactionType(cls, num_reaction:int, num_species:Optional[int]=None,
-          input_boundary_frac:Optional[float]=0.1, output_boundary_frac:Optional[float]=0.14,
-          uni_uni_frac:Optional[float]=0.34, uni_bi_frac:Optional[float]=0.13, bi_uni_frac:Optional[float]=0.19,
-          bi_bi_frac:Optional[float]=0.07)->'NetworkBase':
+    def makeRandomNetworkByReactionType(cls, 
+              num_reaction:int, 
+              num_species:Optional[int]=None,
+              p0r0_frc:Optional[float]=0.0,
+              p0r1_frc:Optional[float]=0.1358,
+              p0r2_frc:Optional[float]=0.001,
+              p0r3_frc:Optional[float]=0.0,
+              p1r0_frc:Optional[float]=0.0978,
+              p1r1_frc:Optional[float]=0.3364,
+              p1r2_frc:Optional[float]=0.1874,
+              p1r3_frc:Optional[float]=0.0011,
+              p2r0_frc:Optional[float]=0.0005,
+              p2r1_frc:Optional[float]=0.1275,
+              p2r2_frc:Optional[float]=0.0683,
+              p2r3_frc:Optional[float]=0.0055,
+              p3r0_frc:Optional[float]=0.0,
+              p3r1_frc:Optional[float]=0.0087,
+              p3r2_frc:Optional[float]=0.0154,
+              p3r3_frc:Optional[float]=0.0146,
+              )->'NetworkBase':
         """
-        Makes a random network based on the type of reaction: input_boundary, output_boundary,
-            uni_uni, uni_bi, bi_uni, bi_bi.
+        Makes a random network based on the type of reaction. Parameers are in the form
+            <p<#products>r<#reactants>_frc> where #products and #reactants are the number of
+            products and reactants
         Fractions are from the paper "SBMLKinetics: a tool for annotation-independent classification of
             reaction kinetics for SBML models", Jin Liu, BMC Bioinformatics, 2023.
 
         Args:
             num_reaction (int): Number of reactions.
             num_species (int): Number of species.
-            input_boundary_frac (float): Fraction of input boundary reactions.
-            output_boundary_frac (float): Fraction of output boundary reactions.
-            uni_uni_frac (float): Fraction of uni-uni reactions.
-            uni_bi_frac (float): Fraction of uni-bi reactions.
-            bi_bi_frac (float): Fraction of bi-bi reactions.
+            fractions by number of products and reactants
 
         Returns:
             Network
         """
-        SUFFIX = "_frac"
+        SUFFIX = "_frc"
         # Handle defaults
         if num_species is None:
             num_species = num_reaction
         # Initializations
-        REACTION_TYPES = ['input_boundary', 'output_boundary', 'uni_uni', 'uni_bi', 'bi_uni', 'bi_bi']
+        REACTION_TYPES = [f"p{i}r{j}" for i in range(4) for j in range(4)]
         FRAC_NAMES = [n + SUFFIX for n in REACTION_TYPES]
         value_dct:dict = {}
-        total = np.sum([input_boundary_frac, output_boundary_frac, uni_uni_frac, uni_bi_frac, bi_uni_frac, bi_bi_frac])
+        total = 0
+        for name in FRAC_NAMES:
+            total += locals()[name] if locals()[name] is not None else 0
         for name in FRAC_NAMES:
             value = locals()[name]
             value_dct[name] = value/total
@@ -437,50 +455,28 @@ class NetworkBase(object):
                 str: Reaction type
             """
             pos = np.sum(CULMULATIVE_ARR < frac)
-            reaction_type = REACTION_TYPES[pos]
+            for _ in range(len(REACTION_TYPES)):
+                reaction_type = REACTION_TYPES[pos]
+                # Handle cases of 0 fractions
+                if not np.isclose(value_dct[reaction_type + SUFFIX], frac):
+                    break
             return reaction_type
         #######
         # Initialize the reactant and product matrices
         reactant_arr = np.zeros((num_species, num_reaction))
         product_arr = np.zeros((num_species, num_reaction))
-        # Construct the reactions
+        # Construct the reactions by building the reactant and product matrices
         for i_reaction in range(num_reaction):
             frac = np.random.rand()
             reaction_type = getType(frac)
-            if reaction_type == 'input_boundary':
-                i_species = np.random.randint(0, num_species)
-                product_arr[i_species, i_reaction] = 1
-            elif reaction_type == 'output_boundary':
-                i_species = np.random.randint(0, num_species)
-                reactant_arr[i_species, i_reaction] = 1
-            elif reaction_type == 'uni_uni':
-                i_species1 = np.random.randint(0, num_species)
-                i_species2 = np.random.randint(0, num_species)
-                reactant_arr[i_species1, i_reaction] = 1
-                product_arr[i_species2, i_reaction] = 1
-            elif reaction_type == 'uni_bi':
-                i_species1 = np.random.randint(0, num_species)
-                i_species2 = np.random.randint(0, num_species)
-                i_species3 = np.random.randint(0, num_species)
-                reactant_arr[i_species1, i_reaction] = 1
-                product_arr[i_species2, i_reaction] = 1
-                product_arr[i_species3, i_reaction] = 1
-            elif reaction_type == 'bi_uni':
-                i_species1 = np.random.randint(0, num_species)
-                i_species2 = np.random.randint(0, num_species)
-                i_species3 = np.random.randint(0, num_species)
-                reactant_arr[i_species1, i_reaction] = 1
-                reactant_arr[i_species2, i_reaction] = 1
-                product_arr[i_species3, i_reaction] = 1
-            else:
-                i_species1 = np.random.randint(0, num_species)
-                i_species2 = np.random.randint(0, num_species)
-                i_species3 = np.random.randint(0, num_species)
-                i_species4 = np.random.randint(0, num_species)
-                reactant_arr[i_species1, i_reaction] = 1
-                reactant_arr[i_species2, i_reaction] = 1
-                product_arr[i_species3, i_reaction] = 1
-                product_arr[i_species4, i_reaction] = 1
+            num_product = int(reaction_type[1])
+            num_reactant = int(reaction_type[3])
+            # Products
+            product_idxs = np.random.randint(0, num_species, num_product)
+            product_arr[product_idxs, i_reaction] += 1
+            # Reactants
+            reactant_idxs = np.random.randint(0, num_species, num_reactant)
+            reactant_arr[reactant_idxs, i_reaction] += 1
         # Eliminate 0 rows (species not used)
         keep_idxs:list = []
         for i_species in range(num_species):
@@ -635,28 +631,84 @@ class NetworkBase(object):
                        reaction_names=reaction_names, species_names=species_names,
                        criteria_vector=criteria_vector)
     
-#   @classmethod
-#    def deserialize(cls, ser:pd.Series):
-#        """
-#        Deserialize the network.
-#
-#        Args:
-#            ser (Series): Serialized network.
-#
-#        Returns:
-#            Network
-#        """
-#        reactant_array_context = util.ArrayContext(ser[cn.REACTANT_ARRAY_STR], ser[cn.NUM_SPECIES],
-#              ser[cn.NUM_REACTION])
-#        product_array_context = util.ArrayContext(ser[cn.PRODUCT_ARRAY_STR], ser[cn.NUM_SPECIES],
-#              ser[cn.NUM_REACTION])
-#        reactant_arr = util.string2Array(reactant_array_context)
-#        product_arr = util.string2Array(product_array_context)
-#        boundary_array_context = util.ArrayContext(ser[cn.CRITERIA_ARRAY_STR], 1,
-#              ser[cn.CRITERIA_ARRAY_LEN])
-#        boundary_arr = util.string2Array(boundary_array_context).flatten()
-#        criteria_vector = CriteriaVector(boundary_arr)
-#        return cls(reactant_arr, product_arr, network_name=ser[cn.NETWORK_NAME],
-#                       reaction_names=np.array(ser[cn.REACTION_NAMES]),
-#                       species_names=np.array(ser[cn.SPECIES_NAMES]),
-#                       criteria_vector=criteria_vector)
+    def getGraphDct(self, identity=cn.ID_STRONG)->Dict[int, List[int]]:
+        """
+        Describes the bipartite graph of the network.
+        Species are indices 0 to num_species - 1 and reactions are
+        indices num_species to num_species + num_reaction - 1.
+
+        Args:
+            identity (str): cn.ID_STRONG or cn.ID_WEAK
+
+        Returns:
+            dict:
+                key: source index
+                value: list of detination index
+        """
+        num_species = self.num_species
+        num_reaction = self.num_reaction
+        num_node = num_species + num_reaction
+        graph_dct:dict = {i: [] for i in range(num_node)}
+        for i_reaction in range(num_reaction):
+            for i_species in range(num_species):
+                # Add an edge for each reactant
+                species_vtx = i_species
+                reaction_vtx = num_species + i_reaction
+                if identity == cn.ID_STRONG:
+                    # Reactants
+                    for _ in range(int(self.reactant_mat.values[i_species, i_reaction])):
+                        graph_dct[species_vtx].append(reaction_vtx)
+                    # Products
+                    for _ in range(int(self.product_mat.values[i_species, i_reaction])):
+                        graph_dct[reaction_vtx].append(species_vtx)
+                else:
+                    # Weak identity. Use the standard stoichiometry matrix
+                    stoichiometry = int(self.standard_mat.values[i_species, i_reaction])
+                    for _ in range(np.abs(stoichiometry)):
+                        if stoichiometry > 0:
+                            # Product
+                            graph_dct[reaction_vtx].append(species_vtx)
+                        elif stoichiometry < 0:
+                            # Reactant
+                            graph_dct[species_vtx].append(reaction_vtx)
+                        else:
+                            pass
+        return graph_dct
+    
+    def makePynautyNetwork(self, identity=cn.ID_STRONG)->Graph:
+        """
+        Make a pynauty graph from the network. Species are indices 0 to num_species - 1 and reactions are
+        indices num_species to num_species + num_reaction - 1.
+
+        Args:
+            identity (str): cn.ID_STRONG or cn.ID_WEAK
+
+        Returns:
+            Graph: Pynauty graph
+        """
+        graph_dct = self.getGraphDct(identity=identity)
+        graph = Graph(len(graph_dct.keys()), directed=True)
+        for node, neighbors in graph_dct.items():
+            graph.connect_vertex(node, neighbors)
+        return graph
+    
+    def makeCSVNetwork(self, identity=cn.ID_STRONG)->str:
+        """
+        Creates a CSV representation of a directed graph. (See https://github.com/ciaranm/glasgow-subgraph-solver)
+        indices num_species to num_species + num_reaction - 1.
+        The CSV format has one line for each edge.  j
+          <source>> <destination>
+
+        Args:
+            identity (str): cn.ID_STRONG or cn.ID_WEAK
+
+        Returns:
+            Graph: Pynauty graph
+        """
+        graph_dct = self.getGraphDct(identity=identity)
+        outputs = []
+        #
+        for source, destinations in graph_dct.items():
+            for destination in destinations:
+                outputs.append(f"{source}>{destination}")
+        return '\n'.join(outputs)
