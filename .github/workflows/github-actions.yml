@@ -17,4 +17,6 @@ jobs:
         pip install -r requirements.txt
     - name: Run tests
       run: |
-        nose2 src
+        #nose2 src
+        cd src
+        nose2 sirn
