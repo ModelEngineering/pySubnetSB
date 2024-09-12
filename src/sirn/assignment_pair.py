@@ -16,9 +16,21 @@ class AssignmentPair(object):
         self.species_assignment = species_assignment
         self.reaction_assignment = reaction_assignment
 
+    def __repr__(self):
+        return f"species: {self.species_assignment}, reaction: {self.reaction_assignment}"
+
     def copy(self)->'AssignmentPair':
         return AssignmentPair(species_assignment=self.species_assignment.copy(),
                               reaction_assignment=self.reaction_assignment.copy())
+    
+    def invert(self)->'AssignmentPair':
+        """Invert the assignment pair.
+
+        Returns:
+            AssignmentPair
+        """
+        return AssignmentPair(species_assignment=np.argsort(self.species_assignment.copy()),
+                              reaction_assignment=np.argsort(self.reaction_assignment.copy()))
     
     def __eq__(self, other)->bool:
         if not isinstance(other, AssignmentPair):

@@ -39,6 +39,17 @@ class TestAssignmentPair(unittest.TestCase):
         assignment_pair = self.assignment_pair.deserialize(serialization_str)
         self.assertEqual(self.assignment_pair, assignment_pair)
 
+    def testInvert(self):
+        if IGNORE_TEST:
+            return
+        def check(perm, inv_perm):
+            identity_perm = range(len(perm))
+            self.assertTrue(np.all(perm[inv_perm] == identity_perm))
+        #####
+        assignment_pair = self.assignment_pair.invert()
+        check(self.assignment_pair.species_assignment, assignment_pair.species_assignment)
+        check(self.assignment_pair.reaction_assignment, assignment_pair.reaction_assignment)
+
         
 
 if __name__ == '__main__':

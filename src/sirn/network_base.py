@@ -145,7 +145,7 @@ class NetworkBase(object):
                          matrix_type:Optional[str]=None,
                          orientation:Optional[str]=None,
                          participant:Optional[str]=None,
-                         identity:Optional[str]=None)->NamedMatrix:
+                         identity:Optional[str]=None)->NamedMatrix: # type: ignore
         """
         Retrieves, possibly constructing, the matrix. The specific matrix is determined by the arguments.
 
@@ -282,9 +282,21 @@ class NetworkBase(object):
             BaseNetwork (class of caller)
             AssignmentPair (species_assignment, reaction_assignment) for reconstructing the original network.
         """
+        #####
+        def makePerm(size:int)->np.ndarray[int]:
+            # Creates a permutation of the desired legnth, ensuring that it's not the identity permutation
+            identity = np.array(range(size))   
+            for _ in range(10):
+                perm = np.random.permutation(range(size))
+                if not np.all(perm == identity):
+                    break
+            else:
+                raise RuntimeError("Could not find a permutation.")
+            return perm
+            #####
         if assignment_pair is None:
-            reaction_perm = np.random.permutation(range(self.num_reaction))
-            species_perm = np.random.permutation(range(self.num_species))
+            reaction_perm = makePerm(self.num_reaction)
+            species_perm = makePerm(self.num_species)
         else:
             reaction_perm = assignment_pair.reaction_assignment
             species_perm = assignment_pair.species_assignment
@@ -396,6 +408,7 @@ class NetworkBase(object):
     def makeRandomNetworkByReactionType(cls, 
               num_reaction:int, 
               num_species:Optional[int]=None,
+              is_prune_species:bool=True,
               p0r0_frc:Optional[float]=0.0,
               p0r1_frc:Optional[float]=0.1358,
               p0r2_frc:Optional[float]=0.001,
@@ -423,6 +436,7 @@ class NetworkBase(object):
         Args:
             num_reaction (int): Number of reactions.
             num_species (int): Number of species.
+            is_prune_species (bool): Prune species not used in any reaction.
             fractions by number of products and reactants
 
         Returns:
@@ -478,12 +492,13 @@ class NetworkBase(object):
             reactant_idxs = np.random.randint(0, num_species, num_reactant)
             reactant_arr[reactant_idxs, i_reaction] += 1
         # Eliminate 0 rows (species not used)
-        keep_idxs:list = []
-        for i_species in range(num_species):
-            if np.sum(reactant_arr[i_species, :]) > 0 or np.sum(product_arr[i_species, :]) > 0:
-                keep_idxs.append(i_species)
-        reactant_arr = reactant_arr[keep_idxs, :]
-        product_arr = product_arr[keep_idxs, :]
+        if is_prune_species:
+            keep_idxs:list = []
+            for i_species in range(num_species):
+                if np.sum(reactant_arr[i_species, :]) > 0 or np.sum(product_arr[i_species, :]) > 0:
+                    keep_idxs.append(i_species)
+            reactant_arr = reactant_arr[keep_idxs, :]
+            product_arr = product_arr[keep_idxs, :]
         # Construct the network
         network = cls(reactant_arr, product_arr)
         return network
