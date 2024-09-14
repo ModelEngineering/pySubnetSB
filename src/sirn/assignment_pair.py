@@ -73,3 +73,15 @@ class AssignmentPair(object):
         species_assignment = np.array(dct[cn.S_SPECIES_ASSIGNMENT_LST])
         reaction_assignment = np.array(dct[cn.S_REACTION_ASSIGNMENT_LST])
         return AssignmentPair(species_assignment=species_assignment, reaction_assignment=reaction_assignment)
+    
+    def resize(self, new_size)->'AssignmentPair':
+        """Truncates the assignment pair to the specify size.
+
+        Args:
+            new_size (int): New size for the assignment pair
+
+        Returns:
+
+        """
+        return AssignmentPair(species_assignment=self.species_assignment[:new_size],
+                              reaction_assignment=self.reaction_assignment[:new_size])

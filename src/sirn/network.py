@@ -65,9 +65,9 @@ class Network(NetworkBase):
 
     def __init__(self, reactant_arr:Union[np.ndarray, Matrix], 
                  product_arr:Union[np.ndarray, Matrix],
-                 reaction_names:Optional[np.ndarray[str]]=None,
-                 species_names:Optional[np.ndarray[str]]=None,
-                 network_name:Optional[str]=None,
+                 reaction_names:Optional[np.ndarray[str]]=None, # type: ignore
+                 species_names:Optional[np.ndarray[str]]=None,  # type: ignore
+                 network_name:Optional[str]=None,               # type: ignore
                  criteria_vector:Optional[CriteriaVector]=CRITERIA_VECTOR)->None:
         """
         Args:
@@ -120,7 +120,7 @@ class Network(NetworkBase):
                         species_names=self.species_names,
                         criteria_vector=self.criteria_vector)
     
-    def _validateAssignments(self, assignment_arr:np.ndarray[int], pos:int,
+    def _validateAssignments(self, assignment_arr:np.ndarray[int], pos:int,  # type: ignore
           expected_assignment_arr:Optional[np.ndarray]=None):
         # Checks if the assignment is consistent with expectations
         if not IS_DEBUG:
@@ -295,7 +295,10 @@ class Network(NetworkBase):
             # Prune the number of assignments if it exceeds the maximum number of assignments
             keep_count = max_num_assignment // len(compatible_sets[pos])
             self._validateAssignments(assignment_arr, pos-1, expected_assignment_arr)
-            new_assignment_arr, new_is_truncated = util.pruneArray(assignment_arr, keep_count)
+            try:
+                new_assignment_arr, new_is_truncated = util.pruneArray(assignment_arr, keep_count)
+            except:
+                import pdb; pdb.set_trace()
             is_truncated = is_truncated or new_is_truncated
             self._validateAssignments(assignment_arr, pos-1, expected_assignment_arr)
             assignment_arr = new_assignment_arr
@@ -426,7 +429,7 @@ class Network(NetworkBase):
                 import pdb; pdb.set_trace()
             return StructurallyIdenticalResult(assignment_pairs=[], is_truncated=is_truncated)
         #####
-        def compare(participant:Optional[str]=None)->Tuple[np.ndarray[bool], bool]:
+        def compare(participant:Optional[str]=None)->Tuple[np.ndarray[bool], bool]:  # type: ignore
             """
             Compares the reference matrix to the target matrix for the participant and identity.
 
@@ -478,10 +481,8 @@ class Network(NetworkBase):
             #   reaction assignment.
             structured_reaction_idxs = np.reshape(reaction_idxs, (num_reaction_assignment,
                   permuted_reference.num_reaction))
-            #big_structured_reaction1_idxs = np.hstack([structured_reaction_idxs]*permuted_reference.num_species)
             big_structured_reaction1_idxs = np.concatenate([structured_reaction_idxs]*permuted_reference.num_species,
                   axis=1)
-            #big_structured_reaction2_idxs = np.vstack([big_structured_reaction1_idxs]*num_species_assignment)
             big_structured_reaction2_idxs = np.concatenate([big_structured_reaction1_idxs]*num_species_assignment,
                   axis=0)
             big_reaction_idxs = big_structured_reaction2_idxs.flatten()
@@ -491,7 +492,6 @@ class Network(NetworkBase):
             big_species2_idxs = np.reshape(big_species1_idxs,
                   (num_species_assignment, permuted_reference.num_species*permuted_reference.num_reaction))
             #  Replicate for each reaction assignment
-            #big_species3_idxs = np.hstack([big_species2_idxs]*num_reaction_assignment)
             big_species3_idxs = np.concatenate([big_species2_idxs]*num_reaction_assignment,
                   axis=1)
             #  Convert to a single array
@@ -506,7 +506,10 @@ class Network(NetworkBase):
             # Rows are results of the comparison of the reference and target; columns are assignments
             assignment_pair_satisfy_arr = np.reshape(big_row_satisfy, (num_assignment, permuted_reference.num_species))
             # Index is True if the assignment-pair results in an identical matrix
-            assignment_satisfy_arr = np.sum(assignment_pair_satisfy_arr, axis=1) == target.num_species
+            assignment_satisfy_arr = np.sum(assignment_pair_satisfy_arr, axis=1) == self.num_species
+            if IS_DEBUG:
+                if np.sum(assignment_satisfy_arr) == 0:
+                    import pdb; pdb.set_trace()
             return assignment_satisfy_arr, is_truncated  # Booleans indicating acceptable assignments
         #####
         #
@@ -542,6 +545,9 @@ class Network(NetworkBase):
                                             reaction_assignment=true_reaction_assignment)
             assignment_pairs.append(assignment_pair)
         # Construct the result
+        if IS_DEBUG:
+            if len(assignment_pairs) == 0:
+                import pdb; pdb.set_trace()
         return StructurallyIdenticalResult(assignment_pairs=assignment_pairs,
                 is_truncated=is_truncated,
                 species_compression_factor=species_assignment_result.compression_factor,

@@ -1,11 +1,12 @@
-from sirn.benchmark_runner import BenchmakrRunner # type: ignore
+from sirn.benchmark_runner import BenchmarkRunner, Experiment, ExperimentResult # type: ignore
+from sirn.network import Network  # type: ignore
 import sirn.constants as cn  # type: ignore
 
 import numpy as np
 import unittest
 
 
-IGNORE_TEST = False
+IGNORE_TEST = True
 IS_PLOT = False
 SIZE = 3
 EXPANSION_FACTOR = 2
@@ -18,7 +19,7 @@ IDENTITY = cn.ID_WEAK
 class TestBenchmarkRunner(unittest.TestCase):
 
     def setUp(self):
-        self.benchmark_runner = BenchmakrRunner(reference_size=SIZE, expansion_factor=EXPANSION_FACTOR,
+        self.benchmark_runner = BenchmarkRunner(reference_size=SIZE, expansion_factor=EXPANSION_FACTOR,
               identity=IDENTITY)
 
     def testConstructor(self):
@@ -27,24 +28,84 @@ class TestBenchmarkRunner(unittest.TestCase):
         self.assertEqual(self.benchmark_runner.reference_size, SIZE)
         self.assertEqual(self.benchmark_runner.expansion_factor, EXPANSION_FACTOR)
         self.assertEqual(self.benchmark_runner.identity, IDENTITY)
+        self.assertEqual(len(self.benchmark_runner.experiments), self.benchmark_runner.num_experiment)
 
     def testMakeStructurallySimilarExperiment(self):
         if IGNORE_TEST:
             return
         size = 3
         num_iteration = 10
-        for expansion_factor in [1, 2, 3]:
+        for expansion_factor in [2, 1, 3]:
             target_size = size*expansion_factor
             for _ in range(num_iteration):
-                benchmark_runner = BenchmakrRunner(reference_size=size, expansion_factor=expansion_factor,
+                benchmark_runner = BenchmarkRunner(reference_size=size, expansion_factor=expansion_factor,
                     identity=IDENTITY)
                 experiment = benchmark_runner.makeExperiment()
                 self.assertEqual(experiment.reference.num_species, SIZE)
                 self.assertEqual(experiment.reference.num_reaction, SIZE)
                 self.assertEqual(experiment.target.num_species, target_size)
-                self.assertEqual(len(experiment.assignment_pair.species_assignment), target_size)
-                self.assertEqual(len(experiment.assignment_pair.reaction_assignment), target_size)
+                self.assertEqual(len(experiment.assignment_pair.species_assignment), size)
+                self.assertEqual(len(experiment.assignment_pair.reaction_assignment), size)
                 self.assertEqual(experiment.target.num_reaction, target_size)
+                self.assertTrue(experiment.target.permute(
+                      assignment_pair=experiment.assignment_pair)[0].isEquivalent(experiment.reference))
+    
+    def testSerializeDeserialize(self):
+        if IGNORE_TEST:
+            return
+        serialization_str = self.benchmark_runner.serialize()
+        benchmark_runner = BenchmarkRunner.deserialize(serialization_str)
+        self.assertEqual(self.benchmark_runner, benchmark_runner)
+
+    def testRun(self):
+        if IGNORE_TEST:
+            return
+        num_experiment = 5
+        for identity in cn.ID_LST:
+            for expansion_factor in [1, 2]:
+                for is_identical in [True, False]:
+                    benchmark_runner = BenchmarkRunner(reference_size=4,
+                        num_experiment=num_experiment,
+                        expansion_factor=expansion_factor,
+                        is_identical=is_identical,
+                        identity=identity)
+                    experiment_result = benchmark_runner.run()
+                    #print(expansion_factor, is_identical, identity, experiment_result)
+                    self.assertEqual(len(experiment_result.runtimes), benchmark_runner.num_experiment)
+                    if is_identical:
+                        count = experiment_result.num_success + experiment_result.num_truncated
+                        count = min(count, num_experiment)
+                    else:
+                        count = experiment_result.num_success
+                    if num_experiment*is_identical != count:
+                        import pdb; pdb.set_trace()
+                    self.assertEqual(num_experiment*is_identical, count)
+
+
+class TestExperiment(unittest.TestCase):
+
+    def testSerializeDeserialize(self):
+        if IGNORE_TEST:
+            return
+        reference = Network.makeRandomNetworkByReactionType(SIZE, is_prune_species=False)
+        target, assignment_pair = reference.permute()
+        experiment = Experiment(reference=reference, target=target, assignment_pair=assignment_pair)
+        serialization_str = experiment.serialize()
+        new_experiment = Experiment.deserialize(serialization_str)
+        self.assertEqual(experiment, new_experiment)
+
+
+class TestExperimentResult(unittest.TestCase):
+
+    def testSerializeDeserialize(self):
+        if IGNORE_TEST:
+            return
+        benchmark_runner = BenchmarkRunner(reference_size=SIZE, expansion_factor=EXPANSION_FACTOR,
+              identity=IDENTITY)
+        experiment_result = benchmark_runner.run()
+        serialization_str = experiment_result.serialize()
+        new_experiment_result = ExperimentResult.deserialize(serialization_str)
+        self.assertEqual(experiment_result, new_experiment_result)
 
 
 if __name__ == '__main__':

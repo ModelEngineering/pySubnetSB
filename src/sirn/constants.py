@@ -26,7 +26,7 @@ for _ in range(3):
     OSCILLATOR_PROJECT = os.path.dirname(OSCILLATOR_PROJECT)
 OSCILLATOR_PROJECT = os.path.join(OSCILLATOR_PROJECT, 'OscillatorDatabase')
 #
-MAX_NUM_ASSIGNMENT = 10000  # Maximum number of permutations to search
+MAX_NUM_ASSIGNMENT = 1e8  # Maximum number of permutations to search
 STRUCTURAL_IDENTITY = "structural_identity"
 UNKNOWN_STRUCTURAL_IDENTITY_NAME = "*" # Used for networks whose structural identity cannot be determined
 NETWORK_DELIMITER = "---"
@@ -72,13 +72,14 @@ CRITERIA_BOUNDARY_VALUES = [-2, -1, 0, 1, 2]
 # Serialization
 S_ANTIMONY_DIRECTORY = "s_antimony_directory"
 S_ASSIGNMENT_COLLECTION = 's_assignment_collection'
+S_ASSIGNMENT_PAIR = 's_assignment_pair'
 S_BOUNDARY_VALUES = "s_boundary_values"
 S_PROCESSED_NETWORKS = "s_processed_networks"
 S_CRITERIA_VECTOR = "s_criteria_vector"
 S_DIRECTORY = "s_directory"
 S_HASH_VAL = "s_hash_val"
 S_ID = "s_id"  # Class being serialized
-S_IDENITY = "s_identity"
+S_IDENTITY = "s_identity"
 S_IS_INDETERMINATE = 's_is_indeterminate'
 S_MODEL_NAME = "s_model_name"
 S_NETWORKS = "s_networks"
@@ -90,5 +91,7 @@ S_PRODUCT_LST = "s_product_lst"
 S_REACTANT_LST = "s_reactant_lst"
 S_REACTION_ASSIGNMENT_LST = "s_reaction_assignment_lst"
 S_REACTION_NAMES = "s_reaction_names"
+S_REFERENCE = "s_reference"
 S_SPECIES_ASSIGNMENT_LST = "s_species_assignment_lst"
 S_SPECIES_NAMES = "s_species_names"
+S_TARGET = "s_target"

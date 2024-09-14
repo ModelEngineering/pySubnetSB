@@ -92,7 +92,7 @@ class ProcessedNetworkCollection(object):
         """
         dct = {cn.S_ID: str(self.__class__),
                cn.S_PROCESSED_NETWORKS: [c.serialize() for c in self.processed_networks],
-               cn.S_IDENITY: self.identity,
+               cn.S_IDENTITY: self.identity,
                cn.S_HASH_VAL: int(self.hash_val),  # Cannot serialize numpy.int64
                cn.S_ANTIMONY_DIRECTORY: self.antimony_directory,
         }
@@ -111,7 +111,7 @@ class ProcessedNetworkCollection(object):
         dct = json.loads(serialization_str)
         if not cls.__name__ in dct[cn.S_ID]:
             raise ValueError(f"Expected {cls} but got {dct[cn.S_ID]}")
-        identity = dct[cn.S_IDENITY]
+        identity = dct[cn.S_IDENTITY]
         antimony_directory =  dct[cn.S_ANTIMONY_DIRECTORY]
         processed_networks = [ProcessedNetwork.deserialize(s) for s in dct[cn.S_PROCESSED_NETWORKS]]
         hash_val = dct[cn.S_HASH_VAL]

@@ -32,8 +32,8 @@ class NetworkBase(object):
 
     def __init__(self, reactant_arr:Matrix, 
                  product_arr:np.ndarray,
-                 reaction_names:Optional[np.ndarray[str]]=None,
-                 species_names:Optional[np.ndarray[str]]=None,
+                 reaction_names:Optional[np.ndarray[str]]=None,  # type: ignore
+                 species_names:Optional[np.ndarray[str]]=None,   # type: ignore
                  network_name:Optional[str]=None,
                  criteria_vector:CriteriaVector=CRITERIA_VECTOR)->None:
         """
@@ -66,7 +66,7 @@ class NetworkBase(object):
 
     # Properties for handling deferred execution
     @property
-    def species_names(self)->np.ndarray[str]:
+    def species_names(self)->np.ndarray[str]:  # type: ignore
         if self._species_names is None:
             self._species_names = np.array([f"S{i}" for i in range(self.num_species)])
         if not isinstance(self._species_names, np.ndarray):
@@ -74,7 +74,7 @@ class NetworkBase(object):
         return self._species_names
     
     @property
-    def reaction_names(self)->np.ndarray[str]:
+    def reaction_names(self)->np.ndarray[str]:  # type: ignore
         if self._reaction_names is None:
             self._reaction_names = np.array([f"J{i}" for i in range(self.num_reaction)])
         if not isinstance(self._reaction_names, np.ndarray):
@@ -141,11 +141,7 @@ class NetworkBase(object):
         return self._stoichiometry_mat
 
     # Methods 
-    def getNetworkMatrix(self,
-                         matrix_type:Optional[str]=None,
-                         orientation:Optional[str]=None,
-                         participant:Optional[str]=None,
-                         identity:Optional[str]=None)->NamedMatrix: # type: ignore
+    def getNetworkMatrix(self, matrix_type:Optional[str]=None, orientation:Optional[str]=None, participant:Optional[str]=None, identity:Optional[str]=None)->NamedMatrix: # type: ignore
         """
         Retrieves, possibly constructing, the matrix. The specific matrix is determined by the arguments.
 
@@ -283,7 +279,7 @@ class NetworkBase(object):
             AssignmentPair (species_assignment, reaction_assignment) for reconstructing the original network.
         """
         #####
-        def makePerm(size:int)->np.ndarray[int]:
+        def makePerm(size:int)->np.ndarray[int]:  # type: ignore
             # Creates a permutation of the desired legnth, ensuring that it's not the identity permutation
             identity = np.array(range(size))   
             for _ in range(10):
