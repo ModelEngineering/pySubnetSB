@@ -2,7 +2,8 @@ from sirn.benchmark_runner import BenchmarkRunner, Experiment, ExperimentResult 
 from sirn.network import Network  # type: ignore
 import sirn.constants as cn  # type: ignore
 
-import numpy as np
+import os
+import shutil
 import unittest
 
 
@@ -11,6 +12,9 @@ IS_PLOT = False
 SIZE = 3
 EXPANSION_FACTOR = 2
 IDENTITY = cn.ID_WEAK
+REFERENCE_DIR = os.path.join(cn.TEST_DIR, "reference")
+TARGET_DIR = os.path.join(cn.TEST_DIR, "target")
+REMOVE_DIRS = [REFERENCE_DIR, TARGET_DIR]
 
 
 #############################
@@ -19,8 +23,17 @@ IDENTITY = cn.ID_WEAK
 class TestBenchmarkRunner(unittest.TestCase):
 
     def setUp(self):
+        self.remove()
         self.benchmark_runner = BenchmarkRunner(reference_size=SIZE, expansion_factor=EXPANSION_FACTOR,
               identity=IDENTITY)
+        
+    def tearDown(self):
+        self.remove()
+    
+    def remove(self):
+        for dir in REMOVE_DIRS:
+            if os.path.exists(dir):
+                shutil.rmtree(dir)
 
     def testConstructor(self):
         if IGNORE_TEST:
@@ -58,19 +71,19 @@ class TestBenchmarkRunner(unittest.TestCase):
         self.assertEqual(self.benchmark_runner, benchmark_runner)
 
     def testRun(self):
-        if IGNORE_TEST:
-            return
-        num_experiment = 5
+        #if IGNORE_TEST:
+        #    return
+        num_experiment = 3
         for identity in cn.ID_LST:
-            for expansion_factor in [1, 2]:
+            for expansion_factor in [2, 10]:
                 for is_identical in [True, False]:
-                    benchmark_runner = BenchmarkRunner(reference_size=4,
+                    benchmark_runner = BenchmarkRunner(reference_size=5,
                         num_experiment=num_experiment,
                         expansion_factor=expansion_factor,
                         is_identical=is_identical,
                         identity=identity)
                     experiment_result = benchmark_runner.run()
-                    #print(expansion_factor, is_identical, identity, experiment_result)
+                    print(expansion_factor, is_identical, identity, experiment_result)
                     self.assertEqual(len(experiment_result.runtimes), benchmark_runner.num_experiment)
                     if is_identical:
                         count = experiment_result.num_success + experiment_result.num_truncated
@@ -81,7 +94,18 @@ class TestBenchmarkRunner(unittest.TestCase):
                         import pdb; pdb.set_trace()
                     self.assertEqual(num_experiment*is_identical, count)
 
+    def testExportExperimentAsCSV(self):
+        if IGNORE_TEST:
+            return
+        benchmark_runner = BenchmarkRunner(reference_size=10, expansion_factor=10,
+              identity=IDENTITY, num_experiment=10, is_identical=False)
+        benchmark_runner.exportExperimentsAsCSV(cn.TEST_DIR)
+        reference_files = os.listdir(REFERENCE_DIR)
+        target_files = os.listdir(TARGET_DIR)
+        self.assertEqual(len(reference_files), len(target_files))
 
+
+##################################################
 class TestExperiment(unittest.TestCase):
 
     def testSerializeDeserialize(self):
@@ -95,6 +119,7 @@ class TestExperiment(unittest.TestCase):
         self.assertEqual(experiment, new_experiment)
 
 
+##################################################
 class TestExperimentResult(unittest.TestCase):
 
     def testSerializeDeserialize(self):

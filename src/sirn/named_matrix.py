@@ -1,11 +1,12 @@
 '''Numpy 2 dimensional array with information about rows and columns.'''
 from sirn.matrix import Matrix  # type: ignore
+import sirn.constants as cn  # type: ignore
 
 import collections
-from IPython.display import display
+import json
 import pandas as pd  # type: ignore
 import numpy as np
-from typing import Optional, Union
+from typing import Optional, Union, List
 
 
 SubsetResult = collections.namedtuple('SubsetResult', ['named_matrix', 'row_idxs', 'column_idxs'])
@@ -104,7 +105,7 @@ class NamedMatrix(Matrix):
         Returns:
             NamedMatrix: New NamedMatrix with zero rows and columns removed.
         """
-        def findIndices(matrix: np.ndarray)->np.ndarray[int]:
+        def findIndices(matrix: np.ndarray)->np.ndarray[int]:  # type: ignore
             # Finds inidices of non-zero rows
             indices = []   # Indices to delete
             for idx, array in enumerate(matrix):
@@ -219,3 +220,101 @@ class NamedMatrix(Matrix):
         return NamedMatrix(self.values.T, row_names=self.column_names,
                            column_names=self.row_names,
                            row_description=self.column_description, column_description=self.row_description)
+    
+    def serialize(self)->str:
+        """Serializes the NamedMatrix."""
+        return json.dumps({cn.S_ID: str(self.__class__),
+                           cn.S_ROW_NAMES: self.row_names.tolist(),
+                           cn.S_COLUMN_NAMES: self.column_names.tolist(),
+                           cn.S_ROW_DESCRIPTION: self.row_description,
+                           cn.S_COLUMN_DESCRIPTION: self.column_description,
+                           cn.S_VALUES: self.values.tolist()})
+    
+    @classmethod
+    def deserialize(cls, string:str)->'NamedMatrix':
+        """
+        Deserializes the NamedMatrix.
+
+        Args:
+            string (str): A JSON string.
+
+        Returns:
+            NamedMatrix: A NamedMatrix object.
+        """
+        dct = json.loads(string)
+        if not str(cls) in dct[cn.S_ID]:
+            raise ValueError(f"Expected {cls} but got {dct[cn.S_ID]}")
+        return cls(np.array(dct[cn.S_VALUES]), row_names=np.array(dct[cn.S_ROW_NAMES]),
+                   column_names=np.array(dct[cn.S_COLUMN_NAMES]),
+                   row_description=dct[cn.S_ROW_DESCRIPTION],
+                   column_description=dct[cn.S_COLUMN_DESCRIPTION])
+    
+    @classmethod
+    def hstack(cls, named_matrices:List['NamedMatrix'])->'NamedMatrix':
+        """
+        Stacks horizontally a list of of compatible NamedMatrix objects.
+
+        Args:
+            named_matrices (List[NamedMatrix])
+
+        Returns:
+            NamedMatrix
+
+        Raises:
+            ValueError: If the row names are not the same. 
+        """
+        # Check compatibility
+        first_num_row = named_matrices[0].num_row
+        first_row_names = named_matrices[0].row_names
+        first_row_description = named_matrices[0].row_description
+        first_column_description = named_matrices[0].column_description
+        for named_matrix in named_matrices[1:]:
+            if first_column_description != named_matrix.column_description:
+                raise ValueError("Column descriptions must be the same!")
+            if first_row_description != named_matrix.row_description:
+                raise ValueError("Row descriptions must be the same!")
+            if not np.all(first_row_names == named_matrix.row_names):
+                raise ValueError("Row descriptions must be the same!")
+            if first_num_row != named_matrix.num_row:
+                raise ValueError("Number of rows must be the same!")
+        # Stack the values and construct the NamedMatrix
+        values = np.hstack([named_matrix.values for named_matrix in named_matrices])
+        column_names = np.concatenate([named_matrix.column_names for named_matrix in named_matrices])
+        return NamedMatrix(values, row_names=first_row_names, column_names=column_names,
+                           row_description=first_row_description,
+                           column_description=first_column_description)
+    
+    @classmethod
+    def vstack(cls, named_matrices:List['NamedMatrix'])->'NamedMatrix':
+        """
+        Stacks vertically a list of of compatible NamedMatrix objects.
+
+        Args:
+            named_matrices (List[NamedMatrix])
+
+        Returns:
+            NamedMatrix
+
+        Raises:
+            ValueError: If the row names are not the same. 
+        """
+        # Check compatibility
+        first_num_column = named_matrices[0].num_column
+        first_column_names = named_matrices[0].column_names
+        first_column_description = named_matrices[0].column_description
+        first_row_description = named_matrices[0].column_description
+        for named_matrix in named_matrices[1:]:
+            if first_row_description != named_matrix.row_description:
+                raise ValueError("Row descriptions must be the same!")
+            if first_column_description != named_matrix.column_description:
+                raise ValueError("Column descriptions must be the same!")
+            if not np.all(first_column_names == named_matrix.column_names):
+                raise ValueError("Column descriptions must be the same!")
+            if first_num_column != named_matrix.num_column:
+                raise ValueError("Number of columns must be the same!")
+        # Stack the values and construct the NamedMatrix
+        values = np.vstack([named_matrix.values for named_matrix in named_matrices])
+        row_names = np.concatenate([named_matrix.row_names for named_matrix in named_matrices])
+        return NamedMatrix(values, column_names=first_column_names, row_names=row_names,
+                           column_description=first_column_description,
+                           row_description=first_row_description)

@@ -271,7 +271,7 @@ class TestNetwork(unittest.TestCase):
         self.assertTrue(isinstance(csv_format, str))
         num_line = csv_format.count("\n")
         num_sep = csv_format.count(">")
-        self.assertEqual(num_line+1,num_sep)
+        self.assertEqual(num_line+1,num_sep + self.network.num_species + self.network.num_reaction)
     
     def testGetGraphDct(self):
         if IGNORE_TEST:
@@ -281,15 +281,22 @@ class TestNetwork(unittest.TestCase):
         for _ in range(num_iteration):
             for identity in cn.ID_LST:
                 network = NetworkBase.makeRandomNetwork(size, size)
-                graph_dct = network.getGraphDct(identity=identity)
-                self.assertTrue(isinstance(graph_dct, dict))
-                self.assertTrue(isinstance(graph_dct[0], list))
+                graph_descriptor = network.getGraphDescriptor(identity=identity)
+                vertex_dct = graph_descriptor.vertex_dct
+                label_dct = graph_descriptor.label_dct
+                self.assertTrue(isinstance(vertex_dct, dict))
+                self.assertTrue(isinstance(vertex_dct[0], list))
                 if identity == cn.ID_STRONG:
                     num_edge = network.reactant_mat.values.sum() + network.product_mat.values.sum()
                 else:
                     num_edge = np.abs(network.standard_mat.values).sum()
-                num_graph_edge = np.sum([len(e) for e in graph_dct.values()])
+                num_graph_edge = np.sum([len(e) for e in vertex_dct.values()])
                 self.assertEqual(num_edge, num_graph_edge)
+                #
+                num_species = np.sum([v == 'species' for v in label_dct.values()])
+                self.assertEqual(num_species, network.num_species)
+                num_reaction = np.sum([v == 'reaction' for v in label_dct.values()])
+                self.assertEqual(num_reaction, network.num_reaction)
 
 if __name__ == '__main__':
     unittest.main(failfast=True)

@@ -23,6 +23,7 @@ from typing import Optional, Tuple, List, Dict
 
 CRITERIA_VECTOR = CriteriaVector()
 Edge = collections.namedtuple('Edge', ['source', 'destination'])
+GraphDescriptor = collections.namedtuple('GraphDescriptor', ['vertex_dct', 'label_dct'])
 
 
 class NetworkBase(object):
@@ -104,23 +105,6 @@ class NetworkBase(object):
                   for o, p in combinations]
             hash_arr = np.sort([s.row_order_independent_hash for s in single_criteria_matrices])
             self._strong_hash = util.makeRowOrderIndependentHash(hash_arr)
-        return self._strong_hash
-        
-    @property
-    def deprecated_strong_hash(self)->int:
-        if self._strong_hash is None:
-            stoichiometries:list = []
-            for i_orientation in cn.OR_LST:
-                for i_participant in cn.PR_LST:
-                    stoichiometries.append(self.getNetworkMatrix(
-                        matrix_type=cn.MT_SINGLE_CRITERIA,
-                        orientation=i_orientation,
-                        identity=cn.ID_STRONG,
-                        participant=i_participant))
-            #hash_arr = np.array([hashArray(stoichiometry.row_hashes.values) for stoichiometry in stoichiometries])
-            #hash_arr = np.sort(hash_arr)
-            #self._strong_hash = hashArray(hash_arr)
-            self._strong_hash = hash(str(stoichiometries))
         return self._strong_hash
 
     @property
@@ -642,24 +626,29 @@ class NetworkBase(object):
                        reaction_names=reaction_names, species_names=species_names,
                        criteria_vector=criteria_vector)
     
-    def getGraphDct(self, identity=cn.ID_STRONG)->Dict[int, List[int]]:
+    def getGraphDescriptor(self, identity=cn.ID_STRONG)->GraphDescriptor:
         """
         Describes the bipartite graph of the network.
         Species are indices 0 to num_species - 1 and reactions are
         indices num_species to num_species + num_reaction - 1.
+        Labels are provided to designate reaction and species nodes.
 
         Args:
             identity (str): cn.ID_STRONG or cn.ID_WEAK
 
         Returns:
-            dict:
-                key: source index
-                value: list of detination index
+            vertex_dict:
+                key: source vertex index
+                value: list of detination indices
+            label_dict:
+                key: vertex
+                value: label ('reaction' or 'species')
         """
         num_species = self.num_species
         num_reaction = self.num_reaction
         num_node = num_species + num_reaction
-        graph_dct:dict = {i: [] for i in range(num_node)}
+        # Vertex dictionary
+        vertex_dct:dict = {i: [] for i in range(num_node)}
         for i_reaction in range(num_reaction):
             for i_species in range(num_species):
                 # Add an edge for each reactant
@@ -668,24 +657,29 @@ class NetworkBase(object):
                 if identity == cn.ID_STRONG:
                     # Reactants
                     for _ in range(int(self.reactant_mat.values[i_species, i_reaction])):
-                        graph_dct[species_vtx].append(reaction_vtx)
+                        vertex_dct[species_vtx].append(reaction_vtx)
                     # Products
                     for _ in range(int(self.product_mat.values[i_species, i_reaction])):
-                        graph_dct[reaction_vtx].append(species_vtx)
+                        vertex_dct[reaction_vtx].append(species_vtx)
                 else:
                     # Weak identity. Use the standard stoichiometry matrix
                     stoichiometry = int(self.standard_mat.values[i_species, i_reaction])
                     for _ in range(np.abs(stoichiometry)):
                         if stoichiometry > 0:
                             # Product
-                            graph_dct[reaction_vtx].append(species_vtx)
+                            vertex_dct[reaction_vtx].append(species_vtx)
                         elif stoichiometry < 0:
                             # Reactant
-                            graph_dct[species_vtx].append(reaction_vtx)
+                            vertex_dct[species_vtx].append(reaction_vtx)
                         else:
                             pass
-        return graph_dct
-    
+        # Label dictionary
+        label_dct:dict = {n: 'species' for n in range(num_species)}
+        label_dct.update({n: 'reaction' for n in range(num_species, num_node)})
+
+        return GraphDescriptor(vertex_dct=vertex_dct, label_dct=label_dct)
+
+    # FIXME: Need colors for reactions? 
     def makePynautyNetwork(self, identity=cn.ID_STRONG)->Graph:
         """
         Make a pynauty graph from the network. Species are indices 0 to num_species - 1 and reactions are
@@ -697,9 +691,10 @@ class NetworkBase(object):
         Returns:
             Graph: Pynauty graph
         """
-        graph_dct = self.getGraphDct(identity=identity)
-        graph = Graph(len(graph_dct.keys()), directed=True)
-        for node, neighbors in graph_dct.items():
+        graph_descriptor = self.getGraphDescriptor(identity=identity)
+        vertex_dct = graph_descriptor.vertex_dct
+        graph = Graph(len(vertex_dct.keys()), directed=True)
+        for node, neighbors in vertex_dct.items():
             graph.connect_vertex(node, neighbors)
         return graph
     
@@ -716,10 +711,13 @@ class NetworkBase(object):
         Returns:
             Graph: Pynauty graph
         """
-        graph_dct = self.getGraphDct(identity=identity)
+        graph_descriptor = self.getGraphDescriptor(identity=identity)
         outputs = []
-        #
-        for source, destinations in graph_dct.items():
+        # Create the vertices
+        for source, destinations in graph_descriptor.vertex_dct.items():
             for destination in destinations:
                 outputs.append(f"{source}>{destination}")
+        # Add the labels
+        for vertex, label in graph_descriptor.label_dct.items():
+            outputs.append(f"{vertex},,{label}")
         return '\n'.join(outputs)

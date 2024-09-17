@@ -295,10 +295,11 @@ class BenchmarkRunner(object):
         """
         #####
         def mkSubdir(subdir:str):
-            subdir = os.path.join(directory, "reference")
+            subdir = os.path.join(directory, subdir)
             if os.path.exists(subdir):
                 shutil.rmtree(subdir)
             os.makedirs(subdir)
+            return subdir
         #####
         def writeSubdir(is_reference:bool=True):
             if is_reference:

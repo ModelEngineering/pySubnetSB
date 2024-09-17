@@ -130,6 +130,54 @@ class TestNamedMatrix(unittest.TestCase):
         named_matrix = self.named_matrix.transpose()
         reverted = named_matrix.transpose()
         self.assertTrue(reverted == self.named_matrix)
+
+    def testSerializeDeserialize(self):
+        if IGNORE_TEST:
+            return
+        string = self.named_matrix.serialize()
+        named_matrix = NamedMatrix.deserialize(string)
+        self.assertTrue(named_matrix == self.named_matrix)
+
+    def testHstack(self):
+        if IGNORE_TEST:
+            return
+        named_matrix = NamedMatrix(np.array([[1, 0], [0, 1], [0, 0]]), column_names=['a', 'b'])
+        named_matrix2 = NamedMatrix(np.array([[1], [0], [0]]), column_names=['c'])
+        # Same shapes
+        result = NamedMatrix.hstack([named_matrix, named_matrix2])
+        expected_arr = np.array([[1, 0, 1], [0, 1, 0], [0, 0, 0]])
+        self.assertTrue(np.all(result.values == expected_arr))
+        self.assertTrue(np.all(result.column_names == np.array(['a', 'b', 'c'])))
+        self.assertEqual(result.num_column, named_matrix.num_column + named_matrix2.num_column)
+        # Different shapes
+        with self.assertRaises(ValueError):
+            NamedMatrix.hstack([named_matrix, named_matrix2.transpose()])
+        # Different row names
+        with self.assertRaises(ValueError):
+            named_matrix2 = NamedMatrix(np.array([[1], [0], [0]]), column_names=['c'],
+                                        row_names=['x', 'y', 'z'])
+            _ = NamedMatrix.hstack([named_matrix, named_matrix2])
+
+    def testVstack(self):
+        if IGNORE_TEST:
+            return
+        array1 =np.array([[1, 0], [0, 1], [0, 0]])
+        array2 =np.array([[1, 2], [0, 2]])
+        named_matrix1 = NamedMatrix(array1, row_names=['a', 'b', 'c'])
+        named_matrix2 = NamedMatrix(array2, row_names=['d', 'e'])
+        # Same shapes
+        result = NamedMatrix.vstack([named_matrix1, named_matrix2])
+        self.assertTrue(np.all(result.values == np.vstack([array1, array2])))
+        self.assertTrue(np.all(result.row_names == np.array(['a', 'b', 'c', 'd', 'e'])))
+        self.assertEqual(result.num_row, named_matrix1.num_row + named_matrix2.num_row)
+        # Different shapes
+        with self.assertRaises(ValueError):
+            NamedMatrix.vstack([named_matrix1, named_matrix2.transpose()])
+        # Different row names
+        with self.assertRaises(ValueError):
+            named_matrix2 = NamedMatrix(np.array([[1], [0], [0]]),
+                                        column_names=['x', 'y'])
+            _ = NamedMatrix.hstack([named_matrix1, named_matrix2])
         
 
 if __name__ == '__main__':
