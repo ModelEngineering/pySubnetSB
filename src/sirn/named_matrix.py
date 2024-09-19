@@ -43,6 +43,8 @@ class NamedMatrix(Matrix):
         if self._row_names is None:
             self._row_names = np.array([str(n) for n in range(self.num_row)])
         else:
+            if len(self._row_names) != np.shape(self.values)[0]:
+                raise ValueError("Row names must have the same number of elements as the number of rows")
             self._row_names = np.array(self._row_names)
         return self._row_names  # type: ignore
     
@@ -51,6 +53,8 @@ class NamedMatrix(Matrix):
         if self._column_names is None:
             self._column_names = np.array([str(n) for n in range(self.num_column)])
         else:
+            if len(self._column_names) != np.shape(self.values)[1]:
+                raise ValueError("Column names must have the same number of elements as the number of columns")
             self._column_names = np.array(self._column_names)
         return self._column_names  # type: ignore
     
@@ -63,9 +67,9 @@ class NamedMatrix(Matrix):
                 return pd.DataFrame()
             self._dataframe = pd.DataFrame(reduced_named_matrix.values)
             if len(reduced_named_matrix.row_names.shape) == 1:
-                   self._dataframe.index = reduced_named_matrix.row_names
+                self._dataframe.index = reduced_named_matrix.row_names
             if len(reduced_named_matrix.column_names.shape) == 1:
-                   self._dataframe.columns = reduced_named_matrix.column_names
+                self._dataframe.columns = reduced_named_matrix.column_names
             self._dataframe.index.name = self.row_description
             self._dataframe.columns.name = self.column_description
         return self._dataframe

@@ -15,6 +15,25 @@ product_arr = np.array([[0, 1], [1, 0]])
 REACTANT_NMAT = NamedMatrix(reactant_arr,  row_names=SPECIES_NAMES, column_names=REACTION_NAMES)
 PRODUCT_NMAT = NamedMatrix(product_arr,  row_names=SPECIES_NAMES, column_names=REACTION_NAMES)
 
+class DummyConstraint(Constraint):
+    
+    def __init__(self, reactant_nmat:NamedMatrix, product_nmat:NamedMatrix):
+        super().__init__(reactant_nmat=reactant_nmat, product_nmat=product_nmat)
+        #
+        species_names = ["A", "B", "C"]
+        self._equality_nmat = NamedMatrix(np.array([[0, 1], [1, 0], [1, 1]]),
+                row_names=species_names, column_names=REACTION_NAMES)
+        self._inequality_nmat = NamedMatrix(np.array([[0, 10], [10, 0], [10, 10]]),
+                row_names=species_names, column_names=REACTION_NAMES)
+    
+    @property
+    def equality_nmat(self)->NamedMatrix:
+        return self._equality_nmat
+    
+    @property
+    def inequality_nmat(self)->NamedMatrix:
+        return self._inequality_nmat
+
 
 
 #############################
@@ -49,7 +68,7 @@ class TestReactionClassification(unittest.TestCase):
 class TestConstraint(unittest.TestCase):
 
     def setUp(self):
-        self.constraint = Constraint(reactant_nmat=REACTANT_NMAT, product_nmat=PRODUCT_NMAT)
+        self.constraint = DummyConstraint(reactant_nmat=REACTANT_NMAT, product_nmat=PRODUCT_NMAT)
 
     def testConstructor(self):
         if IGNORE_TEST:
@@ -70,7 +89,7 @@ class TestConstraint(unittest.TestCase):
         if IGNORE_TEST:
             return
         serialization_str = self.constraint.serialize()
-        constraint = Constraint.deserialize(serialization_str)
+        constraint = DummyConstraint.deserialize(serialization_str)
         self.assertEqual(self.constraint, constraint)
     
     def testClassifyReactions(self):
@@ -78,6 +97,25 @@ class TestConstraint(unittest.TestCase):
             return
         reaction_classifications = self.constraint.classifyReactions()
         self.assertTrue(all([isinstance(rc, ReactionClassification) for rc in reaction_classifications]))
+
+    def testCalculateCompatibility(self):
+        if IGNORE_TEST:
+            return
+        #
+        result = self.constraint.calculateCompatibilityVector(self.constraint.equality_nmat,
+              self.constraint.equality_nmat, is_equality=True)
+        num_true = np.sum(result)
+        self.assertEqual(num_true, self.constraint.equality_nmat.num_row)
+        #
+        result = self.constraint.calculateCompatibilityVector(self.constraint.inequality_nmat,
+              self.constraint.equality_nmat, is_equality=True)
+        num_true = np.sum(result)
+        self.assertEqual(num_true, 0)
+        #
+        result = self.constraint.calculateCompatibilityVector(self.constraint.equality_nmat,
+              self.constraint.inequality_nmat, is_equality=False)
+        num_true = np.sum(result)
+        self.assertEqual(num_true, 5)
 
 
 if __name__ == '__main__':
