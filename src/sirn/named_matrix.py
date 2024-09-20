@@ -254,12 +254,13 @@ class NamedMatrix(Matrix):
                    column_description=dct[cn.S_COLUMN_DESCRIPTION])
     
     @classmethod
-    def hstack(cls, named_matrices:List['NamedMatrix'])->'NamedMatrix':
+    def hstack(cls, named_matrices:List['NamedMatrix'], is_rename:bool=False)->'NamedMatrix':
         """
         Stacks horizontally a list of of compatible NamedMatrix objects.
 
         Args:
             named_matrices (List[NamedMatrix])
+            is_rename: bool (rename the columns)
 
         Returns:
             NamedMatrix
@@ -283,13 +284,15 @@ class NamedMatrix(Matrix):
                 raise ValueError("Number of rows must be the same!")
         # Stack the values and construct the NamedMatrix
         values = np.hstack([named_matrix.values for named_matrix in named_matrices])
+        if is_rename:
+            column_names = None
         column_names = np.concatenate([named_matrix.column_names for named_matrix in named_matrices])
         return NamedMatrix(values, row_names=first_row_names, column_names=column_names,
                            row_description=first_row_description,
                            column_description=first_column_description)
     
     @classmethod
-    def vstack(cls, named_matrices:List['NamedMatrix'])->'NamedMatrix':
+    def vstack(cls, named_matrices:List['NamedMatrix'], is_rename:bool=False)->'NamedMatrix':
         """
         Stacks vertically a list of of compatible NamedMatrix objects.
 
@@ -318,7 +321,24 @@ class NamedMatrix(Matrix):
                 raise ValueError("Number of columns must be the same!")
         # Stack the values and construct the NamedMatrix
         values = np.vstack([named_matrix.values for named_matrix in named_matrices])
-        row_names = np.concatenate([named_matrix.row_names for named_matrix in named_matrices])
+        if is_rename:
+            row_names = None
+        else:
+            row_names = np.concatenate([named_matrix.row_names for named_matrix in named_matrices])
         return NamedMatrix(values, column_names=first_column_names, row_names=row_names,
                            column_description=first_column_description,
                            row_description=first_row_description)
+    
+    @classmethod
+    def makeRandom(cls, num_row:int, num_column:int)->'NamedMatrix':
+        """
+        Create a random NamedMatrix.
+
+        Args:
+            num_row (int): Number of rows
+            num_column (int): Number of columns
+
+        Returns:
+            NamedMatrix: A random NamedMatrix.
+        """
+        return NamedMatrix(np.random.rand(num_row, num_column))
