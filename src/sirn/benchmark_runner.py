@@ -241,13 +241,13 @@ class BenchmarkRunner(object):
             # Expand the target
             #   Create the left part of the expanded target
             left_filler_arr = np.zeros((filler_size, self.reference_size))
-            xreactant_arr = np.vstack([reference.reactant_mat.values, left_filler_arr])
-            xproduct_arr = np.vstack([reference.product_mat.values, left_filler_arr])
+            xreactant_arr = np.vstack([reference.reactant_nmat.values, left_filler_arr])
+            xproduct_arr = np.vstack([reference.product_nmat.values, left_filler_arr])
             #  Create the expanded arrays
             right_filler = Network.makeRandomNetworkByReactionType(num_reaction=filler_size,
                   num_species=target_size, is_prune_species=False)
-            xreactant_arr = np.hstack([xreactant_arr, right_filler.reactant_mat.values])
-            xproduct_arr = np.hstack([xproduct_arr, right_filler.product_mat.values])
+            xreactant_arr = np.hstack([xreactant_arr, right_filler.reactant_nmat.values])
+            xproduct_arr = np.hstack([xproduct_arr, right_filler.product_nmat.values])
             xtarget = Network(xreactant_arr, xproduct_arr)
             #  Merge the left and right parts
             target, assignment_pair = xtarget.permute()
@@ -255,9 +255,9 @@ class BenchmarkRunner(object):
         if not is_identical:
             i_species, i_reaction = np.random.randint(0, reference.num_species),  \
                   np.random.randint(0, reference.num_reaction)
-            max_val = np.max(reference.reactant_mat.values)
+            max_val = np.max(reference.reactant_nmat.values)
             # Insert an impossible value
-            reference.reactant_mat.values[i_species, i_reaction] =  max_val + 1
+            reference.reactant_nmat.values[i_species, i_reaction] =  max_val + 1
         return Experiment(reference=reference, target=target, assignment_pair=assignment_pair)
     
     def run(self)->ExperimentResult:

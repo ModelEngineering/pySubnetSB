@@ -1,17 +1,20 @@
-'''Constraint species.'''
+'''Constraints for reactions.'''
 
 """
-Constraints are 
-  1. counts of reaction types in which a species is a reactant or product;
-  2. number of autocatalysis reactions for a species.
-For induced graphs (is_subset=False), there are only equality constraints.
-For noninduced graphs (is_subset=True), there are only inequality constraints.
+Enumerated constraints.
+   Number of occurrence of the species as a reactant in the different reaction types.
+   Number of predecessors in the inferred monopartite graph
+   Number of successors in the inferred monopartite graph
+No categorical constraints.
 """
 
+import sirn.constants as cn # type: ignore
 from sirn.named_matrix import NamedMatrix # type: ignore
 from sirn.constraint import Constraint, ReactionClassification, NULL_NMAT # type: ignore
+import sirn.util as util # type: ignore
 
 import numpy as np
+from typing import Optional, List
 
 
 #####################################
@@ -28,44 +31,34 @@ class SpeciesConstraint(Constraint):
         #
         self.is_subset = is_subset
         self.is_initialized = False
-        self._inequality_nmat = NULL_NMAT
         self._equality_nmat = NULL_NMAT
-        self._species_constraint_nmat = self._makeSpeciesConstraintMatrix()
+        self._inequality_nmat = NULL_NMAT
 
     @property
     def equality_nmat(self)->NamedMatrix:
-        # This property overrides the parent property
         if not self.is_initialized:
             if self.is_subset:
-                self._inequality_nmat = NULL_NMAT
-                self._equality_nmat = self._species_constraint_nmat
+                self._inequality_nmat = self._makeSpeciesConstraintMatrix()
             else:
-                self._equality_nmat = NULL_NMAT
-                self._inequality_nmat = self._species_constraint_nmat
+                self._equality_nmat = self._makeSpeciesConstraintMatrix()
             self.is_initialized = True
         return self._equality_nmat
         
+    
     @property
     def inequality_nmat(self)->NamedMatrix:
-        # This property overrides the parent property
         if not self.is_initialized:
             if self.is_subset:
-                self._equality_nmat = NULL_NMAT
-                self._inequality_nmat = self._species_constraint_nmat
+                self._inequality_nmat = self._makeSpeciesConstraintMatrix()
             else:
-                self._inequality_nmat = NULL_NMAT
-                self._equality_nmat = self._species_constraint_nmat
+                self._equality_nmat = self._makeSpeciesConstraintMatrix()
             self.is_initialized = True
-        return self._equality_nmat
+        return self._inequality_nmat
 
     def __repr__(self)->str:
         return "Species--" + super().__repr__()
     
-    def setSubset(self, is_subset:bool)->None:
-        self.is_subset = is_subset
-        self.is_initialized = False
-    
-    def _makeSpeciesReactionConstraintMatrix(self)->NamedMatrix:
+    def _makeReactionClassificationConstraints(self)->NamedMatrix:
         """Make constraints for the reaction classification. These are {R, P} X {ReactionClassifications}
         where R is reactant and P is product.
 
@@ -99,19 +92,28 @@ class SpeciesConstraint(Constraint):
                            column_names=column_labels)
         return named_matrix
     
-    def _makeAutocatalysisConstraint(self)->NamedMatrix:
-        """Counts the number of reactions in which a species is both a reactant and product.
+    def _makeSpeciesMonopartiteConstraints(self)->NamedMatrix:
+        """Make constraints for the species monopartite graph. These are the number of
+        predecessor and successor nodes.
 
         Returns:
-            NamedMatrix
+            NamedMatrix: Rows are species, columns are constraints
         """
-        column_names =  ['num_autocatalysis']
-        array = self.reactant_nmat.values * self.product_nmat.values > 0
-        vector = np.sum(array, axis=1)
-        vector = np.reshape(vector, (len(vector), 1))
-        named_matrix = NamedMatrix(vector, row_names=self.reactant_nmat.row_names,
-                           row_description=self.reactant_nmat.column_description,
-                           column_description=self.reactant_nmat.row_description,
+        # Create the monopartite graph
+        incoming_arr = self.reactant_nmat.values
+        outgoing_arr = self.product_nmat.values
+        monopartite_arr = np.sign(np.matmul(incoming_arr, outgoing_arr.T))
+        # Count predecessor species
+        predecessor_arr = np.sum(monopartite_arr, axis=0)
+        # Count successor species
+        successor_arr = np.sum(monopartite_arr, axis=1)
+        import pdb; pdb.set_trace()
+        # Construct the NamedMatrix
+        array = np.vstack([predecessor_arr, successor_arr]).T
+        column_names = ["num_predecessor", "num_successor"]
+        named_matrix = NamedMatrix(array, row_names=self.reactant_nmat.row_names,
+                           row_description=self.reactant_nmat.row_description,
+                           column_description="constraints",
                            column_names=column_names)
         return named_matrix
     
@@ -121,5 +123,5 @@ class SpeciesConstraint(Constraint):
         Returns:
             NamedMatrix: Rows are species, columns are constraints
         """
-        return NamedMatrix.hstack([self._makeSpeciesReactionConstraintMatrix(),
-                                   self._makeAutocatalysisConstraint()])
+        return NamedMatrix.hstack([self._makeReactionClassificationConstraints(),
+                                   self._makeSpeciesMonopartiteConstraints()])

@@ -114,7 +114,7 @@ class Network(NetworkBase):
         Returns:
             Network: Copy of this network.
         """
-        return Network(self.reactant_mat.values.copy(), self.product_mat.values.copy(),
+        return Network(self.reactant_nmat.values.copy(), self.product_nmat.values.copy(),
                         network_name=self.network_name,
                         reaction_names=self.reaction_names,
                         species_names=self.species_names,

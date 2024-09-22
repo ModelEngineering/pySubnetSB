@@ -1,6 +1,14 @@
 DSIRN
 1. Refactor to use constraints, both enumerated and categorical
   a. Implement Constraint, SpeciesConstraint, ReactionConstraint
+     Species: pred, succ X reaction type
+              number autocat reaction
+     Reaction: pred, succ X reaction type
+              number autocat species
+  a1: classify reaction using reactant_nmat, product_nmat
+      sum columns, max is 3, form pairs
+  a2: Evaluation. Count duplicate rows in criteria mats as increase
+      network size.
   b. Evaluate quality of constraints on benchmark networks
      For pattern and target of different sizes
        Calculate the number of permutations to evaluate based on

@@ -3,7 +3,7 @@ from sirn.named_matrix import NamedMatrix   # type: ignore
 
 import itertools
 import numpy as np
-from scipy.special import factorial
+from scipy.special import factorial  # type: ignore
 import unittest
 
 

@@ -87,7 +87,7 @@ class TestNetwork(unittest.TestCase):
         if IGNORE_TEST:
             return
         self.assertEqual(self.network.network_name, NETWORK_NAME)
-        for mat in [self.network.reactant_mat, self.network.product_mat]:
+        for mat in [self.network.reactant_nmat, self.network.product_nmat]:
             self.assertTrue(isinstance(mat, NamedMatrix))
         self.assertTrue("int" in str(type(self.network.weak_hash)))
         self.assertTrue("int" in str(type(self.network.strong_hash)))
@@ -175,11 +175,11 @@ class TestNetwork(unittest.TestCase):
                 new_network, _ = network.permute()
                 irow = np.random.randint(0, size)
                 icol = np.random.randint(0, size)
-                cur_value = new_network.reactant_mat.values[irow, icol]
+                cur_value = new_network.reactant_nmat.values[irow, icol]
                 if cur_value == 0:
-                    new_network.reactant_mat.values[irow, icol] = 1
+                    new_network.reactant_nmat.values[irow, icol] = 1
                 else:
-                    new_network.reactant_mat.values[irow, icol] = 0
+                    new_network.reactant_nmat.values[irow, icol] = 0
                 self.assertNotEqual(network, new_network)
                 self.assertEqual(network.num_species, new_network.num_species)
                 self.assertEqual(network.num_reaction, new_network.num_reaction)
@@ -246,7 +246,7 @@ class TestNetwork(unittest.TestCase):
         for _ in range(100):
             size = np.random.randint(3, 20)
             network = NetworkBase.makeRandomNetworkByReactionType(size)
-            eval_arr = np.hstack([network.reactant_mat.values, network.product_mat.values])
+            eval_arr = np.hstack([network.reactant_nmat.values, network.product_nmat.values])
             sum_arr = np.sum(eval_arr, axis=1)
             self.assertTrue(np.all(sum_arr > 0))
 
@@ -287,7 +287,7 @@ class TestNetwork(unittest.TestCase):
                 self.assertTrue(isinstance(vertex_dct, dict))
                 self.assertTrue(isinstance(vertex_dct[0], list))
                 if identity == cn.ID_STRONG:
-                    num_edge = network.reactant_mat.values.sum() + network.product_mat.values.sum()
+                    num_edge = network.reactant_nmat.values.sum() + network.product_nmat.values.sum()
                 else:
                     num_edge = np.abs(network.standard_mat.values).sum()
                 num_graph_edge = np.sum([len(e) for e in vertex_dct.values()])

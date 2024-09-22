@@ -84,7 +84,6 @@ class CompatibilityCollection(object):
         return collection
 
 
-
 #####################################
 class ReactionClassification(object):
     MAX_REACTANT = 3
@@ -96,14 +95,18 @@ class ReactionClassification(object):
 
     def __repr__(self)->str:
         labels = ["null", "uni", "bi", "multi"]
-        return f"{labels[self.num_reactant]}-{labels[self.num_product]}"
+        try:
+            result = f"{labels[int(self.num_reactant)]}-{labels[int(self.num_product)]}"
+        except:
+            import pdb; pdb.set_trace()
+        return result
 
     @classmethod 
     def getReactionClassifications(cls)->List['ReactionClassification']:
         """Gets a list of reaction classifications."""
         classifications = []
-        for num_reactant in range(ReactionClassification.MAX_REACTANT):
-            for num_product in range(ReactionClassification.MAX_PRODUCT):
+        for num_reactant in range(ReactionClassification.MAX_REACTANT + 1):
+            for num_product in range(ReactionClassification.MAX_PRODUCT + 1):
                 classifications.append(cls(num_reactant, num_product))
         return classifications
 
@@ -183,8 +186,8 @@ class Constraint(object):
         """
         classifications = []
         for idx in range(self.num_reaction):
-            num_reactant = np.sum(self.reactant_nmat.values[idx, :])
-            num_product = np.sum(self.product_nmat.values[idx, :])
+            num_reactant = np.sum(self.reactant_nmat.values[:, idx])
+            num_product = np.sum(self.product_nmat.values[:, idx])
             classifications.append(ReactionClassification(num_reactant, num_product))
         return classifications
 

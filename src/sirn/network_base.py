@@ -50,9 +50,9 @@ class NetworkBase(object):
             raise ValueError("Reactant and product matrices must have the same shape.")
         self.num_species, self.num_reaction = np.shape(reactant_arr)
         self.criteria_vector = criteria_vector
-        self.reactant_mat = NamedMatrix(reactant_arr, row_names=species_names, column_names=reaction_names,
+        self.reactant_nmat = NamedMatrix(reactant_arr, row_names=species_names, column_names=reaction_names,
               row_description="species", column_description="reactions")
-        self.product_mat = NamedMatrix(product_arr, row_names=species_names, column_names=reaction_names,
+        self.product_nmat = NamedMatrix(product_arr, row_names=species_names, column_names=reaction_names,
               row_description="species", column_description="reactions")
         self.standard_mat = NamedMatrix(product_arr - reactant_arr, row_names=species_names,
               column_names=reaction_names, row_description="species", column_description="reactions")
@@ -119,7 +119,7 @@ class NetworkBase(object):
     @property
     def stoichiometry_mat(self)->NamedMatrix:
         if self._stoichiometry_mat is None:
-            stoichiometry_arr = self.product_mat.values - self.reactant_mat.values
+            stoichiometry_arr = self.product_nmat.values - self.reactant_nmat.values
             self._stoichiometry_mat = NamedMatrix(stoichiometry_arr, row_names=self.species_names,
                column_names=self.reaction_names, row_description="species", column_description="reactions")
         return self._stoichiometry_mat
@@ -158,9 +158,9 @@ class NetworkBase(object):
             matrix = self.stoichiometry_mat
         elif identity == cn.ID_STRONG:
             if participant == cn.PR_REACTANT:
-                matrix = self.reactant_mat
+                matrix = self.reactant_nmat
             elif participant == cn.PR_PRODUCT:
-                matrix = self.product_mat
+                matrix = self.product_nmat
             else:
                 raise ValueError("Invalid participant: {participant}.")
         else:
@@ -186,7 +186,7 @@ class NetworkBase(object):
         return matrix
 
     def copy(self)->'NetworkBase':
-        return NetworkBase(self.reactant_mat.values.copy(), self.product_mat.values.copy(),
+        return NetworkBase(self.reactant_nmat.values.copy(), self.product_nmat.values.copy(),
                        network_name=self.network_name, reaction_names=self.reaction_names,
                        species_names=self.species_names,
                        criteria_vector=self.criteria_vector)  # type: ignore
@@ -265,7 +265,9 @@ class NetworkBase(object):
         #####
         def makePerm(size:int)->np.ndarray[int]:  # type: ignore
             # Creates a permutation of the desired legnth, ensuring that it's not the identity permutation
-            identity = np.array(range(size))   
+            identity = np.array(range(size))
+            if size == 1:
+                return identity
             for _ in range(10):
                 perm = np.random.permutation(range(size))
                 if not np.all(perm == identity):
@@ -280,8 +282,8 @@ class NetworkBase(object):
         else:
             reaction_perm = assignment_pair.reaction_assignment
             species_perm = assignment_pair.species_assignment
-        reactant_arr = self.reactant_mat.values.copy()
-        product_arr = self.product_mat.values.copy()
+        reactant_arr = self.reactant_nmat.values.copy()
+        product_arr = self.product_nmat.values.copy()
         reactant_arr = reactant_arr[species_perm, :]
         reactant_arr = reactant_arr[:, reaction_perm]
         product_arr = product_arr[species_perm, :]
@@ -503,8 +505,8 @@ class NetworkBase(object):
             result =  ' + '.join(expressions)
             return result
         #
-        reactant_expression = makeSpeciesExpression(index, self.reactant_mat.values)
-        product_expression = makeSpeciesExpression(index, self.product_mat.values)
+        reactant_expression = makeSpeciesExpression(index, self.reactant_nmat.values)
+        product_expression = makeSpeciesExpression(index, self.product_nmat.values)
         result = f"{self.reaction_names[index]}: " + f"{reactant_expression} -> {product_expression}"
         return result
 
@@ -520,8 +522,8 @@ class NetworkBase(object):
         """
         species_assignment = assignment_pair.species_assignment
         reaction_assignment = assignment_pair.reaction_assignment
-        reactant_arr = self.reactant_mat.values[species_assignment, :]
-        product_arr = self.product_mat.values[species_assignment, :]
+        reactant_arr = self.reactant_nmat.values[species_assignment, :]
+        product_arr = self.product_nmat.values[species_assignment, :]
         reactant_arr = reactant_arr[:, reaction_assignment]
         product_arr = product_arr[:, reaction_assignment]
         return NetworkBase(reactant_arr, product_arr, reaction_names=self.reaction_names[reaction_assignment],
@@ -534,8 +536,8 @@ class NetworkBase(object):
         Returns:
             str: string representation of json structure
         """
-        reactant_lst = self.reactant_mat.values.tolist()
-        product_lst = self.product_mat.values.tolist()
+        reactant_lst = self.reactant_nmat.values.tolist()
+        product_lst = self.product_nmat.values.tolist()
         criteria_vector_serialization = self.criteria_vector.serialize()
         dct = {cn.S_ID: self.__class__.__name__,
                cn.S_NETWORK_NAME: self.network_name,
@@ -595,8 +597,8 @@ class NetworkBase(object):
         Returns:
             str: string representation of json structure
         """
-        dct = {cn.S_REACTANT_LST: self.reactant_mat.values.flatten().tolist(),
-               cn.S_PRODUCT_LST: self.product_mat.values.flatten().tolist(),
+        dct = {cn.S_REACTANT_LST: self.reactant_nmat.values.flatten().tolist(),
+               cn.S_PRODUCT_LST: self.product_nmat.values.flatten().tolist(),
                cn.S_NETWORK_NAME: self.network_name,
                cn.S_REACTION_NAMES: self.reaction_names,
                cn.S_SPECIES_NAMES: self.species_names}
@@ -656,10 +658,10 @@ class NetworkBase(object):
                 reaction_vtx = num_species + i_reaction
                 if identity == cn.ID_STRONG:
                     # Reactants
-                    for _ in range(int(self.reactant_mat.values[i_species, i_reaction])):
+                    for _ in range(int(self.reactant_nmat.values[i_species, i_reaction])):
                         vertex_dct[species_vtx].append(reaction_vtx)
                     # Products
-                    for _ in range(int(self.product_mat.values[i_species, i_reaction])):
+                    for _ in range(int(self.product_nmat.values[i_species, i_reaction])):
                         vertex_dct[reaction_vtx].append(species_vtx)
                 else:
                     # Weak identity. Use the standard stoichiometry matrix
