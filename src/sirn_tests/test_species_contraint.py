@@ -22,23 +22,15 @@ PRODUCT_MATRIX = NamedMatrix(np.array([[1, 1], [1, 0], [0, 0]]))
 class TestSpeciesConstraint(unittest.TestCase):
 
     def setUp(self):
-        self.species_constraint = SpeciesConstraint(REACTANT_MATRIX.copy(), PRODUCT_MATRIX.copy()) 
+        self.constraint = SpeciesConstraint(REACTANT_MATRIX.copy(), PRODUCT_MATRIX.copy()) 
 
     def testConstructor(self):
         if IGNORE_TEST:
             return
-        self.assertEqual(self.species_constraint.reactant_nmat, REACTANT_MATRIX)
-        self.assertEqual(self.species_constraint.product_nmat, PRODUCT_MATRIX)
-        self.assertEqual(self.species_constraint._equality_nmat, NULL_NMAT)
-        self.assertEqual(self.species_constraint._inequality_nmat, NULL_NMAT)
-
-    def testMakeSpeciesConstraintMatrix(self):
-        if IGNORE_TEST:
-            return
-        named_matrix = self.species_constraint._makeSpeciesConstraintMatrix()
-        self.assertTrue(isinstance(named_matrix, NamedMatrix))
-        df = named_matrix.dataframe
-        self.assertGreater(len(df), 0)
+        self.assertEqual(self.constraint.reactant_nmat, REACTANT_MATRIX)
+        self.assertEqual(self.constraint.product_nmat, PRODUCT_MATRIX)
+        self.assertEqual(self.constraint._categorical_nmat, NULL_NMAT)
+        self.assertEqual(self.constraint._enumerated_nmat, NULL_NMAT)
 
     def testMakeSpeciesConstraintMatrixScale(self):
         if IGNORE_TEST:
@@ -51,7 +43,7 @@ class TestSpeciesConstraint(unittest.TestCase):
             uni_result =  re.findall(": S.. ->", str(network))
             num_uni_re += len(list(uni_result))
             species_constraint = SpeciesConstraint(network.reactant_nmat, network.product_nmat)
-            named_matrix = species_constraint._makeSpeciesReactionConstraintMatrix()
+            named_matrix = species_constraint._makeReactantProductConstraintMatrix()
             self.assertTrue(isinstance(named_matrix, NamedMatrix))
             df = named_matrix.dataframe
             uni_names = ['r_uni-null', 'r_uni-uni', 'r_uni-bi', 'r_uni-multi']
@@ -89,6 +81,18 @@ class TestSpeciesConstraint(unittest.TestCase):
             self.assertTrue(isinstance(named_matrix, NamedMatrix))
             df = named_matrix.dataframe
             self.assertGreater(len(df), 0)
+
+    def testCategoricalAndEnumeratedConstraints(self):
+        if IGNORE_TEST:
+            return
+        for _ in range(4):
+            self.constraint.setSubset(True)
+            self.assertTrue(self.constraint.equality_nmat is NULL_NMAT)
+            self.assertTrue(self.constraint.inequality_nmat is not NULL_NMAT)
+            #
+            self.constraint.setSubset(False)
+            self.assertTrue(self.constraint.equality_nmat is not NULL_NMAT)
+            self.assertTrue(self.constraint.inequality_nmat is NULL_NMAT)
 
 
 

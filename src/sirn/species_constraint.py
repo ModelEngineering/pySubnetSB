@@ -1,11 +1,10 @@
 '''Constraint species.'''
 
 """
-Constraints are 
-  1. counts of reaction types in which a species is a reactant or product;
-  2. number of autocatalysis reactions for a species.
-For induced graphs (is_subset=False), there are only equality constraints.
-For noninduced graphs (is_subset=True), there are only inequality constraints.
+Implements the calculation of categorical and enumerated constraints for species.
+  Enumerated constraints: 
+    counts of reaction types in which a species is a reactant or product
+    number of autocatalysis reactions for a species.
 """
 
 from sirn.named_matrix import NamedMatrix # type: ignore
@@ -26,46 +25,26 @@ class SpeciesConstraint(Constraint):
         """
         super().__init__(reactant_nmat=reactant_nmat, product_nmat=product_nmat)
         #
-        self.is_subset = is_subset
-        self.is_initialized = False
-        self._inequality_nmat = NULL_NMAT
-        self._equality_nmat = NULL_NMAT
-        self._species_constraint_nmat = self._makeSpeciesConstraintMatrix()
+        self._is_initialized = False
+        self._enumerated_nmat = NULL_NMAT
+        self._categorical_nmat = NULL_NMAT
 
     @property
-    def equality_nmat(self)->NamedMatrix:
-        # This property overrides the parent property
-        if not self.is_initialized:
-            if self.is_subset:
-                self._inequality_nmat = NULL_NMAT
-                self._equality_nmat = self._species_constraint_nmat
-            else:
-                self._equality_nmat = NULL_NMAT
-                self._inequality_nmat = self._species_constraint_nmat
-            self.is_initialized = True
-        return self._equality_nmat
-        
+    def enumerated_nmat(self)->NamedMatrix:
+        if not self._is_initialized:
+            self._enumerated_nmat = NamedMatrix.hstack([self._makeReactantProductConstraintMatrix(),
+                  self._makeAutocatalysisConstraint()])
+            self._is_initialized = True
+        return self._enumerated_nmat
+
     @property
-    def inequality_nmat(self)->NamedMatrix:
-        # This property overrides the parent property
-        if not self.is_initialized:
-            if self.is_subset:
-                self._equality_nmat = NULL_NMAT
-                self._inequality_nmat = self._species_constraint_nmat
-            else:
-                self._inequality_nmat = NULL_NMAT
-                self._equality_nmat = self._species_constraint_nmat
-            self.is_initialized = True
-        return self._equality_nmat
+    def categorical_nmat(self)->NamedMatrix:
+        return self._categorical_nmat
 
     def __repr__(self)->str:
         return "Species--" + super().__repr__()
     
-    def setSubset(self, is_subset:bool)->None:
-        self.is_subset = is_subset
-        self.is_initialized = False
-    
-    def _makeSpeciesReactionConstraintMatrix(self)->NamedMatrix:
+    def _makeReactantProductConstraintMatrix(self)->NamedMatrix:
         """Make constraints for the reaction classification. These are {R, P} X {ReactionClassifications}
         where R is reactant and P is product.
 
@@ -79,7 +58,7 @@ class SpeciesConstraint(Constraint):
             reactant_array = np.zeros(len(reaction_classifications))
             product_array = np.zeros(len(reaction_classifications))
             for i_reaction in range(self.num_reaction):
-                i_constraint_str = str(self.reaction_classifications[i_reaction])
+                i_constraint_str = str(self.reaction_classification_arr[i_reaction])
                 idx = reaction_classifications.index(i_constraint_str)
                 if self.reactant_nmat.values[i_species, i_reaction] > 0:
                     reactant_array[idx] += 1
@@ -114,12 +93,3 @@ class SpeciesConstraint(Constraint):
                            column_description=self.reactant_nmat.row_description,
                            column_names=column_names)
         return named_matrix
-    
-    def _makeSpeciesConstraintMatrix(self)->NamedMatrix:
-        """Make the species constraint matrix.
-
-        Returns:
-            NamedMatrix: Rows are species, columns are constraints
-        """
-        return NamedMatrix.hstack([self._makeSpeciesReactionConstraintMatrix(),
-                                   self._makeAutocatalysisConstraint()])

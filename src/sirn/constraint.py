@@ -7,6 +7,10 @@ Constraint objects have two kinds of constraints:
 
 Constraints are NamedMatrices such that the columns are constraints and the rows are instances.
 For reaction networks, instances are either species or reactions.
+
+Subclasses are responsible for implementing:
+  property: categorical_nmat - NamedMatrix of categorical constraints
+  property: enumerated_nmat - NamedMatrix of enumerated constraints
 """
 
 import sirn.constants as cn # type: ignore
@@ -43,10 +47,11 @@ class CompatibilityCollection(object):
     
     def __len__(self)->int:
         return len(self.compatibilities)
-    
+     
     @property
     def num_permutation(self)->int:
         return int(np.prod([len(l) for l in self.compatibilities]))
+    
     
     def prune(self, max_permutation:int)->'CompatibilityCollection':
         """Randomly prune the compatibility collection to a maximum number of permutations
@@ -114,7 +119,7 @@ class ReactionClassification(object):
 #####################################
 class Constraint(object):
 
-    def __init__(self, reactant_nmat:NamedMatrix, product_nmat:NamedMatrix):
+    def __init__(self, reactant_nmat:NamedMatrix, product_nmat:NamedMatrix, is_subset:bool=True):
         """
         Args:
             reactant_nmat: NamedMatrix
@@ -125,10 +130,15 @@ class Constraint(object):
         self.reactant_nmat = reactant_nmat
         self.product_nmat = product_nmat
         self._num_row = NULL_INT
+        self.is_subset = is_subset
         # Calculated
+        self._reaction_classes = ReactionClassification.getReactionClassifications()
         self.num_species, self.num_reaction = self.reactant_nmat.num_row, self.reactant_nmat.num_column
-        self.reaction_classifications = self.classifyReactions()
+        self.reaction_classification_arr = self.classifyReactions()
         # Outputs are categorical_nmat and enumerated_nmat, which are implemented by subclass
+        self._is_subset_initialized = False
+        self._equality_nmat = NULL_NMAT
+        self._inequality_nmat = NULL_NMAT
 
     @property
     def num_row(self)->int:
@@ -136,18 +146,43 @@ class Constraint(object):
             self._num_row = self.equality_nmat.num_row
         return self._num_row
     
+    def _initializeSubset(self):
+        # Initialize the equality and inequality NamedMatrices
+        if self._is_subset_initialized:
+            return
+        if self.is_subset:
+            self._equality_nmat = self.categorical_nmat
+            self._inequality_nmat = self.enumerated_nmat
+        else:
+            if self._categorical_nmat == NULL_NMAT:
+                self._equality_nmat = self._enumerated_nmat
+            elif self._enumerated_nmat == NULL_NMAT:
+                self._equality_nmat = self._categorical_nmat
+            else:
+                self._equality_nmat = NamedMatrix.hstack([self._categorical_nmat, self._enumerated_nmat])
+            self._inequality_nmat = NULL_NMAT
+        self._is_subset_initialized = True
+    
+    @property
+    def categorical_nmat(self)->NamedMatrix:
+        raise NotImplementedError("categorical_nmat be implemented by subclass.")
+    
+    @property
+    def enumerated_nmat(self)->NamedMatrix:
+        raise NotImplementedError("categorical_nmat be implemented by subclass.")
+   
     @property
     def equality_nmat(self)->NamedMatrix:
-        # Columns are constraints for equality constraints
-        raise NotImplementedError("_categorical_nmat be implemented by subclass.")
+        self._initializeSubset()
+        return self._equality_nmat
     
     @property
     def inequality_nmat(self)->NamedMatrix:
-        # Columns are constraints for inequality constraints
-        raise NotImplementedError("_enumerated_nmat be implemented by subclass.")
+        self._initializeSubset()
+        return self._inequality_nmat
 
     def __repr__(self)->str:
-        return str(self.reactant_nmat, self.product_nmat)
+        return "Reactant\n" + str(self.reactant_nmat) + "\n\nProduct\n" +  str(self.product_nmat)
 
     def __eq__(self, other)->bool:
         if self.__class__.__name__ != other.__class__.__name__:
@@ -157,6 +192,10 @@ class Constraint(object):
         if self.product_nmat != other.product_nmat:
             return False
         return True
+    
+    def setSubset(self, is_subset:bool)->None:
+        self.is_subset = is_subset
+        self._is_subset_initialized = False
 
     def copy(self):
         return self.__class__(self.reactant_nmat.copy(), self.product_nmat.copy())
@@ -195,7 +234,7 @@ class Constraint(object):
     def calculateBooleanCompatibilityVector(cls, self_constraint_nmat:NamedMatrix,
               other_constraint_nmat:NamedMatrix, is_equality:bool=True)->np.ndarray[bool]:  # type: ignore
         """
-        Calculates the compatibility of the compatibility of two matrices of constraints.
+        Calculates the compatibility of two matrices of constraints.
 
         Args:
             other: Constraint
