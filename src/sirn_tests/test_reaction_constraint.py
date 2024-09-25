@@ -42,7 +42,7 @@ class TestReactionConstraint(unittest.TestCase):
         df = named_matrix.dataframe
         self.assertEqual(len(df), size)
     
-    def testMakePredecessorSuccessorConstraintMatrix(self):
+    def testMakeSuccessorConstraintMatrix(self):
         if IGNORE_TEST:
             return
         for _ in range(100):
@@ -52,6 +52,15 @@ class TestReactionConstraint(unittest.TestCase):
             named_matrix = constraint._makeSuccessorConstraintMatrix()
             sum_arr = named_matrix.values.sum(axis=1)
             self.assertTrue(np.all(sum_arr <= size))
+            # Try multiple successors
+            successors = []
+            for num_successor_traversal in [1, 2, 4]:
+                constraint = ReactionConstraint(network.reactant_nmat, network.product_nmat,
+                   num_successor_traversal=num_successor_traversal)
+                named_matrix = constraint._makeSuccessorConstraintMatrix()
+                successors.append(named_matrix.values.sum(axis=1))
+            total_arr = np.sum(successors, axis=0)
+            self.assertTrue(np.all(sum_arr <= total_arr))
 
     def testMakeAutocatalysisConstraintMatrix(self):
         if IGNORE_TEST:

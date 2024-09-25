@@ -17,18 +17,20 @@ import numpy as np
 #####################################
 class ReactionConstraint(Constraint):
 
-    def __init__(self, reactant_nmat:NamedMatrix, product_nmat:NamedMatrix, is_subset:bool=False):
+    def __init__(self, reactant_nmat:NamedMatrix, product_nmat:NamedMatrix,
+                 is_subset:bool=False, num_successor_traversal:int=1):
         """
         Args:
             reactant_nmat (NamedMatrix)
             product_nmat (NamedMatrix)
-            is_subset (bool, optional) Consider self as a subset of other.
+            num_successor_traversal (int, optional) Number of times to traverse successors
         """
-        super().__init__(reactant_nmat=reactant_nmat, product_nmat=product_nmat)
+        super().__init__(reactant_nmat=reactant_nmat, product_nmat=product_nmat, is_subset=is_subset)
         #
         self._is_initialized = False
         self._enumerated_nmat = NULL_NMAT  
         self._categorical_nmat = NULL_NMAT
+        self._num_successor_traversal = num_successor_traversal
 
     def _initialize(self):
         if self._is_initialized:
@@ -55,6 +57,9 @@ class ReactionConstraint(Constraint):
         """Make constraints for the reaction monopartite graph. These are the number of
         successor reactions of each type.
 
+        Args:
+            num_successor_traversal (int, optional): Number of times to traverse successors
+
         Returns:
             NamedMatrix: Rows are reactions, columns are constraints by count of reaction type.
               <ReactionType>
@@ -62,14 +67,18 @@ class ReactionConstraint(Constraint):
         # Create the monopartite graph
         incoming_arr = self.reactant_nmat.values.T
         outgoing_arr = self.product_nmat.values.T
-        monopartite_arr = np.sign(np.matmul(outgoing_arr, incoming_arr.T))
+        # Calculate immediate successors
+        one_successor_arr = np.matmul(outgoing_arr, incoming_arr.T)
+        successor_arr = one_successor_arr
+        for _ in range(self._num_successor_traversal - 1):
+            successor_arr = np.matmul(successor_arr, one_successor_arr)
         # Process the sucessors
         successor_arrays:list = []
         for ifrom in range(self.num_reaction):
             # Process the from row
             successor_dct = {str(n): 0 for n in self._reaction_classes}
             for ito in range(self.num_reaction):
-                successor_dct[str(self.reaction_classification_arr[ito])] += monopartite_arr[ifrom, ito]
+                successor_dct[str(self.reaction_classification_arr[ito])] += successor_arr[ifrom, ito]
             array = list(successor_dct.values())
             successor_arrays.append(array)
         successor_arr = np.array(successor_arrays)

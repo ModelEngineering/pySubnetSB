@@ -411,7 +411,7 @@ class NetworkBase(object):
         """
         Makes a random network based on the type of reaction. Parameers are in the form
             <p<#products>r<#reactants>_frc> where #products and #reactants are the number of
-            products and reactants
+            products and reactants. Ensures that species and reactions are unique.
         Fractions are from the paper "SBMLKinetics: a tool for annotation-independent classification of
             reaction kinetics for SBML models", Jin Liu, BMC Bioinformatics, 2023.
 
@@ -458,21 +458,34 @@ class NetworkBase(object):
                     break
             return reaction_type
         #######
-        # Initialize the reactant and product matrices
-        reactant_arr = np.zeros((num_species, num_reaction))
-        product_arr = np.zeros((num_species, num_reaction))
         # Construct the reactions by building the reactant and product matrices
-        for i_reaction in range(num_reaction):
-            frac = np.random.rand()
-            reaction_type = getType(frac)
-            num_product = int(reaction_type[1])
-            num_reactant = int(reaction_type[3])
-            # Products
-            product_idxs = np.random.randint(0, num_species, num_product)
-            product_arr[product_idxs, i_reaction] += 1
-            # Reactants
-            reactant_idxs = np.random.randint(0, num_species, num_reactant)
-            reactant_arr[reactant_idxs, i_reaction] += 1
+        for _ in range(1000):  # Iterate until get unique reactions and species
+            # Initialize the reactant and product matrices
+            reactant_arr = np.zeros((num_species, num_reaction))
+            product_arr = np.zeros((num_species, num_reaction))
+            for i_reaction in range(num_reaction):
+                frac = np.random.rand()
+                reaction_type = getType(frac)
+                num_product = int(reaction_type[1])
+                num_reactant = int(reaction_type[3])
+                # Products
+                product_idxs = np.random.randint(0, num_species, num_product)
+                product_arr[product_idxs, i_reaction] += 1
+                # Reactants
+                reactant_idxs = np.random.randint(0, num_species, num_reactant)
+                reactant_arr[reactant_idxs, i_reaction] += 1
+            # Check for unique species
+            merged_arr = np.hstack([reactant_arr, product_arr])
+            uniques = np.unique(merged_arr, axis=0)
+            if len(uniques) < num_reaction:
+                continue
+            # Check for unique reactions
+            merged_arr = np.hstack([reactant_arr.T, product_arr.T])
+            uniques = np.unique(merged_arr, axis=0)
+            if len(uniques) == num_reaction:
+                break
+        else:
+            raise RuntimeError("Could not find unique reactions.")
         # Eliminate 0 rows (species not used)
         if is_prune_species:
             keep_idxs:list = []

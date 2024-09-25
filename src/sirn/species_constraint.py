@@ -73,8 +73,8 @@ class SpeciesConstraint(Constraint):
         column_labels = reactant_labels + product_labels
         # Make the NamedMatrix
         named_matrix = NamedMatrix(np.array(arrays), row_names=self.reactant_nmat.row_names,
-                           row_description=self.reactant_nmat.column_description,
-                           column_description=self.reactant_nmat.row_description,
+                           row_description='species',
+                           column_description='constraints',
                            column_names=column_labels)
         return named_matrix
     
@@ -89,7 +89,7 @@ class SpeciesConstraint(Constraint):
         vector = np.sum(array, axis=1)
         vector = np.reshape(vector, (len(vector), 1))
         named_matrix = NamedMatrix(vector, row_names=self.reactant_nmat.row_names,
-                           row_description=self.reactant_nmat.column_description,
-                           column_description=self.reactant_nmat.row_description,
+                           row_description='species',
+                           column_description='constraints',
                            column_names=column_names)
         return named_matrix

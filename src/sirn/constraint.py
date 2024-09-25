@@ -83,7 +83,6 @@ class CompatibilityCollection(object):
             # Delete the element
             del collection.compatibilities[irow][pos]
         else:
-            import pdb; pdb.set_trace()
             raise ValueError("Could not prune the collection.")
         #
         return collection
@@ -100,10 +99,7 @@ class ReactionClassification(object):
 
     def __repr__(self)->str:
         labels = ["null", "uni", "bi", "multi"]
-        try:
-            result = f"{labels[int(self.num_reactant)]}-{labels[int(self.num_product)]}"
-        except:
-            import pdb; pdb.set_trace()
+        result = f"{labels[int(self.num_reactant)]}-{labels[int(self.num_product)]}"
         return result
 
     @classmethod 
@@ -129,7 +125,7 @@ class Constraint(object):
         """
         self.reactant_nmat = reactant_nmat
         self.product_nmat = product_nmat
-        self._num_row = NULL_INT
+        self.num_row = self.reactant_nmat.num_row
         self.is_subset = is_subset
         # Calculated
         self._reaction_classes = ReactionClassification.getReactionClassifications()
@@ -139,12 +135,6 @@ class Constraint(object):
         self._is_subset_initialized = False
         self._equality_nmat = NULL_NMAT
         self._inequality_nmat = NULL_NMAT
-
-    @property
-    def num_row(self)->int:
-        if self._num_row == NULL_INT:
-            self._num_row = self.equality_nmat.num_row
-        return self._num_row
     
     def _initializeSubset(self):
         # Initialize the equality and inequality NamedMatrices
@@ -154,12 +144,12 @@ class Constraint(object):
             self._equality_nmat = self.categorical_nmat
             self._inequality_nmat = self.enumerated_nmat
         else:
-            if self._categorical_nmat == NULL_NMAT:
-                self._equality_nmat = self._enumerated_nmat
-            elif self._enumerated_nmat == NULL_NMAT:
-                self._equality_nmat = self._categorical_nmat
+            if self.categorical_nmat == NULL_NMAT:
+                self._equality_nmat = self.enumerated_nmat
+            elif self.enumerated_nmat == NULL_NMAT:
+                self._equality_nmat = self.categorical_nmat
             else:
-                self._equality_nmat = NamedMatrix.hstack([self._categorical_nmat, self._enumerated_nmat])
+                self._equality_nmat = NamedMatrix.hstack([self.categorical_nmat, self.enumerated_nmat])
             self._inequality_nmat = NULL_NMAT
         self._is_subset_initialized = True
     
@@ -182,7 +172,7 @@ class Constraint(object):
         return self._inequality_nmat
 
     def __repr__(self)->str:
-        return "Reactant\n" + str(self.reactant_nmat) + "\n\nProduct\n" +  str(self.product_nmat)
+        return "Categorical\n" + str(self.categorical_nmat) + "\n\nEnumerated\n" +  str(self.enumerated_nmat)
 
     def __eq__(self, other)->bool:
         if self.__class__.__name__ != other.__class__.__name__:
@@ -291,6 +281,7 @@ class Constraint(object):
         elif is_inequality_compatibility:
             compatibility_arr = inequality_compatibility_arr
         else:
+            import pdb; pdb.set_trace()
             raise ValueError("No compatibility constraints.")
         # Create the compatibility collection
         compatibility_collection = CompatibilityCollection(self.num_row, other.num_row)
