@@ -94,6 +94,18 @@ class TestSpeciesConstraint(unittest.TestCase):
             self.assertTrue(self.constraint.equality_nmat is not NULL_NMAT)
             self.assertTrue(self.constraint.inequality_nmat is NULL_NMAT)
 
+    def testmakeSuccessorConstraintMatrix(self):
+        if IGNORE_TEST:
+            return
+        for _ in range(100):
+            size = 20
+            network = Network.makeRandomNetworkByReactionType(size, size)
+            species_constraint = SpeciesConstraint(network.reactant_nmat, network.product_nmat)
+            named_matrix = species_constraint._makeSuccessorConstraintMatrix()
+            self.assertTrue(isinstance(named_matrix, NamedMatrix))
+            df = named_matrix.dataframe
+            self.assertGreater(len(df), 0)
+
 
 
 if __name__ == '__main__':

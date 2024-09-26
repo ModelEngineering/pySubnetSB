@@ -33,7 +33,7 @@ class SpeciesConstraint(Constraint):
     def enumerated_nmat(self)->NamedMatrix:
         if not self._is_initialized:
             self._enumerated_nmat = NamedMatrix.hstack([self._makeReactantProductConstraintMatrix(),
-                  self._makeAutocatalysisConstraint()])
+                  self._makeAutocatalysisConstraint(), self._makeSuccessorConstraintMatrix()])
             self._is_initialized = True
         return self._enumerated_nmat
 
@@ -91,5 +91,33 @@ class SpeciesConstraint(Constraint):
         named_matrix = NamedMatrix(vector, row_names=self.reactant_nmat.row_names,
                            row_description='species',
                            column_description='constraints',
+                           column_names=column_names)
+        return named_matrix
+
+    def _makeSuccessorConstraintMatrix(self)->NamedMatrix:
+        """Make constructs an enumerated constraint that is the number of species
+        that are reachable in N steps, where N is 2, 4, 8, 16, 32, 64, 128.
+
+        Returns:
+            NamedMatrix: Rows are reactions, columns are constraints by count of reaction type.
+              <ReactionType>
+        """
+        STEPS = np.array([2, 4, 8, 16, 32, 64, 128])
+        # Create the monopartite graph
+        incoming_arr = self.reactant_nmat.values
+        outgoing_arr = self.product_nmat.values
+        # Calculate immediate successors
+        successor_arr = np.sign(np.matmul(incoming_arr, outgoing_arr.T))
+        step_arrs:list = []
+        for _ in STEPS:
+            successor_arr = np.sign(np.matmul(successor_arr, successor_arr.T))
+            sum_arr = np.sum(successor_arr, axis=1)
+            step_arrs.append(sum_arr)
+        step_arr = np.array(step_arrs).T
+        # Make the NamedMatrix
+        column_names = [f"succ_{n}" for n in STEPS]
+        named_matrix = NamedMatrix(step_arr, row_names=self.reactant_nmat.row_names,
+                           row_description='species',
+                           column_description="constraints",
                            column_names=column_names)
         return named_matrix

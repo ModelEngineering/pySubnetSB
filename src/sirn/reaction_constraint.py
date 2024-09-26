@@ -57,9 +57,6 @@ class ReactionConstraint(Constraint):
         """Make constraints for the reaction monopartite graph. These are the number of
         successor reactions of each type.
 
-        Args:
-            num_successor_traversal (int, optional): Number of times to traverse successors
-
         Returns:
             NamedMatrix: Rows are reactions, columns are constraints by count of reaction type.
               <ReactionType>
