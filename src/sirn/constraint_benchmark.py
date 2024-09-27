@@ -16,9 +16,9 @@ To do
 
 """
 
-from src.sirn.reaction_constraint import ReactionConstraint
-from src.sirn.species_constraint import SpeciesConstraint
-from src.sirn.network import Network
+from sirn.reaction_constraint import ReactionConstraint  # type: ignore
+from sirn.species_constraint import SpeciesConstraint    # type: ignore
+from sirn.network import Network                         # type: ignore
 
 import collections
 import numpy as np
@@ -39,7 +39,7 @@ StudyResult = collections.namedtuple('StudyResult', ['is_categorical_id', 'study
 #  benchmark_results: List[pd.DataFrame]
 
 
-class Benchmark(object):
+class ConstraintBenchmark(object):
     def __init__(self, reference_size:int, fillter_size:int, num_iteration:int,
                  is_subset:bool=False):
         """
@@ -60,32 +60,6 @@ class Benchmark(object):
                 self.filler_size, self.filler_size)
                 for _ in range(num_iteration)]
         self.benchmark_result_df = NULL_DF  # Updated with result of run
-
-    @staticmethod
-    def makeFillerNetwork(reference_network:Network, filler_network:Network)->Network:
-        # Creates a supernetwork with the reference in the upper left corner of the matrices
-        # and the filler network in the bottom right. Then, randomize.
-        num_reference_species = reference_network.num_species
-        num_filler_species = filler_network.num_species
-        num_reference_reaction = reference_network.num_reaction
-        num_filler_reaction = filler_network.num_reaction
-        right_hpad_arr = np.zeros((num_reference_species, num_filler_reaction))
-        right_hpad_arr = np.zeros((num_reference_species, num_reference_reaction))
-        left_hpad_arr = np.zeros((num_filler_species, num_reference_reaction))
-        #####
-        def makeTargetArray(reference_arr:np.ndarray, filler_arr:np.ndarray)->np.ndarray:
-            target_reactant_arr = np.hstack([reference_arr, right_hpad_arr])
-            target_reactant_arr = np.vstack([target_reactant_arr, left_hpad_arr])
-            target_reactant_arr = np.vstack([target_reactant_arr, left_hpad_arr])
-            return np.hstack([left_hpad_arr, filler_arr])
-        ##### 
-        # Construct the reactant array so that reference is upper left and filler is lower right
-        target_reactant_arr = makeTargetArray(reference_network.reactant_nmat.values,
-              filler_network.reactant_nmat.values)
-        target_product_arr = makeTargetArray(reference_network.product_nmat.values,
-              filler_network.product_nmat.values)
-        target_network = Network(target_reactant_arr, target_product_arr)
-        return target_network.permute()
 
     @staticmethod 
     def _getConstraintClass(is_species:bool=True):
@@ -114,7 +88,7 @@ class Benchmark(object):
                     reference_network.reactant_nmat, reference_network.product_nmat,
                     is_subset=self.is_subset)
             if self.is_subset:
-                target_network = self._makeTargetArray(reference_network, filler_network)
+                target_network = reference_network.fill(filler_network=filler_network)
                 target_constraint = constraint_cls(target_network.reactant_nmat, target_network.product_nmat)
             else:
                 target_constraint = reference_constraint
@@ -191,4 +165,4 @@ class Benchmark(object):
     
 
 if __name__ == '__main__':
-    Benchmark.plotConstraintStudy(5, 5, expansion_factor=3)
+    ConstraintBenchmark.plotConstraintStudy(5, 5, expansion_factor=3)
