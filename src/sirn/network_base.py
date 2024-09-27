@@ -288,8 +288,8 @@ class NetworkBase(object):
         reactant_arr = reactant_arr[:, reaction_perm]
         product_arr = product_arr[species_perm, :]
         product_arr = product_arr[:, reaction_perm]
-        reaction_names = np.array([self.reaction_names[i] for i in reaction_perm])
-        species_names = np.array([self.species_names[i] for i in species_perm])
+        reaction_names = np.array(self.reaction_names[reaction_perm])
+        species_names = np.array(self.species_names[species_perm])
         assignment_pair = AssignmentPair(np.argsort(species_perm), np.argsort(reaction_perm))
         return self.__class__(reactant_arr, product_arr,
               reaction_names=reaction_names, species_names=species_names), assignment_pair
@@ -411,7 +411,7 @@ class NetworkBase(object):
         """
         Makes a random network based on the type of reaction. Parameers are in the form
             <p<#products>r<#reactants>_frc> where #products and #reactants are the number of
-            products and reactants. Ensures that species and reactions are unique.
+            products and reactants. Ensures that reactions are unique.
         Fractions are from the paper "SBMLKinetics: a tool for annotation-independent classification of
             reaction kinetics for SBML models", Jin Liu, BMC Bioinformatics, 2023.
 
@@ -458,34 +458,36 @@ class NetworkBase(object):
                     break
             return reaction_type
         #######
+        MAX_ITERATION = 1000
         # Construct the reactions by building the reactant and product matrices
-        for _ in range(1000):  # Iterate until get unique reactions and species
-            # Initialize the reactant and product matrices
-            reactant_arr = np.zeros((num_species, num_reaction))
-            product_arr = np.zeros((num_species, num_reaction))
-            for i_reaction in range(num_reaction):
-                frac = np.random.rand()
-                reaction_type = getType(frac)
-                num_product = int(reaction_type[1])
-                num_reactant = int(reaction_type[3])
-                # Products
-                product_idxs = np.random.randint(0, num_species, num_product)
-                product_arr[product_idxs, i_reaction] += 1
-                # Reactants
-                reactant_idxs = np.random.randint(0, num_species, num_reactant)
-                reactant_arr[reactant_idxs, i_reaction] += 1
-            # Check for unique species
-            merged_arr = np.hstack([reactant_arr, product_arr])
-            uniques = np.unique(merged_arr, axis=0)
-            if len(uniques) < num_reaction:
-                continue
+        reactant_arr = np.zeros((num_species, num_reaction))
+        product_arr = np.zeros((num_species, num_reaction))
+        i_reaction = 0
+        num_iteration = 0
+        while i_reaction < num_reaction:
+            num_iteration += 1
+            if num_iteration > MAX_ITERATION:
+                raise ValueError("Could not find unique reactions.")
+            frac = np.random.rand()
+            reaction_type = getType(frac)
+            num_product = int(reaction_type[1])
+            num_reactant = int(reaction_type[3])
+            # Products
+            product_idxs = np.random.randint(0, num_species, num_product)
+            product_arr[product_idxs, i_reaction] += 1
+            # Reactants
+            reactant_idxs = np.random.randint(0, num_species, num_reactant)
+            reactant_arr[reactant_idxs, i_reaction] += 1
             # Check for unique reactions
-            merged_arr = np.hstack([reactant_arr.T, product_arr.T])
+            merged_arr = np.hstack([reactant_arr.T[:i_reaction+1], product_arr.T[:i_reaction+1]])
             uniques = np.unique(merged_arr, axis=0)
-            if len(uniques) == num_reaction:
-                break
-        else:
-            raise RuntimeError("Could not find unique reactions.")
+            if len(uniques) == i_reaction + 1:
+                # Unique reaction. Keep it
+                i_reaction += 1
+            else:
+                # Duplicated reaction. Back it out
+                product_arr[product_idxs, i_reaction] -= 1
+                reactant_arr[reactant_idxs, i_reaction] -= 1
         # Eliminate 0 rows (species not used)
         if is_prune_species:
             keep_idxs:list = []
@@ -736,3 +738,46 @@ class NetworkBase(object):
         for vertex, label in graph_descriptor.label_dct.items():
             outputs.append(f"{vertex},,{label}")
         return '\n'.join(outputs)
+    
+    def fill(self, num_fill_species:Optional[int]=3,
+          num_fill_reaction:Optional[int]=3,
+          filler_network:Optional['NetworkBase']=None)->'NetworkBase':
+        """Creates a new network that augments (fills) the existing network with new species and reactions.
+
+        Args:
+            num_fill_species (int): Number of filler species
+            num_fill_reaction (int): Number of filler reactions
+            filler_network (Network): Network to use as filler. Ignores num_fill_species and num_fill_reaction.
+
+        Returns:
+            Network
+        """
+        if filler_network is None:
+            if num_fill_species < 1:  # type: ignore
+                raise ValueError("Number of filler species must be at least 1.")
+            if num_fill_reaction < 1: # type: ignore
+                raise ValueError("Number of filler reaction must be at least 1.")
+            filler_network = NetworkBase.makeRandomNetworkByReactionType(num_fill_reaction,  # type: ignore
+                num_fill_species)
+        else:
+            num_fill_species = filler_network.num_species
+            num_fill_reaction = filler_network.num_reaction
+        # Creates a supernetwork with the reference in the upper left corner of the matrices
+        # and the filler network in the bottom right. Then, randomize.
+        self_pad_arr = np.zeros((self.num_species, filler_network.num_reaction))   # type: ignore
+        filler_pad_arr = np.zeros((filler_network.num_species, self.num_reaction)) # type: ignore
+        #####
+        def makeTargetArray(reference_arr:np.ndarray, filler_arr:np.ndarray)->np.ndarray:
+            padded_reference_arr = np.hstack([reference_arr.copy(), self_pad_arr])
+            padded_filler_arr = np.hstack([filler_pad_arr, filler_arr.copy()])
+            target_arr = np.vstack([padded_reference_arr, padded_filler_arr])
+            return target_arr
+        ##### 
+        # Construct the reactant array so that reference is upper left and filler is lower right
+        target_reactant_arr = makeTargetArray(self.reactant_nmat.values,
+              filler_network.reactant_nmat.values)
+        target_product_arr = makeTargetArray(self.product_nmat.values,
+              filler_network.product_nmat.values)
+        target_network = self.__class__(target_reactant_arr, target_product_arr)
+        target_network, _ = target_network.permute()
+        return target_network

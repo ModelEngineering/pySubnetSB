@@ -99,7 +99,10 @@ class ReactionClassification(object):
 
     def __repr__(self)->str:
         labels = ["null", "uni", "bi", "multi"]
-        result = f"{labels[int(self.num_reactant)]}-{labels[int(self.num_product)]}"
+        try:
+            result = f"{labels[int(self.num_reactant)]}-{labels[int(self.num_product)]}"
+        except:
+            import pdb; pdb.set_trace()
         return result
 
     @classmethod 
@@ -235,6 +238,7 @@ class Constraint(object):
                 index n represents i*self_num_row + jth row in other
         """
         if self_constraint_nmat.num_column != other_constraint_nmat.num_column:
+            import pdb; pdb.set_trace()
             raise ValueError("Incompatible number of columns.")
         #
         self_num_row = self_constraint_nmat.num_row

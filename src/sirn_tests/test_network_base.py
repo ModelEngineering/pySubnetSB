@@ -246,8 +246,9 @@ class TestNetwork(unittest.TestCase):
         for _ in range(100):
             size = np.random.randint(3, 20)
             network = NetworkBase.makeRandomNetworkByReactionType(size)
-            eval_arr = np.hstack([network.reactant_nmat.values, network.product_nmat.values])
-            sum_arr = np.sum(eval_arr, axis=1)
+            eval_arr = np.vstack([network.reactant_nmat.values, network.product_nmat.values])
+            # Verify that all reactions have at least one participant
+            sum_arr = np.sum(eval_arr, axis=0)
             self.assertTrue(np.all(sum_arr > 0))
 
     def testToFromSeries(self):
@@ -297,6 +298,24 @@ class TestNetwork(unittest.TestCase):
                 self.assertEqual(num_species, network.num_species)
                 num_reaction = np.sum([v == 'reaction' for v in label_dct.values()])
                 self.assertEqual(num_reaction, network.num_reaction)
+
+    def testFill(self):
+        if IGNORE_TEST:
+            return
+        for fill_size in range(1, 5):
+            network = NetworkBase.makeRandomNetworkByReactionType(5, 5)
+            filled_network = network.fill(num_fill_reaction=fill_size, num_fill_species=fill_size)
+            self.assertLessEqual(filled_network.num_species, network.num_species + fill_size)
+            self.assertEqual(filled_network.num_reaction, network.num_reaction + fill_size)
+        #
+        with self.assertRaises(ValueError):
+            network.fill(num_fill_reaction=0, num_fill_species=0)
+        #
+        fill_size = 5
+        filler_network = NetworkBase.makeRandomNetworkByReactionType(5, 5)
+        filled_network = network.fill(filler_network=filler_network)
+        self.assertLessEqual(filled_network.num_species, network.num_species + fill_size)
+        self.assertEqual(filled_network.num_reaction, network.num_reaction + fill_size)
 
 if __name__ == '__main__':
     unittest.main(failfast=True)
