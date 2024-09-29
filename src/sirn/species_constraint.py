@@ -102,7 +102,7 @@ class SpeciesConstraint(Constraint):
             NamedMatrix: Rows are reactions, columns are constraints by count of reaction type.
               <ReactionType>
         """
-        STEPS = np.array([2, 4, 8, 16, 32, 64, 128])
+        STEPS = np.array(range(5))
         # Create the monopartite graph
         incoming_arr = self.reactant_nmat.values
         outgoing_arr = self.product_nmat.values

@@ -13,11 +13,13 @@ Subclasses are responsible for implementing:
   property: enumerated_nmat - NamedMatrix of enumerated constraints
 """
 
+import scipy.special  # type: ignore
 import sirn.constants as cn # type: ignore
 from sirn.named_matrix import NamedMatrix # type: ignore
 
 import json
 import numpy as np
+import scipy  # type: ignore
 from typing import Optional, List
 
 NULL_NMAT = NamedMatrix(np.array([[]]))
@@ -49,9 +51,9 @@ class CompatibilityCollection(object):
         return len(self.compatibilities)
      
     @property
-    def num_permutation(self)->int:
-        return int(np.prod([len(l) for l in self.compatibilities]))
-    
+    def log10_num_permutation(self)->int:
+        # Calculates the log of the number of permutations implied by the compatibility collection
+        return np.sum([np.log10(len(l)) for l in self.compatibilities])
     
     def prune(self, max_permutation:int)->'CompatibilityCollection':
         """Randomly prune the compatibility collection to a maximum number of permutations
@@ -65,7 +67,7 @@ class CompatibilityCollection(object):
         collection = self.copy()
         #
         for idx in range(1000000):
-            if collection.num_permutation <= max_permutation:
+            if collection.log10_num_permutation <= np.log(max_permutation):
                 break
             candidate_rows = [i for i in range(collection.num_self_row)
                               if len(collection.compatibilities[i]) > 1]  
@@ -99,10 +101,7 @@ class ReactionClassification(object):
 
     def __repr__(self)->str:
         labels = ["null", "uni", "bi", "multi"]
-        try:
-            result = f"{labels[int(self.num_reactant)]}-{labels[int(self.num_product)]}"
-        except:
-            import pdb; pdb.set_trace()
+        result = f"{labels[int(self.num_reactant)]}-{labels[int(self.num_product)]}"
         return result
 
     @classmethod 
@@ -138,6 +137,24 @@ class Constraint(object):
         self._is_subset_initialized = False
         self._equality_nmat = NULL_NMAT
         self._inequality_nmat = NULL_NMAT
+
+    @classmethod
+    def calculateLog10UnconstrainedPermutation(cls, reference_size:int, target_size:int)->float:
+        """Calculates the log10 of the number of permutations to examine if no constraint is applied.
+
+        Args:
+            reference_size: int (number of species and reactions)
+            target_size: int (number of species and reactions)
+
+        Returns:
+            float
+        """
+        def calculatePermutation(num_reference:int, num_target:int)->int:
+            result = scipy.special.factorial(num_target) /  \
+                  scipy.special.factorial(num_target - num_reference, exact=True)
+            return result
+        log_permutation = np.log10(calculatePermutation(reference_size, target_size))
+        return 2*log_permutation
     
     def _initializeSubset(self):
         # Initialize the equality and inequality NamedMatrices
@@ -238,7 +255,6 @@ class Constraint(object):
                 index n represents i*self_num_row + jth row in other
         """
         if self_constraint_nmat.num_column != other_constraint_nmat.num_column:
-            import pdb; pdb.set_trace()
             raise ValueError("Incompatible number of columns.")
         #
         self_num_row = self_constraint_nmat.num_row
@@ -277,7 +293,7 @@ class Constraint(object):
                   other.inequality_nmat, is_equality=False)
         else:
             is_inequality_compatibility = False
-        # Calculate the compatibility vector
+        # Calculate the compatibility vector by combining the equality and inequality constraints
         if is_equality_compatibility and is_inequality_compatibility:
             compatibility_arr = equality_compatibility_arr & inequality_compatibility_arr
         elif is_equality_compatibility:
@@ -285,7 +301,6 @@ class Constraint(object):
         elif is_inequality_compatibility:
             compatibility_arr = inequality_compatibility_arr
         else:
-            import pdb; pdb.set_trace()
             raise ValueError("No compatibility constraints.")
         # Create the compatibility collection
         compatibility_collection = CompatibilityCollection(self.num_row, other.num_row)

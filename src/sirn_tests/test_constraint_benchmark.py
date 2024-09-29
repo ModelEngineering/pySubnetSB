@@ -1,7 +1,7 @@
-from sirn.constraint_benchmark import ConstraintBenchmark
-from sirn.network import Network
-from sirn.species_constraint import SpeciesConstraint
-from sirn.reaction_constraint import ReactionConstraint
+from sirn.constraint_benchmark import ConstraintBenchmark  # type: ignore
+from sirn.network import Network  # type: ignore
+from sirn.species_constraint import SpeciesConstraint  # type: ignore
+from sirn.reaction_constraint import ReactionConstraint  # type: ignore
 
 import numpy as np
 import re
@@ -9,8 +9,8 @@ import time
 import unittest
 
 
-IGNORE_TEST = False
-IS_PLOT = False
+IGNORE_TEST = True
+IS_PLOT = True
 NUM_REACTION = 5
 NUM_SPECIES = 5
 NUM_ITERATION = 10
@@ -29,7 +29,7 @@ class TestBenchmark(unittest.TestCase):
             return
         self.assertEqual(self.benchmark.num_reaction, 5)
         self.assertEqual(len(self.benchmark.reference_networks), NUM_ITERATION)
-        self.assertEqual(len(self.benchmark.filler_networks), NUM_ITERATION)
+        self.assertEqual(len(self.benchmark.target_networks), NUM_ITERATION)
 
     def testGetConstraintClass(self):
         if IGNORE_TEST:
@@ -51,6 +51,12 @@ class TestBenchmark(unittest.TestCase):
         self.validateBenchmarkDataframe(self.benchmark, df)
         df = self.benchmark.run(is_species=False)
         self.validateBenchmarkDataframe(self.benchmark, df)
+
+    def testPlotConstraintStudy(self):
+        #if IGNORE_TEST:
+        #    return
+        for size in range(9, 10):
+            self.benchmark.plotConstraintStudy(size, size, is_plot=IS_PLOT)
 
 
 if __name__ == '__main__':

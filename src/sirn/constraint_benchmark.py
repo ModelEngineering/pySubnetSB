@@ -29,7 +29,7 @@ from typing import List
 
 NULL_DF = pd.DataFrame()
 C_TIME = 'time'
-C_NUM_PERMUTATION = 'num_permutation'
+C_LOG10_NUM_PERMUTATION = 'num_permutation'
 
 
 # A study result is a container of the results of multiple benchmarks
@@ -40,7 +40,7 @@ StudyResult = collections.namedtuple('StudyResult', ['is_categorical_id', 'study
 
 
 class ConstraintBenchmark(object):
-    def __init__(self, reference_size:int, fillter_size:int, num_iteration:int,
+    def __init__(self, reference_size:int, fill_size:int=0, num_iteration:int=1000,
                  is_subset:bool=False):
         """
         Args:
@@ -51,14 +51,16 @@ class ConstraintBenchmark(object):
         self.num_reaction = reference_size
         self.num_species = reference_size
         self.num_iteration = num_iteration
-        self.filler_size = fillter_size
+        self.fill_size = fill_size
         self.is_subset = is_subset
         # Calculated
         self.reference_networks = [Network.makeRandomNetworkByReactionType(self.num_reaction, self.num_species)
                 for _ in range(num_iteration)]
-        self.filler_networks = [Network.makeRandomNetworkByReactionType(
-                self.filler_size, self.filler_size)
-                for _ in range(num_iteration)]
+        if is_subset and fill_size > 0:
+            self.target_networks = [Network.fill(n, num_fill_reaction=self.num_reaction,
+              num_fill_species=self.num_species) for n in self.reference_networks]
+        self.target_networks = [Network.fill(n, num_fill_reaction=self.fill_size,
+              num_fill_species=self.fill_size) for n in self.reference_networks]
         self.benchmark_result_df = NULL_DF  # Updated with result of run
 
     @staticmethod 
@@ -81,30 +83,33 @@ class ConstraintBenchmark(object):
         times:list = []
         num_permutations:list = []
         constraint_cls = self._getConstraintClass(is_species)
-        for reference_network, filler_network in zip(self.reference_networks, self.filler_networks):
+        for reference_network, target_network in zip(self.reference_networks, self.target_networks):
             # Species
             start = time.time()
             reference_constraint = constraint_cls(
                     reference_network.reactant_nmat, reference_network.product_nmat,
                     is_subset=self.is_subset)
             if self.is_subset:
-                target_network = reference_network.fill(filler_network=filler_network)
-                target_constraint = constraint_cls(target_network.reactant_nmat, target_network.product_nmat)
+                target_constraint = constraint_cls(
+                    target_network.reactant_nmat, target_network.product_nmat, is_subset=self.is_subset)
             else:
                 target_constraint = reference_constraint
             compatibility_collection = reference_constraint.makeCompatibilityCollection(target_constraint)
             times.append(time.time() - start)
-            num_permutations.append(compatibility_collection.num_permutation)
-        self.benchmark_result_df = pd.DataFrame({C_TIME: times, C_NUM_PERMUTATION: num_permutations})
+            num_permutations.append(compatibility_collection.log10_num_permutation)
+        self.benchmark_result_df = pd.DataFrame({C_TIME: times, C_LOG10_NUM_PERMUTATION: num_permutations})
         return self.benchmark_result_df
 
     @classmethod 
-    def plotConstraintStudy(cls, num_species:int, num_reaction:int, **kwargs):
+    def plotConstraintStudy(cls, reference_size:int, fill_size:int, num_iteration:int=1000,
+                            is_plot:bool=True, **kwargs):
         """Plot the results of a study of constraints.
 
         Args:
-            num_reaction (int): Number of reactions
-            num_species (int): Number of species
+            reference_size (int): Size of the reference network
+            fill_size (int): Size of the filler network
+            num_iteration (int, optional): Number of iterations. Defaults to 1000.
+            is_plot (bool, optional): Plot the results. Defaults to True.
             kwargs: constructor options
         """
         def doPlot(df:pd.DataFrame, node_str:str, is_subset:bool=False, pos:int=0):
@@ -134,24 +139,18 @@ class ConstraintBenchmark(object):
     #####
         num_iteration = 1000
         fig, axes = plt.subplots(2, 3)
-        expansion_factor = kwargs.get('expansion_factor', 1)
-        suptitle = f"CDF of permutations for; #species={num_species}; "
-        suptitle += f"#reaction={num_reaction}; expf={expansion_factor}"
+        suptitle = f"CDF of permutations: reference_size={reference_size}; fill_size={fill_size}"
         fig.suptitle(suptitle)
         # Collect data and construct plots
         pos = 0
         benchmark_dct = {}
         for is_subset in [False, True]:
-            if is_subset:
-                expf = expansion_factor
-            else:
-                expf = 1
             for is_species in [False, True]:
                 if is_species:
                     node_str = 'Spc.'
                 else:
                     node_str = 'Rct.'
-                benchmark_dct[is_species] = cls(num_species, num_reaction, num_iteration,
+                benchmark_dct[is_species] = cls(reference_size, fill_size, num_iteration,
                       is_subset=is_subset, **kwargs)
                 benchmark_dct[is_species].run(is_species=is_species)
                 doPlot(benchmark_dct[is_species].benchmark_result_df, node_str, is_subset, pos=pos)
@@ -161,8 +160,10 @@ class ConstraintBenchmark(object):
             df += benchmark_dct[False].benchmark_result_df
             doPlot(df, "Total", is_subset, pos=pos)
             pos += 1
-        plt.show()
+        if is_plot:
+            plt.show()
     
 
 if __name__ == '__main__':
-    ConstraintBenchmark.plotConstraintStudy(5, 5, expansion_factor=3)
+    size = 20
+    ConstraintBenchmark.plotConstraintStudy(size, fill_size=size, num_iteration=100, is_plot=True)

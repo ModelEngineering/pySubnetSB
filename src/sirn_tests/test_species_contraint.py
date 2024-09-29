@@ -106,6 +106,25 @@ class TestSpeciesConstraint(unittest.TestCase):
             df = named_matrix.dataframe
             self.assertGreater(len(df), 0)
 
+    def testmakeCompatibilityCollection(self):
+        if IGNORE_TEST:
+            return
+        for _ in range(100):
+            size = 5
+            network = Network.makeRandomNetworkByReactionType(size, 100*size)
+            big_network = network.fill(num_fill_reaction=2*size, num_fill_species=2*size)
+            # Not doing initialization
+            species_constraint = SpeciesConstraint(network.reactant_nmat, network.product_nmat,
+                                                   is_subset=True)
+            big_species_constraint = SpeciesConstraint(big_network.reactant_nmat, big_network.product_nmat,
+                                                       is_subset=True)
+            compatibility_collection = species_constraint.makeCompatibilityCollection(
+                  big_species_constraint)
+            species_names = big_network.species_names
+            for irow, row_lst in enumerate(compatibility_collection.compatibilities):
+                trues = ["S" + str(irow) == species_names[i] for i in row_lst]
+                self.assertTrue(any(trues))
+
 
 
 if __name__ == '__main__':

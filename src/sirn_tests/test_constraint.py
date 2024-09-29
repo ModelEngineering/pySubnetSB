@@ -1,5 +1,6 @@
 from sirn.constraint import Constraint, ReactionClassification, CompatibilityCollection    # type: ignore
 from sirn.named_matrix import NamedMatrix   # type: ignore
+from sirn.network import Network  # type: ignore
 
 import itertools
 import numpy as np
@@ -9,10 +10,11 @@ import unittest
 
 IGNORE_TEST = False
 IS_PLOT = False
-REACTION_NAMES = ["J1", "J2"]
-SPECIES_NAMES = ["A", "B"]
-reactant_arr = np.array([[1, 0], [0, 1]])
-product_arr = np.array([[0, 1], [1, 0]])
+reactant_arr = np.array([[1, 0], [0, 1], [0, 0]]) # Must have 3 rows to be consistent with DummyConstraint
+product_arr = np.array([[0, 1], [1, 0], [0, 0]])
+NUM_SPECIES, NUM_REACTION = reactant_arr.shape
+SPECIES_NAMES = ["S" + str(i) for i in range(NUM_SPECIES)]
+REACTION_NAMES = ["J" + str(i) for i in range(NUM_REACTION)]
 REACTANT_NMAT = NamedMatrix(reactant_arr,  row_names=SPECIES_NAMES, column_names=REACTION_NAMES)
 PRODUCT_NMAT = NamedMatrix(product_arr,  row_names=SPECIES_NAMES, column_names=REACTION_NAMES)
 
@@ -49,7 +51,17 @@ class DummyConstraint(Constraint):
     @property
     def enumerated_nmat(self)->NamedMatrix:
         return self._enumerated_nmat
-    
+
+    @classmethod 
+    def makeDummyConstraint(cls, num_species:int=3, num_reaction:int=3):
+        for _ in range(100):
+            network = Network.makeRandomNetworkByReactionType(num_reaction, num_species)
+            if (num_species != network.num_species) or (num_reaction != network.num_reaction):
+                continue
+            break
+        else:
+            raise RuntimeError("Failed to make a random network")
+        return DummyConstraint(network.reactant_nmat, network.product_nmat)
 
 
 #############################
@@ -121,10 +133,10 @@ class TestCompatibilityCollection(unittest.TestCase):
     def testNumPermutation(self):
         if IGNORE_TEST:
             return
-        for size in np.random.randint(2, 20, 1000):
+        for size in np.random.randint(2, 50, 1000):
             collection = CompatibilityCollection(size, size)
             [collection.add(i-1, range(i)) for i in range(1, size+1)]
-            self.assertTrue(np.isclose(collection.num_permutation, factorial(size)))
+            self.assertTrue(np.isclose(collection.log10_num_permutation, np.log10(factorial(size))))
 
     def testPrune(self):
         if IGNORE_TEST:
@@ -134,7 +146,7 @@ class TestCompatibilityCollection(unittest.TestCase):
             collection = CompatibilityCollection(size, size)
             [collection.add(i-1, range(i)) for i in range(1, size+1)]
             new_collection = collection.prune(max_permutation)
-            self.assertTrue(new_collection.num_permutation <= max_permutation)
+            self.assertTrue(new_collection.log10_num_permutation <= max_permutation)
 
 
 #############################
@@ -193,7 +205,7 @@ class TestConstraint(unittest.TestCase):
         if IGNORE_TEST:
             return
         compatibility_collection = self.constraint.makeCompatibilityCollection(self.constraint)
-        self.assertEqual(compatibility_collection.num_permutation, 1)
+        self.assertTrue(np.isclose(compatibility_collection.log10_num_permutation, 0))
     
     def testMakeCompatibilityCollectionScale(self):
         if IGNORE_TEST:
@@ -205,6 +217,14 @@ class TestConstraint(unittest.TestCase):
         trues = [len(lst) >= scale
                    for lst in compatibility_collection.compatibilities]
         self.assertTrue(all(trues))
+
+    def testCalculateLog10UnconstrainedPermutation(self):
+        if IGNORE_TEST:
+            return
+        for size in range(3, 20):
+            log10_permutation = self.constraint.calculateLog10UnconstrainedPermutation(size, size)
+            self.assertTrue(np.isclose(log10_permutation, 2*np.log10(factorial(size))))
+
 
 
 if __name__ == '__main__':
