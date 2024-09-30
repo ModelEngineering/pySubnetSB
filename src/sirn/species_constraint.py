@@ -110,7 +110,7 @@ class SpeciesConstraint(Constraint):
         successor_arr = np.sign(np.matmul(incoming_arr, outgoing_arr.T))
         step_arrs:list = []
         for _ in STEPS:
-            successor_arr = np.matmul(successor_arr, successor_arr.T)
+            successor_arr = np.sign(np.matmul(successor_arr, successor_arr.T))
             sum_arr = np.sum(successor_arr, axis=1)
             step_arrs.append(sum_arr)
         step_arr = np.array(step_arrs).T

@@ -110,9 +110,10 @@ class TestSpeciesConstraint(unittest.TestCase):
         if IGNORE_TEST:
             return
         for _ in range(100):
-            size = 5
-            network = Network.makeRandomNetworkByReactionType(size, 100*size)
-            big_network = network.fill(num_fill_reaction=2*size, num_fill_species=2*size)
+            reference_size = 15
+            filler_size = 5*reference_size
+            network = Network.makeRandomNetworkByReactionType(reference_size, reference_size)
+            big_network = network.fill(num_fill_reaction=filler_size, num_fill_species=filler_size)
             # Not doing initialization
             species_constraint = SpeciesConstraint(network.reactant_nmat, network.product_nmat,
                                                    is_subset=True)
@@ -123,6 +124,8 @@ class TestSpeciesConstraint(unittest.TestCase):
             species_names = big_network.species_names
             for irow, row_lst in enumerate(compatibility_collection.compatibilities):
                 trues = ["S" + str(irow) == species_names[i] for i in row_lst]
+                if not any(trues):
+                    import pdb; pdb.set_trace()
                 self.assertTrue(any(trues))
 
 
