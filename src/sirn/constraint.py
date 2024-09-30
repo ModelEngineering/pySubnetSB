@@ -11,6 +11,7 @@ For reaction networks, instances are either species or reactions.
 Subclasses are responsible for implementing:
   property: categorical_nmat - NamedMatrix of categorical constraints
   property: enumerated_nmat - NamedMatrix of enumerated constraints
+  property: num_row - number of rows in the constraint matrix
 """
 
 import scipy.special  # type: ignore
@@ -127,7 +128,6 @@ class Constraint(object):
         """
         self.reactant_nmat = reactant_nmat
         self.product_nmat = product_nmat
-        self.num_row = self.reactant_nmat.num_row
         self.is_subset = is_subset
         # Calculated
         self._reaction_classes = ReactionClassification.getReactionClassifications()
@@ -180,6 +180,10 @@ class Constraint(object):
     @property
     def enumerated_nmat(self)->NamedMatrix:
         raise NotImplementedError("categorical_nmat be implemented by subclass.")
+    
+    @property
+    def num_row(self)->int:
+        raise NotImplementedError("num_row be implemented by subclass.")
    
     @property
     def equality_nmat(self)->NamedMatrix:

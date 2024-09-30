@@ -40,6 +40,10 @@ class SpeciesConstraint(Constraint):
     @property
     def categorical_nmat(self)->NamedMatrix:
         return self._categorical_nmat
+    
+    @property
+    def num_row(self)->int:
+        return self.reactant_nmat.num_row
 
     def __repr__(self)->str:
         return "Species--" + super().__repr__()
@@ -107,10 +111,10 @@ class SpeciesConstraint(Constraint):
         incoming_arr = self.reactant_nmat.values
         outgoing_arr = self.product_nmat.values
         # Calculate immediate successors
-        successor_arr = np.sign(np.matmul(incoming_arr, outgoing_arr.T))
+        successor_arr = np.sign(np.matmul(incoming_arr, outgoing_arr.T)).astype(int)
         step_arrs:list = []
         for _ in STEPS:
-            successor_arr = np.sign(np.matmul(successor_arr, successor_arr.T))
+            successor_arr = np.sign(np.matmul(successor_arr, successor_arr.T)).astype(int)
             sum_arr = np.sum(successor_arr, axis=1)
             step_arrs.append(sum_arr)
         step_arr = np.array(step_arrs).T

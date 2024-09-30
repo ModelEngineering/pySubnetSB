@@ -45,22 +45,19 @@ class TestReactionConstraint(unittest.TestCase):
     def testMakeSuccessorConstraintMatrix(self):
         if IGNORE_TEST:
             return
+        frac_duplicates = []
         for _ in range(100):
-            size = 30
+            size = 20
             network = Network.makeRandomNetworkByReactionType(size, size)
             constraint = ReactionConstraint(network.reactant_nmat, network.product_nmat)
-            named_matrix = constraint._makeSuccessorConstraintMatrix()
+            named_matrix = constraint._makeSuccessorPredecessorConstraintMatrix()
+            num_unique = len(np.unique(named_matrix.values, axis=0))
+            frac_duplicate = num_unique / len(named_matrix.values)
+            frac_duplicates.append(frac_duplicate)
             sum_arr = named_matrix.values.sum(axis=1)
-            self.assertTrue(np.all(sum_arr <= size))
-            # Try multiple successors
-            successors = []
-            for num_successor_traversal in [1, 2, 4]:
-                constraint = ReactionConstraint(network.reactant_nmat, network.product_nmat,
-                   num_successor_traversal=num_successor_traversal)
-                named_matrix = constraint._makeSuccessorConstraintMatrix()
-                successors.append(named_matrix.values.sum(axis=1))
-            total_arr = np.sum(successors, axis=0)
-            self.assertTrue(np.all(sum_arr <= total_arr))
+            self.assertTrue(isinstance(named_matrix, NamedMatrix))
+            self.assertTrue(np.all(sum_arr >= 0))
+        #print(np.mean(frac_duplicates))
 
     def testMakeAutocatalysisConstraintMatrix(self):
         if IGNORE_TEST:
@@ -79,7 +76,7 @@ class TestReactionConstraint(unittest.TestCase):
             # Regular expression counts occurrences, not reactions and so may exceed named_matrix sum.
             self.assertLessEqual(df.values.sum(), num_autocatalysis)
 
-    def testcategoricalAndenumeratedConstraints(self):
+    def testcategoricalAndEnumeratedConstraints(self):
         if IGNORE_TEST:
             return
         for _ in range(4):
@@ -90,6 +87,64 @@ class TestReactionConstraint(unittest.TestCase):
             self.constraint.setSubset(False)
             self.assertTrue(self.constraint.equality_nmat is not NULL_NMAT)
             self.assertTrue(self.constraint.inequality_nmat is NULL_NMAT)
+
+    def testmakeCompatibilityCollection(self):
+        if IGNORE_TEST:
+            return
+        num_permutations = []
+        for _ in range(100):
+            reference_size = 18
+            filler_size = 3*reference_size
+            network = Network.makeRandomNetworkByReactionType(reference_size, reference_size)
+            big_network = network.fill(num_fill_reaction=filler_size, num_fill_species=filler_size)
+            # Not doing initialization
+            reaction_constraint = ReactionConstraint(network.reactant_nmat, network.product_nmat,
+                                                   is_subset=True)
+            big_reaction_constraint = ReactionConstraint(big_network.reactant_nmat, big_network.product_nmat,
+                                                       is_subset=True)
+            compatibility_collection = reaction_constraint.makeCompatibilityCollection(
+                  big_reaction_constraint)
+            name_arr = np.array(big_reaction_constraint.reactant_nmat.column_names)
+            for i, arr in enumerate(compatibility_collection.compatibilities):
+                reference_name = "J" + str(i)
+                target_names = [name_arr[i] for i in arr]
+                if not reference_name in target_names:
+                    import pdb; pdb.set_trace()
+                self.assertTrue(reference_name in target_names)
+            num_permutations.append(compatibility_collection.log10_num_permutation)
+        #print(np.mean(num_permutations))
+
+    def testBug(self):
+        if IGNORE_TEST:
+            return
+        small_model = """
+        J0: S1 -> S1
+        J1: S0 + S1 -> S0 + S1
+        J2: S0 -> S0
+        """
+        network = Network.makeFromAntimonyStr(small_model)
+        big_model = """
+        J5: S2 -> S2 + S4
+  J0: S1 -> S1
+  J4: S3 -> S3
+  J1: S1 + S0 -> S1 + S0
+  J3:  -> S4
+  J2: S0 -> S0
+        """
+        big_network = Network.makeFromAntimonyStr(big_model)
+        reaction_constraint = ReactionConstraint(network.reactant_nmat, network.product_nmat,
+                                                   is_subset=True)
+        big_reaction_constraint = ReactionConstraint(big_network.reactant_nmat, big_network.product_nmat,
+                                                       is_subset=True)
+        compatibility_collection = reaction_constraint.makeCompatibilityCollection(
+                  big_reaction_constraint)
+        name_arr = np.array(big_reaction_constraint.reactant_nmat.column_names)
+        for i, arr in enumerate(compatibility_collection.compatibilities):
+                reference_name = "J" + str(i)
+                target_names = [name_arr[i] for i in arr]
+                if not reference_name in target_names:
+                    import pdb; pdb.set_trace()
+                self.assertTrue(reference_name in target_names)
 
 
 if __name__ == '__main__':

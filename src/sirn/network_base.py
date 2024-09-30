@@ -345,7 +345,8 @@ class NetworkBase(object):
         Returns:
             Network
         """
-        stoichiometry = Stoichiometry(antimony_str)
+        clean_antimony_str = antimony_str.replace("\n", ";\n")
+        stoichiometry = Stoichiometry(clean_antimony_str)
         network = cls(stoichiometry.reactant_mat, stoichiometry.product_mat, network_name=network_name,
                       species_names=stoichiometry.species_names, reaction_names=stoichiometry.reaction_names)
         return network
