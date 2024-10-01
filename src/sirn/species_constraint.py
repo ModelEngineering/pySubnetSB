@@ -28,12 +28,15 @@ class SpeciesConstraint(Constraint):
         self._is_initialized = False
         self._enumerated_nmat = NULL_NMAT
         self._categorical_nmat = NULL_NMAT
+        self._one_step_nmat = NULL_NMAT
+
+    ################# OVERLOADED PARENT CLASS METHODS #################
 
     @property
     def enumerated_nmat(self)->NamedMatrix:
         if not self._is_initialized:
             self._enumerated_nmat = NamedMatrix.hstack([self._makeReactantProductConstraintMatrix(),
-                  self._makeAutocatalysisConstraint(), self._makeSuccessorConstraintMatrix()])
+                  self._makeAutocatalysisConstraint(), self._makeSuccessorPredecessorConstraintMatrix()])
             self._is_initialized = True
         return self._enumerated_nmat
 
@@ -42,8 +45,24 @@ class SpeciesConstraint(Constraint):
         return self._categorical_nmat
     
     @property
-    def num_row(self)->int:
-        return self.reactant_nmat.num_row
+    def one_step_nmat(self)->NamedMatrix:
+        """Calculates the successor matrix for the species monopartite graph.
+
+        Returns:
+            np.ndarray: _description_
+        """
+        # Create the monopartite graph
+        if self._one_step_nmat is NULL_NMAT:
+            incoming_arr = self.reactant_nmat.values
+            outgoing_arr = self.product_nmat.values
+            arr = np.sign(np.matmul(incoming_arr, outgoing_arr.T)).astype(int)
+            self._one_step_nmat = NamedMatrix(arr, row_names=self.reactant_nmat.row_names,
+                                row_description='species',
+                                column_description='species',
+                                column_names=self.reactant_nmat.row_names)
+        return self._one_step_nmat
+    
+    ##################################
 
     def __repr__(self)->str:
         return "Species--" + super().__repr__()
@@ -95,33 +114,5 @@ class SpeciesConstraint(Constraint):
         named_matrix = NamedMatrix(vector, row_names=self.reactant_nmat.row_names,
                            row_description='species',
                            column_description='constraints',
-                           column_names=column_names)
-        return named_matrix
-
-    def _makeSuccessorConstraintMatrix(self)->NamedMatrix:
-        """Make constructs an enumerated constraint that is the number of species (and routes)
-        that are reachable in N steps, where N is 2, 4, 8, 16, 32, 64, 128.
-
-        Returns:
-            NamedMatrix: Rows are reactions, columns are constraints by count of reaction type.
-              <ReactionType>
-        """
-        STEPS = np.array(range(5))
-        # Create the monopartite graph
-        incoming_arr = self.reactant_nmat.values
-        outgoing_arr = self.product_nmat.values
-        # Calculate immediate successors
-        successor_arr = np.sign(np.matmul(incoming_arr, outgoing_arr.T)).astype(int)
-        step_arrs:list = []
-        for _ in STEPS:
-            successor_arr = np.sign(np.matmul(successor_arr, successor_arr.T)).astype(int)
-            sum_arr = np.sum(successor_arr, axis=1)
-            step_arrs.append(sum_arr)
-        step_arr = np.array(step_arrs).T
-        # Make the NamedMatrix
-        column_names = [f"succ_{n}" for n in STEPS]
-        named_matrix = NamedMatrix(step_arr, row_names=self.reactant_nmat.row_names,
-                           row_description='species',
-                           column_description="constraints",
                            column_names=column_names)
         return named_matrix

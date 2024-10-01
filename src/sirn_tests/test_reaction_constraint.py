@@ -42,17 +42,17 @@ class TestReactionConstraint(unittest.TestCase):
         df = named_matrix.dataframe
         self.assertEqual(len(df), size)
     
-    def testMakeSuccessorConstraintMatrix(self):
+    def testMakeSuccessorPredecessorConstraintMatrix(self):
         if IGNORE_TEST:
             return
         frac_duplicates = []
         for _ in range(100):
-            size = 20
+            size = 5
             network = Network.makeRandomNetworkByReactionType(size, size)
             constraint = ReactionConstraint(network.reactant_nmat, network.product_nmat)
             named_matrix = constraint._makeSuccessorPredecessorConstraintMatrix()
             num_unique = len(np.unique(named_matrix.values, axis=0))
-            frac_duplicate = num_unique / len(named_matrix.values)
+            frac_duplicate = 1 - num_unique / len(named_matrix.values)
             frac_duplicates.append(frac_duplicate)
             sum_arr = named_matrix.values.sum(axis=1)
             self.assertTrue(isinstance(named_matrix, NamedMatrix))

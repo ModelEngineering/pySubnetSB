@@ -11,7 +11,7 @@ For reaction networks, instances are either species or reactions.
 Subclasses are responsible for implementing:
   property: categorical_nmat - NamedMatrix of categorical constraints
   property: enumerated_nmat - NamedMatrix of enumerated constraints
-  property: num_row - number of rows in the constraint matrix
+  property: one_step_nmat - NamedMatrix of one step transitions
 """
 
 import scipy.special  # type: ignore
@@ -129,6 +129,7 @@ class Constraint(object):
         self.reactant_nmat = reactant_nmat
         self.product_nmat = product_nmat
         self.is_subset = is_subset
+        self.num_row = self.one_step_nmat.num_row
         # Calculated
         self._reaction_classes = ReactionClassification.getReactionClassifications()
         self.num_species, self.num_reaction = self.reactant_nmat.num_row, self.reactant_nmat.num_column
@@ -156,6 +157,22 @@ class Constraint(object):
         log_permutation = np.log10(calculatePermutation(reference_size, target_size))
         return 2*log_permutation
     
+    ################ SUBCLASS MUST IMPLEMENT ################
+        
+    @property
+    def categorical_nmat(self)->NamedMatrix:
+        raise NotImplementedError("categorical_nmat be implemented by subclass.")
+    
+    @property
+    def enumerated_nmat(self)->NamedMatrix:
+        raise NotImplementedError("categorical_nmat be implemented by subclass.")
+    
+    @property
+    def one_step_nmat(self)->NamedMatrix:
+        raise NotImplementedError("one_step_nmat be implemented by subclass.")
+
+    ########################################################
+    
     def _initializeSubset(self):
         # Initialize the equality and inequality NamedMatrices
         if self._is_subset_initialized:
@@ -172,18 +189,6 @@ class Constraint(object):
                 self._equality_nmat = NamedMatrix.hstack([self.categorical_nmat, self.enumerated_nmat])
             self._inequality_nmat = NULL_NMAT
         self._is_subset_initialized = True
-    
-    @property
-    def categorical_nmat(self)->NamedMatrix:
-        raise NotImplementedError("categorical_nmat be implemented by subclass.")
-    
-    @property
-    def enumerated_nmat(self)->NamedMatrix:
-        raise NotImplementedError("categorical_nmat be implemented by subclass.")
-    
-    @property
-    def num_row(self)->int:
-        raise NotImplementedError("num_row be implemented by subclass.")
    
     @property
     def equality_nmat(self)->NamedMatrix:
@@ -317,3 +322,38 @@ class Constraint(object):
             target_rows = target_arr[sel_idxs]
             compatibility_collection.add(irow, target_rows)
         return compatibility_collection
+    
+    def _makeSuccessorPredecessorConstraintMatrix(self)->NamedMatrix:
+        """Make a marix of count of successor and predecessor counts. Uses
+        subclass.one_step_arr to calculate the counts.
+
+        Returns:
+            NamedMatrix: Rows are reactions, columns are constraints by count of reaction type.
+              <ReactionType>
+        """
+        NUM_TRAVERSAL = 4
+        def makeTraversalCounts(one_step_arr):
+            # one_step_arr: N X N where row is current and column is next
+            # Returns: N X NUM_TRAVERSAL where row is current and column is count of next
+            multistep_arr = one_step_arr.copy()
+            # Process the steps
+            count_arrs:list = []  # type: ignore
+            count_arrs.append(multistep_arr.sum(axis=1))
+            for _ in range(2, NUM_TRAVERSAL+1):
+                multistep_arr = np.sign(np.matmul(multistep_arr, one_step_arr)).astype(int)
+                count_arrs.append(multistep_arr.sum(axis=1))
+            count_arr = np.array(count_arrs).T
+            return count_arr
+        #####
+        column_names = [f"s_{n+1}" for n in range(NUM_TRAVERSAL)]
+        column_names.extend([f"p_{n+1}" for n in range(NUM_TRAVERSAL)])
+        # Calculate successor and predecessor arrays
+        successor_count_arr = makeTraversalCounts(self.one_step_nmat.values)
+        predecessor_count_arr = makeTraversalCounts(self.one_step_nmat.values.T)
+        count_arr = np.concatenate([successor_count_arr, predecessor_count_arr], axis=1)
+        # Make the NamedMatrix
+        named_matrix = NamedMatrix(count_arr, row_names=self.one_step_nmat.row_names,
+                           row_description=self.one_step_nmat.row_description,
+                           column_description="constraints",
+                           column_names=column_names)
+        return named_matrix

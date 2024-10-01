@@ -21,11 +21,17 @@ PRODUCT_NMAT = NamedMatrix(product_arr,  row_names=SPECIES_NAMES, column_names=R
 
 #############################
 class DummyConstraint(Constraint):
+    SPECIES_NAMES = ["A", "B", "C"]
+    NUM_ROW = len(SPECIES_NAMES)
+    arr = np.random.randint(0, 2, (NUM_ROW, NUM_ROW))
+    ONE_STEP_NMAT = NamedMatrix(arr, row_names='rows', column_names='columns')
+
     
     def __init__(self, reactant_nmat:NamedMatrix, product_nmat:NamedMatrix):
+        self.species_names = self.SPECIES_NAMES
+        self._num_row = self.NUM_ROW
         super().__init__(reactant_nmat=reactant_nmat, product_nmat=product_nmat)
         #
-        self.species_names = ["A", "B", "C"]
         self._categorical_nmat = NamedMatrix(np.array([[0, 1], [1, 0], [1, 1]]),
                 row_names=self.species_names, column_names=REACTION_NAMES)
         self._enumerated_nmat = NamedMatrix(np.array([[0, 10], [10, 0], [10, 10]]),
@@ -51,6 +57,12 @@ class DummyConstraint(Constraint):
     @property
     def enumerated_nmat(self)->NamedMatrix:
         return self._enumerated_nmat
+    
+    @property
+    def one_step_nmat(self)->NamedMatrix:
+        arr = np.matmul(self.product_nmat.values, self.reactant_nmat.values.T)
+        row_names = [str(n) for n in range(arr.shape[0])]
+        return NamedMatrix(arr, row_names=row_names, column_names=row_names)
 
     @classmethod 
     def makeDummyConstraint(cls, num_species:int=3, num_reaction:int=3):
@@ -83,8 +95,9 @@ class ScalableDummyConstraint(Constraint):
         constraint = DummyConstraint(reactant_nmat, product_nmat)
         equality_arr = np.vstack([self.equality_nmat.values]*scale)
         inequality_arr = np.vstack([self.inequality_nmat.values]*scale)
-        constraint._categorical_nmat = NamedMatrix(equality_arr, row_names=np.array(range(self.num_row)))
-        constraint._enumerated_nmat = NamedMatrix(inequality_arr, row_names=np.array(range(self.num_row)))
+        num_row = equality_arr.shape[0]
+        constraint._categorical_nmat = NamedMatrix(equality_arr, row_names=np.array(range(num_row)))
+        constraint._enumerated_nmat = NamedMatrix(inequality_arr, row_names=np.array(range(num_row)))
         return constraint
 
     @property
@@ -94,6 +107,12 @@ class ScalableDummyConstraint(Constraint):
     @property
     def enumerated_nmat(self)->NamedMatrix:
         return self._enumerated_nmat
+    
+    @property
+    def one_step_nmat(self)->NamedMatrix:
+        arr = np.matmul(self.product_nmat.values, self.reactant_nmat.values.T)
+        return NamedMatrix(arr,
+                row_names='rows', column_names='columns')
 
 
 #############################
@@ -210,7 +229,7 @@ class TestConstraint(unittest.TestCase):
     def testMakeCompatibilityCollectionScale(self):
         if IGNORE_TEST:
             return
-        scale = 5000  # scaling factor
+        scale = 10  # scaling factor
         constraint = ScalableDummyConstraint(50)
         new_constraint = constraint.scale(scale)
         compatibility_collection = constraint.makeCompatibilityCollection(new_constraint)

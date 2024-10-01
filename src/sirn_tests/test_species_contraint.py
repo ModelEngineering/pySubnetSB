@@ -13,7 +13,6 @@ IGNORE_TEST = False
 IS_PLOT = False
 REACTANT_MATRIX = NamedMatrix(np.array([[1, 0], [0, 1], [0, 0]]))
 PRODUCT_MATRIX = NamedMatrix(np.array([[1, 1], [1, 0], [0, 0]]))
-#PRODUCT_MATRIX = NamedMatrix(np.array([[0, 1], [1, 0], [0, 0]]))
 
 
 #############################
@@ -94,40 +93,28 @@ class TestSpeciesConstraint(unittest.TestCase):
             self.assertTrue(self.constraint.equality_nmat is not NULL_NMAT)
             self.assertTrue(self.constraint.inequality_nmat is NULL_NMAT)
 
-    def testmakeSuccessorConstraintMatrix(self):
-        if IGNORE_TEST:
-            return
-        for _ in range(100):
-            size = 20
-            network = Network.makeRandomNetworkByReactionType(size, size)
-            species_constraint = SpeciesConstraint(network.reactant_nmat, network.product_nmat)
-            named_matrix = species_constraint._makeSuccessorConstraintMatrix()
-            self.assertTrue(isinstance(named_matrix, NamedMatrix))
-            df = named_matrix.dataframe
-            self.assertGreater(len(df), 0)
-
     def testmakeCompatibilityCollection(self):
         if IGNORE_TEST:
             return
+        num_permutations = []
         for _ in range(100):
             reference_size = 15
             filler_size = 5*reference_size
             network = Network.makeRandomNetworkByReactionType(reference_size, reference_size)
             big_network = network.fill(num_fill_reaction=filler_size, num_fill_species=filler_size)
-            # Not doing initialization
-            species_constraint = SpeciesConstraint(network.reactant_nmat, network.product_nmat,
+            reaction_constraint = SpeciesConstraint(network.reactant_nmat, network.product_nmat,
                                                    is_subset=True)
-            big_species_constraint = SpeciesConstraint(big_network.reactant_nmat, big_network.product_nmat,
+            big_reaction_constraint = SpeciesConstraint(big_network.reactant_nmat, big_network.product_nmat,
                                                        is_subset=True)
-            compatibility_collection = species_constraint.makeCompatibilityCollection(
-                  big_species_constraint)
-            species_names = big_network.species_names
-            for irow, row_lst in enumerate(compatibility_collection.compatibilities):
-                trues = ["S" + str(irow) == species_names[i] for i in row_lst]
-                if not any(trues):
-                    import pdb; pdb.set_trace()
-                self.assertTrue(any(trues))
-
+            compatibility_collection = reaction_constraint.makeCompatibilityCollection(
+                  big_reaction_constraint)
+            name_arr = np.array(big_reaction_constraint.reactant_nmat.row_names)
+            for i, arr in enumerate(compatibility_collection.compatibilities):
+                reference_name = "S" + str(i)
+                target_names = [name_arr[i] for i in arr]
+                self.assertTrue(reference_name in target_names)
+            num_permutations.append(compatibility_collection.log10_num_permutation)
+        #print(np.mean(num_permutations))
 
 
 if __name__ == '__main__':
