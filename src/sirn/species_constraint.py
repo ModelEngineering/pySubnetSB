@@ -110,7 +110,7 @@ class SpeciesConstraint(Constraint):
         column_names =  ['num_autocatalysis']
         array = self.reactant_nmat.values * self.product_nmat.values > 0
         vector = np.sum(array, axis=1)
-        vector = np.reshape(vector, (len(vector), 1))
+        vector = np.reshape(vector, (len(vector), 1)).astype(int)
         named_matrix = NamedMatrix(vector, row_names=self.reactant_nmat.row_names,
                            row_description='species',
                            column_description='constraints',

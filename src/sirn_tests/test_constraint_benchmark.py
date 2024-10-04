@@ -1,16 +1,14 @@
-from sirn.constraint_benchmark import ConstraintBenchmark  # type: ignore
+from sirn.constraint_benchmark import ConstraintBenchmark, C_LOG10_NUM_PERMUTATION, C_TIME  # type: ignore
 from sirn.network import Network  # type: ignore
 from sirn.species_constraint import SpeciesConstraint  # type: ignore
 from sirn.reaction_constraint import ReactionConstraint  # type: ignore
 
-import numpy as np
-import re
-import time
+import pandas as pd
 import unittest
 
 
-IGNORE_TEST = True
-IS_PLOT = True
+IGNORE_TEST = False
+IS_PLOT = False
 NUM_REACTION = 5
 NUM_SPECIES = 5
 NUM_ITERATION = 10
@@ -22,7 +20,7 @@ NUM_ITERATION = 10
 class TestBenchmark(unittest.TestCase):
 
     def setUp(self):
-        self.benchmark = ConstraintBenchmark(NUM_REACTION, NUM_SPECIES, NUM_ITERATION, False)
+        self.benchmark = ConstraintBenchmark(NUM_REACTION, NUM_SPECIES, NUM_ITERATION)
 
     def testConstructor(self):
         if IGNORE_TEST:
@@ -40,24 +38,30 @@ class TestBenchmark(unittest.TestCase):
         self.assertEqual(constraint_class, ReactionConstraint)
 
     def validateBenchmarkDataframe(self, benchmark, df):
-        self.assertTrue('time' in df.columns)
-        self.assertTrue('num_permutation' in df.columns)
+        self.assertTrue(C_TIME in df.columns)
+        self.assertTrue(C_LOG10_NUM_PERMUTATION in df.columns)
         self.assertEqual(len(df), benchmark.num_iteration)
 
     def testRun(self):
         if IGNORE_TEST:
             return
-        df = self.benchmark.run(is_species=True)
-        self.validateBenchmarkDataframe(self.benchmark, df)
-        df = self.benchmark.run(is_species=False)
-        self.validateBenchmarkDataframe(self.benchmark, df)
+        for is_species in [True, False]:
+            for is_subset in [True, False]:
+                df = self.benchmark.run(is_species=is_species, is_subset=is_subset)
+                self.validateBenchmarkDataframe(self.benchmark, df)
 
     def testPlotConstraintStudy(self):
-        #if IGNORE_TEST:
-        #    return
+        if IGNORE_TEST:
+            return
         for size in range(9, 10):
-            self.benchmark.plotConstraintStudy(size, size, is_plot=IS_PLOT)
+            self.benchmark.plotConstraintStudy(size, size, 10, is_plot=IS_PLOT)
+
+    def testPlotHeatmap(self):
+        if IGNORE_TEST:
+            return
+        df = self.benchmark.plotHeatmap(range(5, 35, 5), range(10, 100, 10), percentile=50, is_plot=IS_PLOT, num_iteration=20)
+        self.assertTrue(isinstance(df, pd.DataFrame))
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(failfast=True)

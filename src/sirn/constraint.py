@@ -21,6 +21,7 @@ from sirn.named_matrix import NamedMatrix # type: ignore
 import json
 import numpy as np
 import scipy  # type: ignore
+import time
 from typing import Optional, List
 
 NULL_NMAT = NamedMatrix(np.array([[]]))
@@ -95,23 +96,24 @@ class CompatibilityCollection(object):
 class ReactionClassification(object):
     MAX_REACTANT = 3
     MAX_PRODUCT = 3
+    LABELS = ["null", "uni", "bi", "multi"]
 
     def __init__(self, num_reactant:int, num_product:int):
         self.num_reactant = num_reactant
         self.num_product = num_product
+        self.encoding = self.num_reactant*10 + self.num_product
 
     def __repr__(self)->str:
-        labels = ["null", "uni", "bi", "multi"]
-        result = f"{labels[int(self.num_reactant)]}-{labels[int(self.num_product)]}"
+        result = f"{self.LABELS[int(self.num_reactant)]}-{self.LABELS[int(self.num_product)]}"
         return result
 
     @classmethod 
     def getReactionClassifications(cls)->List['ReactionClassification']:
         """Gets a list of reaction classifications."""
         classifications = []
-        for num_reactant in range(ReactionClassification.MAX_REACTANT + 1):
-            for num_product in range(ReactionClassification.MAX_PRODUCT + 1):
-                classifications.append(cls(num_reactant, num_product))
+        pairs = [(n, m) for n in range(cls.MAX_REACTANT+1) for m in range(cls.MAX_PRODUCT+1)]
+        for num_reactant, num_product in pairs:
+            classifications.append(cls(num_reactant, num_product))
         return classifications
 
 
@@ -129,7 +131,6 @@ class Constraint(object):
         self.reactant_nmat = reactant_nmat
         self.product_nmat = product_nmat
         self.is_subset = is_subset
-        self.num_row = self.one_step_nmat.num_row
         # Calculated
         self._reaction_classes = ReactionClassification.getReactionClassifications()
         self.num_species, self.num_reaction = self.reactant_nmat.num_row, self.reactant_nmat.num_column
@@ -138,6 +139,10 @@ class Constraint(object):
         self._is_subset_initialized = False
         self._equality_nmat = NULL_NMAT
         self._inequality_nmat = NULL_NMAT
+
+    @property
+    def num_row(self)->int:
+        return self.one_step_nmat.num_row
 
     @classmethod
     def calculateLog10UnconstrainedPermutation(cls, reference_size:int, target_size:int)->float:
@@ -180,6 +185,8 @@ class Constraint(object):
         if self.is_subset:
             self._equality_nmat = self.categorical_nmat
             self._inequality_nmat = self.enumerated_nmat
+            self._equality_nmat.values = self._equality_nmat.values.astype(int)
+            self._inequality_nmat.values = self._inequality_nmat.values.astype(int)
         else:
             if self.categorical_nmat == NULL_NMAT:
                 self._equality_nmat = self.enumerated_nmat
@@ -187,6 +194,7 @@ class Constraint(object):
                 self._equality_nmat = self.categorical_nmat
             else:
                 self._equality_nmat = NamedMatrix.hstack([self.categorical_nmat, self.enumerated_nmat])
+            self._equality_nmat.values = self._equality_nmat.values.astype(int)
             self._inequality_nmat = NULL_NMAT
         self._is_subset_initialized = True
    
@@ -338,19 +346,19 @@ class Constraint(object):
             multistep_arr = one_step_arr.copy()
             # Process the steps
             count_arrs:list = []  # type: ignore
-            count_arrs.append(multistep_arr.sum(axis=1))
+            count_arrs.append(multistep_arr.sum(axis=1).astype(int))
             for _ in range(2, NUM_TRAVERSAL+1):
                 multistep_arr = np.sign(np.matmul(multistep_arr, one_step_arr)).astype(int)
                 count_arrs.append(multistep_arr.sum(axis=1))
             count_arr = np.array(count_arrs).T
-            return count_arr
+            return count_arr.astype(int)
         #####
         column_names = [f"s_{n+1}" for n in range(NUM_TRAVERSAL)]
         column_names.extend([f"p_{n+1}" for n in range(NUM_TRAVERSAL)])
         # Calculate successor and predecessor arrays
         successor_count_arr = makeTraversalCounts(self.one_step_nmat.values)
         predecessor_count_arr = makeTraversalCounts(self.one_step_nmat.values.T)
-        count_arr = np.concatenate([successor_count_arr, predecessor_count_arr], axis=1)
+        count_arr = np.concatenate([successor_count_arr, predecessor_count_arr], axis=1).astype(int)
         # Make the NamedMatrix
         named_matrix = NamedMatrix(count_arr, row_names=self.one_step_nmat.row_names,
                            row_description=self.one_step_nmat.row_description,

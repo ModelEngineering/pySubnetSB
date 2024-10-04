@@ -14,10 +14,11 @@ from sirn.assignment_pair import AssignmentPair  # type: ignore
 import collections
 import itertools
 import json
+import numpy as np
 import os
 import pandas as pd  # type: ignore
 from pynauty import Graph  # type: ignore
-import numpy as np
+import time
 from typing import Optional, Tuple, List, Dict
 
 
@@ -389,7 +390,7 @@ class NetworkBase(object):
     
     @classmethod
     def makeRandomNetworkByReactionType(cls, 
-              num_reaction:int, 
+              num_reaction:int,
               num_species:Optional[int]=None,
               is_prune_species:bool=True,
               p0r0_frc:Optional[float]=0.0,
@@ -408,6 +409,7 @@ class NetworkBase(object):
               p3r1_frc:Optional[float]=0.0087,
               p3r2_frc:Optional[float]=0.0154,
               p3r3_frc:Optional[float]=0.0146,
+              is_unique:bool=False,
               )->'NetworkBase':
         """
         Makes a random network based on the type of reaction. Parameers are in the form
@@ -419,6 +421,7 @@ class NetworkBase(object):
         Args:
             num_reaction (int): Number of reactions.
             num_species (int): Number of species.
+            is_unique (bool): Ensure that reactions are unique.
             is_prune_species (bool): Prune species not used in any reaction.
             fractions by number of products and reactants
 
@@ -467,7 +470,7 @@ class NetworkBase(object):
         num_iteration = 0
         while i_reaction < num_reaction:
             num_iteration += 1
-            if num_iteration > MAX_ITERATION:
+            if num_iteration > max(num_reaction, MAX_ITERATION):
                 raise ValueError("Could not find unique reactions.")
             frac = np.random.rand()
             reaction_type = getType(frac)
@@ -481,14 +484,17 @@ class NetworkBase(object):
             reactant_arr[reactant_idxs, i_reaction] += 1
             # Check for unique reactions
             merged_arr = np.hstack([reactant_arr.T[:i_reaction+1], product_arr.T[:i_reaction+1]])
-            uniques = np.unique(merged_arr, axis=0)
-            if len(uniques) == i_reaction + 1:
-                # Unique reaction. Keep it
-                i_reaction += 1
+            if is_unique:
+                uniques = np.unique(merged_arr, axis=0)
+                if len(uniques) == i_reaction + 1:
+                    # Unique reaction. Keep it
+                    i_reaction += 1
+                else:
+                    # Duplicated reaction. Back it out
+                    product_arr[product_idxs, i_reaction] -= 1
+                    reactant_arr[reactant_idxs, i_reaction] -= 1
             else:
-                # Duplicated reaction. Back it out
-                product_arr[product_idxs, i_reaction] -= 1
-                reactant_arr[reactant_idxs, i_reaction] -= 1
+                i_reaction += 1
         # Eliminate 0 rows (species not used)
         if is_prune_species:
             keep_idxs:list = []

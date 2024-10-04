@@ -25,7 +25,6 @@ class ReactionConstraint(Constraint):
             product_nmat (NamedMatrix)
         """
         super().__init__(reactant_nmat=reactant_nmat, product_nmat=product_nmat, is_subset=is_subset)
-        #
         self._is_initialized = False
         self._enumerated_nmat = NULL_NMAT  
         self._categorical_nmat = NULL_NMAT
@@ -64,8 +63,8 @@ class ReactionConstraint(Constraint):
             outgoing_arr = self.product_nmat.values.T
             arr = np.sign(np.matmul(outgoing_arr, incoming_arr.T)).astype(int)
             self._one_step_nmat = NamedMatrix(arr, row_names=self.reactant_nmat.column_names,
-                                row_description='reaction',
-                                column_description='reaction',
+                                row_description='reactions',
+                                column_description='reactions',
                                 column_names=self.reactant_nmat.column_names)
         return self._one_step_nmat
     
@@ -81,8 +80,8 @@ class ReactionConstraint(Constraint):
         Returns:
             NamedMatrix: Rows are reactions, columns are constraints by count of reaction type.
         """
-        array = np.array([str(self.reaction_classification_arr[n]) for n in range(self.num_reaction)])
-        array = np.reshape(array, (len(array), 1))
+        array = np.array([self.reaction_classification_arr[n].encoding for n in range(self.num_reaction)])
+        array = np.reshape(array, (len(array), 1)).astype(int)
         column_names = ["reaction_classifications"]
         named_matrix = NamedMatrix(array, row_names=self.reactant_nmat.column_names,
                            row_description=self.reactant_nmat.column_description,
@@ -99,7 +98,7 @@ class ReactionConstraint(Constraint):
         """
         autocatalysis_arr = np.sum(self.reactant_nmat.values * self.product_nmat.values, axis=0)
         autocatalysis_arr = np.sign(autocatalysis_arr)
-        autocatalysis_arr = np.reshape(autocatalysis_arr, (len(autocatalysis_arr), 1))
+        autocatalysis_arr = np.reshape(autocatalysis_arr, (len(autocatalysis_arr), 1)).astype(int)
         column_names = ["autocatalysis"]
         named_matrix = NamedMatrix(autocatalysis_arr, row_names=self.reactant_nmat.column_names,
                            row_description=self.reactant_nmat.column_description,

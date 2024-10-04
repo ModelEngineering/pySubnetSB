@@ -47,7 +47,7 @@ class TestSpeciesConstraint(unittest.TestCase):
             df = named_matrix.dataframe
             uni_names = ['r_uni-null', 'r_uni-uni', 'r_uni-bi', 'r_uni-multi']
             num_uni_nmat = df[uni_names].sum().sum()
-            self.assertTrue(np.isclose(num_uni_re, num_uni_nmat))
+            self.assertEqual(num_uni_re, num_uni_nmat)
 
     def testMakeAutocatalysisConstraint(self):
         if IGNORE_TEST:
