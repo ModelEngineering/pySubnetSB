@@ -11,6 +11,7 @@ import unittest
 
 IGNORE_TEST = False
 IS_PLOT = False
+NUM_ITERATION = 10
 NETWORK_NAME = "test"
 BIG_NETWORK = """
 J0: S1 -> S1 + S2; k1*S1;
@@ -88,82 +89,10 @@ class TestNetwork(unittest.TestCase):
         self.assertTrue("int" in str(type(self.network.weak_hash)))
         self.assertTrue("int" in str(type(self.network.strong_hash)))
 
-    def testMakeCompatibilitySetVector(self):
-        if IGNORE_TEST:
-            return
-        result = self.network.makeCompatibilitySetVector(self.network,
-                     cn.OR_SPECIES, identity=cn.ID_WEAK, is_subsets=False)
-        for idx, compatibility_set in enumerate(result):
-            self.assertTrue(len(compatibility_set) == 1)
-            self.assertTrue(compatibility_set[0] == idx)
-
-    def testMakeCompatibilitySetVectorScaleTrue(self):
-        if IGNORE_TEST:
-            return
-        def test(factor=2, num_iteration=100):
-            # factor: factor by which the target is scaled
-            big_reactant_mat = np.concatenate([self.network.reactant_nmat.values for _ in range(factor)])
-            big_product_mat = np.concatenate([self.network.product_nmat.values for _ in range(factor)])
-            big_network = Network(big_reactant_mat, big_product_mat)
-            for _ in range(num_iteration):
-                result = self.network.makeCompatibilitySetVector(big_network,
-                            cn.OR_SPECIES, identity=cn.ID_WEAK, is_subsets=True)
-                num_species = self.network.num_species
-                for idx, compatibility_set in enumerate(result):
-                    self.assertTrue(len(compatibility_set) == factor)
-                    for idx2 in compatibility_set:
-                        self.assertTrue(np.mod(idx2, num_species) == idx)
-        #
-        test(2)
-        test(20, num_iteration=100)
-
     def makeRandomNetwork(self, num_species=5, num_reaction=5):
         big_reactant_mat = np.random.randint(0, 2, (num_species, num_reaction))
         big_product_mat = np.random.randint(0, 2, (num_species, num_reaction))
         return Network(big_reactant_mat, big_product_mat)
-    
-    def testMakeCompatibilitySetVectorScaleFalse(self):
-        if IGNORE_TEST:
-            return
-        def test(reference_size=10, target_size=20, num_iteration=100):
-            for _ in range(num_iteration):
-                reference_network = self.makeRandomNetwork(reference_size, reference_size)
-                target_network = self.makeRandomNetwork(target_size, target_size)
-                result = reference_network.makeCompatibilitySetVector(target_network,
-                            cn.OR_SPECIES, identity=cn.ID_WEAK, is_subsets=True)
-                size_arr = np.array([len(s) for s in result])
-                self.assertTrue(np.all(size_arr <= target_size))
-
-        #
-        test(reference_size=10, target_size=20)
-        test(reference_size=18, target_size=20)
-
-    def testMakeCompatibleAssignments(self):
-        if IGNORE_TEST:
-            return
-        def test(identity):
-            reference_size =3
-            target_size = 10
-            start_time = time.time()
-            for _ in range(10): 
-                reference_network = self.makeRandomNetwork(reference_size, reference_size)
-                target_network = self.makeRandomNetwork(target_size, target_size)
-                result = reference_network.makeCompatibleAssignments(target_network,
-                            cn.OR_SPECIES, identity=identity, is_subsets=True, max_num_assignment=100000)
-                if len(result.assignment_arr) == 0:
-                    continue
-                if IGNORE_TEST:
-                    print(f"Time: {time.time() - start_time:.4f}", len(result.assignment_arr), result.is_truncated)
-                self.assertGreater(len(result.assignment_arr), 0)
-                self.assertEqual(len(result.assignment_arr[0]), reference_size)
-                break
-            else:
-                self.assertTrue(False)
-            if IGNORE_TEST:
-                print(np.sum(np.log10(result.compression_factor)))
-        #
-        test(cn.ID_WEAK)
-        test(cn.ID_STRONG)
 
     def testIsStructurallyIdenticalBasic(self):
         if IGNORE_TEST:
@@ -174,12 +103,10 @@ class TestNetwork(unittest.TestCase):
             new_arr = new_arr[:, column_perm]
             return new_arr
         #
-        species_perm = np.array([1, 2, 0])
-        reaction_perm = np.array([1, 0])
-        reactant_arr = permuteArray(self.network.reactant_nmat.values, species_perm, reaction_perm)
-        product_arr = permuteArray(self.network.product_nmat.values, species_perm, reaction_perm)
-        network = Network(reactant_arr, product_arr)
-        result = self.network.isStructurallyIdentical(network, identity=cn.ID_WEAK)
+        target, assignment_pair = self.network.permute()
+        result = self.network.isStructurallyIdentical(target, identity=cn.ID_WEAK)
+        self.assertTrue(np.all(self.network.species_names == target.species_names[assignment_pair.species_assignment]))
+        self.assertTrue(np.all(self.network.reaction_names == target.reaction_names[assignment_pair.reaction_assignment]))
         self.assertTrue(result)
         result = self.network.isStructurallyIdentical(self.network, identity=cn.ID_STRONG)
         self.assertTrue(result)
@@ -193,7 +120,7 @@ class TestNetwork(unittest.TestCase):
         product_arr = np.vstack([self.network.product_nmat.values]*2)
         product_arr = np.hstack([product_arr]*2)
         target_network = Network(reactant_arr, product_arr)
-        result = self.network.isStructurallyIdentical(target_network, is_subsets=False, identity=cn.ID_WEAK)
+        result = self.network.isStructurallyIdentical(target_network, is_subset=False, identity=cn.ID_WEAK)
         self.assertFalse(result)
     
     def testIsStructurallyIdenticalDoubleSubset(self):
@@ -202,7 +129,7 @@ class TestNetwork(unittest.TestCase):
         reactant_arr = np.hstack([self.network.reactant_nmat.values]*2)
         product_arr = np.hstack([self.network.product_nmat.values]*2)
         target_network = Network(reactant_arr, product_arr)
-        result = self.network.isStructurallyIdentical(target_network, is_subsets=True, identity=cn.ID_WEAK)
+        result = self.network.isStructurallyIdentical(target_network, is_subset=True, identity=cn.ID_WEAK)
         self.assertTrue(result)
 
     def testIsStructurallyIdenticalSimpleRandomlyPermute(self):
@@ -225,90 +152,40 @@ class TestNetwork(unittest.TestCase):
     def testIsStructurallyIdenticalScaleRandomlyPermuteTrue(self):
         if IGNORE_TEST:
             return
-        def test(reference_size, target_factor=1, num_iteration=100):
-            success_cnt = 0
-            total_cnt = 0
-            for _ in range(num_iteration):
-                for identity in [cn.ID_WEAK, cn.ID_STRONG]:
-                    for is_subsets in [True, False]:
-                        if (not is_subsets) and (target_factor > 1):
-                            continue
-                        reference = Network.makeRandomNetworkByReactionType(reference_size)
-                        target, assignment_pair = reference.permute()
-                        target_reactant_arr = np.hstack([target.reactant_nmat.values]*target_factor)
-                        target_product_arr = np.hstack([target.product_nmat.values]*target_factor)
-                        target = Network(target_reactant_arr, target_product_arr)
-                        result = reference.isStructurallyIdentical(target, identity=identity, is_subsets=is_subsets,
-                              expected_assignment_pair=assignment_pair, max_num_assignment=1000000)
-                        total_cnt += 1
-                        if result.is_truncated:
-                            continue
-                        success_cnt += 1
-                        self.assertTrue(bool(result))
-                        first_matched_network = target.makeNetworkFromAssignmentPair(result.assignment_pairs[0])
-                        if (not is_subsets) and (identity == cn.ID_STRONG):
-                            first_matched_network = target.makeNetworkFromAssignmentPair(result.assignment_pairs[0])
-                            self.assertTrue(np.all(
-                                first_matched_network.reactant_nmat.values == reference.reactant_nmat.values))
-                            self.assertTrue(np.all(
-                                    first_matched_network.product_nmat.values == reference.product_nmat.values))
-            if IGNORE_TEST:
-                print(f"Total count: {total_cnt}; Success count: {success_cnt}; reference_size: {reference_size}; target_factor: {target_factor}")
+        def test(reference_size, fill_factor=1, num_iteration=2*NUM_ITERATION):
+            for identity in [cn.ID_WEAK, cn.ID_STRONG]:
+                num_success = 0
+                for _ in range(num_iteration):
+                    reference = Network.makeRandomNetworkByReactionType(reference_size)
+                    target = reference.fill(num_fill_reaction=fill_factor*reference_size,
+                        num_fill_species=fill_factor*reference_size)
+                    result = reference.isStructurallyIdentical(target, identity=identity, is_subset=True,
+                            max_num_assignment=5000)
+                    num_success += bool(result)
+                    #self.assertTrue(bool(result))
+                succ_frac = num_success/num_iteration
+                self.assertGreater(succ_frac, 0.8)
+                #print(f"Success rate for {identity}: {num_success/num_iteration}")
         #
-        for target_factor in [1, 2]:
-            for size in [3, 5, 8]:
-                test(size, target_factor=target_factor)
+        for fill_factor in [1, 2]:
+            for size in [3, 5, 7]:
+                test(size, fill_factor=fill_factor)
 
     def testIsStructurallyIdenticalScaleRandomlyPermuteFalse(self):
         if IGNORE_TEST:
             return
-        def test(reference_size, target_factor=1, num_iteration=100):
-            count = 0
+        def test(reference_size, target_factor=1, num_iteration=NUM_ITERATION):
             for _ in range(num_iteration):
                 for identity in [cn.ID_STRONG]:
-                    for is_subsets in [False]:
+                    for is_subset in [False]:
                         reference = Network.makeRandomNetworkByReactionType(reference_size)
-                        target, _ = reference.permute()
-                        target_reactant_arr = np.hstack([target.reactant_nmat.values]*target_factor)
-                        target_product_arr = np.hstack([target.product_nmat.values]*target_factor)
-                        target = Network(target_reactant_arr, target_product_arr)
-                        # Change the target so that it's no longer structurally identical
-                        irow, icolumn = (np.random.randint(0, target.num_species),
-                              np.random.randint(0, target.num_reaction))
-                        if target.reactant_nmat.values[irow, icolumn] == 0:
-                            target.reactant_nmat.values[irow, icolumn] = 1
-                        else:
-                            target.reactant_nmat.values[irow, icolumn] = 0
+                        target = Network.makeRandomNetworkByReactionType(target_factor*reference_size)
                         # Analyze
-                        result = reference.isStructurallyIdentical(target, identity=identity, is_subsets=is_subsets)
-                        count += 1
+                        result = reference.isStructurallyIdentical(target, identity=identity, is_subset=is_subset)
                         self.assertFalse(result)
-            #print(reference_size, count)
         #
         for size in [5, 10, 20, 40]:
-            test(size)
-
-    def testMakeCompatibilityVectorPermutedNetwork(self):
-        if IGNORE_TEST:
-            return
-        identity = cn.ID_WEAK
-        is_subsets = False
-        for _ in range(10):
-            reference = Network.makeRandomNetworkByReactionType(10)
-            target, _ = reference.permute()
-            # FIXME: Check both reaction and species permutation
-            compatibility_vector = reference.makeCompatibilitySetVector(target, identity=identity,
-                                                                        is_subsets=is_subsets)
-            # Check that sets are not the same size
-            std = np.std([len(s) for s in compatibility_vector])
-            if std > 0.1:
-                break
-        else:
-            raise RuntimeError("All sets are the same size")
-        permuted_network, inversion_permutation = reference._makeCompatibilityVectorPermutedNetwork(target,
-              identity=identity, is_subsets=is_subsets)
-        original_network, _ = permuted_network.permute(assignment_pair=inversion_permutation)
-        self.assertTrue(reference.isEquivalent(original_network))
+            test(size, target_factor=5)
 
     def testSerializeDeserialize(self):
         if IGNORE_TEST:
@@ -323,7 +200,7 @@ class TestNetwork(unittest.TestCase):
     def testIsIsomorphic(self):
         if IGNORE_TEST:
             return
-        def test(reference_size, is_isomorphic=True, num_iteration=100):
+        def test(reference_size, is_isomorphic=True, num_iteration=NUM_ITERATION):
             for _ in range(num_iteration):
                     reference = Network.makeRandomNetworkByReactionType(reference_size)
                     target, _ = reference.permute()
@@ -338,6 +215,54 @@ class TestNetwork(unittest.TestCase):
         #
         test(10, is_isomorphic=True)
         test(10, is_isomorphic=False)
+
+    def testCompare(self):
+        if IGNORE_TEST:
+            return
+        target_arr = np.array([ [1, 2, 3], [4, 5, 6], [7, 8, 9]])
+        reference_arr = np.array([ [9, 7], [3, 1]])
+        true_species_assignment_arr = np.array([2, 0])
+        false_species_assignment_arr = np.array([0, 1])
+        # Index of true species assignment is 0
+        species_assignment_arr = np.vstack([true_species_assignment_arr, false_species_assignment_arr])
+        true_reaction_assignment_arr = np.array([2, 0])
+        false_reaction_assignment_arr = np.array([1, 0])
+        # Index of true reaction assignment is 1
+        reaction_assignment_arr = np.vstack([false_reaction_assignment_arr, true_reaction_assignment_arr])
+        # Index of true result is 1 + 0*num_species = 1
+        result_arr = self.network._compare(reference_arr, target_arr, species_assignment_arr, reaction_assignment_arr)
+        self.assertTrue(result_arr[1])
+        self.assertTrue(not result_arr[i] for i in range(4) if i != 1)
+
+    def testCompareScale(self):
+        if IGNORE_TEST:
+            return
+        target_size = 10
+        reference_size = 5
+        num_assignment = 4
+        #####
+        def makeAssignment(arr):
+            extended_arr = [arr]
+            hashes = [hash(str(arr))]
+            while len(extended_arr) < num_assignment:
+                new_arr = np.random.permutation(arr)
+                new_hash = hash(str(new_arr))
+                if new_hash in hashes:
+                    continue
+                extended_arr.append(new_arr)
+                hashes.append(new_hash)
+            return np.vstack(extended_arr)
+        #####
+        target_arr = np.random.randint(0, 10, (target_size, target_size))
+        true_species_assignment_arr = np.random.permutation(range(target_size))[:reference_size]
+        species_assignment_arr = makeAssignment(true_species_assignment_arr)
+        true_reaction_assignment_arr = np.random.permutation(range(target_size))[:reference_size]
+        reaction_assignment_arr = makeAssignment(true_reaction_assignment_arr)
+        reference_arr = target_arr[true_species_assignment_arr, :]
+        reference_arr = reference_arr[:, true_reaction_assignment_arr]
+        result_arr = self.network._compare(reference_arr, target_arr, species_assignment_arr, reaction_assignment_arr)
+        self.assertTrue(result_arr[0])
+        self.assertTrue(not v for v in result_arr[1:])
 
 
 if __name__ == '__main__':

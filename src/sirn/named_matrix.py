@@ -275,9 +275,11 @@ class NamedMatrix(Matrix):
         first_column_description = named_matrices[0].column_description
         for named_matrix in named_matrices[1:]:
             if first_column_description != named_matrix.column_description:
-                raise ValueError("Column descriptions must be the same!")
+                if len(first_column_description) > 0 and len(named_matrix.column_description) > 0:
+                    raise ValueError("Column descriptions must be the same!")
             if first_row_description != named_matrix.row_description:
-                raise ValueError("Row descriptions must be the same!")
+                if len(first_row_description) > 0 and len(named_matrix.row_description) > 0:
+                    raise ValueError("Row descriptions must be the same!")
             if not np.all(first_row_names == named_matrix.row_names):
                 raise ValueError("Row descriptions must be the same!")
             if first_num_row != named_matrix.num_row:

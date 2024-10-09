@@ -28,8 +28,8 @@ class TestSpeciesConstraint(unittest.TestCase):
             return
         self.assertEqual(self.constraint.reactant_nmat, REACTANT_MATRIX)
         self.assertEqual(self.constraint.product_nmat, PRODUCT_MATRIX)
-        self.assertEqual(self.constraint._categorical_nmat, NULL_NMAT)
-        self.assertEqual(self.constraint._enumerated_nmat, NULL_NMAT)
+        self.assertEqual(self.constraint._numerical_categorical_nmat, NULL_NMAT)
+        self.assertEqual(self.constraint._numerical_enumerated_nmat, NULL_NMAT)
 
     def testMakeSpeciesConstraintMatrixScale(self):
         if IGNORE_TEST:
@@ -65,8 +65,6 @@ class TestSpeciesConstraint(unittest.TestCase):
             species_constraint = SpeciesConstraint(network.reactant_nmat, network.product_nmat)
             named_matrix = species_constraint._makeAutocatalysisConstraint()
             diff = np.abs(np.sum(autocatalysis_arr - named_matrix.values.flatten()))
-            if diff != 0:
-                import pdb; pdb.set_trace()
             self.assertEqual(diff, 0)
 
     def testSpeciesConstraintMatrix(self):

@@ -26,23 +26,33 @@ class SpeciesConstraint(Constraint):
         super().__init__(reactant_nmat=reactant_nmat, product_nmat=product_nmat)
         #
         self._is_initialized = False
-        self._enumerated_nmat = NULL_NMAT
-        self._categorical_nmat = NULL_NMAT
+        self._numerical_enumerated_nmat = NULL_NMAT
+        self._numerical_categorical_nmat = NULL_NMAT
+        self._logical_enumerated_nmat = NULL_NMAT
+        self._logical_categorical_nmat = NULL_NMAT
         self._one_step_nmat = NULL_NMAT
 
     ################# OVERLOADED PARENT CLASS METHODS #################
 
     @property
-    def enumerated_nmat(self)->NamedMatrix:
+    def numerical_enumerated_nmat(self)->NamedMatrix:
         if not self._is_initialized:
-            self._enumerated_nmat = NamedMatrix.hstack([self._makeReactantProductConstraintMatrix(),
-                  self._makeAutocatalysisConstraint(), self._makeSuccessorPredecessorConstraintMatrix()])
+            self._numerical_enumerated_nmat = NamedMatrix.hstack([self._makeReactantProductConstraintMatrix(),
+                  self._makeAutocatalysisConstraint(), self.makeSuccessorPredecessorConstraintMatrix()])
             self._is_initialized = True
-        return self._enumerated_nmat
+        return self._numerical_enumerated_nmat
 
     @property
-    def categorical_nmat(self)->NamedMatrix:
-        return self._categorical_nmat
+    def numerical_categorical_nmat(self)->NamedMatrix:
+        return self._numerical_categorical_nmat
+    
+    @property
+    def bitwise_categorical_nmat(self)->NamedMatrix:
+        return self._logical_categorical_nmat
+
+    @property
+    def bitwise_enumerated_nmat(self)->NamedMatrix:
+        return self._logical_enumerated_nmat
     
     @property
     def one_step_nmat(self)->NamedMatrix:
@@ -70,6 +80,41 @@ class SpeciesConstraint(Constraint):
     def _makeReactantProductConstraintMatrix(self)->NamedMatrix:
         """Make constraints for the reaction classification. These are {R, P} X {ReactionClassifications}
         where R is reactant and P is product.
+
+        Returns:
+            NamedMatrix: Rows are species, columns are constraints
+        """
+        reaction_classifications = [str(c) for c in ReactionClassification.getReactionClassifications()]
+        reactant_arrays = []
+        product_arrays = []
+        for i_species in range(self.num_species):
+            reactant_array = np.zeros(len(reaction_classifications))
+            product_array = np.zeros(len(reaction_classifications))
+            for i_reaction in range(self.num_reaction):
+                i_constraint_str = str(self.reaction_classification_arr[i_reaction])
+                idx = reaction_classifications.index(i_constraint_str)
+                if self.reactant_nmat.values[i_species, i_reaction] > 0:
+                    reactant_array[idx] += 1
+                if self.product_nmat.values[i_species, i_reaction] > 0:
+                    product_array[idx] += 1
+            reactant_arrays.append(reactant_array)
+            product_arrays.append(product_array)
+        # Construct full array and labels
+        arrays = np.concatenate([reactant_arrays, product_arrays], axis=1)
+        reactant_labels = [f"r_{c}" for c in reaction_classifications]
+        product_labels = [f"p_{c}" for c in reaction_classifications]
+        column_labels = reactant_labels + product_labels
+        # Make the NamedMatrix
+        named_matrix = NamedMatrix(np.array(arrays), row_names=self.reactant_nmat.row_names,
+                           row_description='species',
+                           column_description='constraints',
+                           column_names=column_labels)
+        return named_matrix
+    
+
+    def _makeLogicalReactantProductConstraintMatrix(self)->NamedMatrix:
+        """For each reach, construct two bit vectors, one for reactants and one for products,
+        that species the type of reactions in which the species is present (as a reactant or product).
 
         Returns:
             NamedMatrix: Rows are species, columns are constraints

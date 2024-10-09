@@ -54,9 +54,9 @@ class ConstraintBenchmark(object):
         self.reference_networks = [Network.makeRandomNetworkByReactionType(self.num_reaction, self.num_species)
                 for _ in range(num_iteration)]
         if fill_size > 0:
-            self.target_networks = [Network.fill(n, num_fill_reaction=self.num_reaction,
+            self.target_networks = [n.fill(num_fill_reaction=self.num_reaction,
               num_fill_species=self.num_species) for n in self.reference_networks]
-        self.target_networks = [Network.fill(n, num_fill_reaction=self.fill_size,
+        self.target_networks = [n.fill(num_fill_reaction=self.fill_size,
               num_fill_species=self.fill_size) for n in self.reference_networks]
         self.benchmark_result_df = NULL_DF  # Updated with result of run
 
@@ -195,10 +195,11 @@ class ConstraintBenchmark(object):
         # Construct the dataframe
         df = pd.DataFrame(data_dct)
         df = df.rename(columns={C_NUM_REFERENCE: 'Reference', C_NUM_TARGET: 'Target'})
+        df[C_LOG10_NUM_PERMUTATION] = np.round(df[C_LOG10_NUM_PERMUTATION].astype(float), 1)
         pivot_df = df.pivot(columns='Reference', index='Target', values=C_LOG10_NUM_PERMUTATION)
         pivot_df = pivot_df.sort_index(ascending=False)
         # Plot
-        ax = sns.heatmap(pivot_df, annot=False, fmt="g", cmap='Reds', vmin=0, vmax=10,
+        ax = sns.heatmap(pivot_df, annot=True, fmt="g", cmap='Reds', vmin=0, vmax=10,
                           cbar_kws={'label': 'log10 number of permutations'})
         ax.set_title(f'percentile: {percentile}')
         if is_plot:

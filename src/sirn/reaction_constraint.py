@@ -26,29 +26,39 @@ class ReactionConstraint(Constraint):
         """
         super().__init__(reactant_nmat=reactant_nmat, product_nmat=product_nmat, is_subset=is_subset)
         self._is_initialized = False
-        self._enumerated_nmat = NULL_NMAT  
-        self._categorical_nmat = NULL_NMAT
+        self._numerical_enumerated_nmat = NULL_NMAT  
+        self._numerical_categorical_nmat = NULL_NMAT
+        self._bitwise_enumerated_nmat = NULL_NMAT
+        self._bitwise_categorical_nmat = NULL_NMAT
         self._one_step_nmat = NULL_NMAT
 
     def _initialize(self):
         if self._is_initialized:
             return
-        self._enumerated_nmat = self._makeSuccessorPredecessorConstraintMatrix()
-        self._categorical_nmat = NamedMatrix.hstack([self._makeClassificationConstraintMatrix(),
+        self._numerical_enumerated_nmat = self.makeSuccessorPredecessorConstraintMatrix()
+        self._numerical_categorical_nmat = NamedMatrix.hstack([self._makeClassificationConstraintMatrix(),
             self._makeAutocatalysisConstraintMatrix()])
         self._is_initialized = True
 
     ################# OVERLOADED PARENT CLASS METHODS #################
 
     @property
-    def enumerated_nmat(self)->NamedMatrix:
+    def numerical_enumerated_nmat(self)->NamedMatrix:
         self._initialize()
-        return self._enumerated_nmat
+        return self._numerical_enumerated_nmat
     
     @property
-    def categorical_nmat(self)->NamedMatrix:
+    def numerical_categorical_nmat(self)->NamedMatrix:
         self._initialize()
-        return self._categorical_nmat
+        return self._numerical_categorical_nmat
+    
+    @property
+    def bitwise_categorical_nmat(self)->NamedMatrix:
+        return self._bitwise_categorical_nmat
+
+    @property
+    def bitwise_enumerated_nmat(self)->NamedMatrix:
+        return self._bitwise_enumerated_nmat
     
     @property
     def one_step_nmat(self)->NamedMatrix:

@@ -11,6 +11,7 @@ python-libsbml
 pynauty
 sbmlnetwork
 seaborn
+sbbadger
 simplesbml
 tellurium
 twine

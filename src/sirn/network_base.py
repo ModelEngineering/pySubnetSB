@@ -1,30 +1,27 @@
 '''Efficient container of properties for a reaction network.'''
 
 from sirn import constants as cn  # type: ignore
-from sirn.criteria_vector import CriteriaVector  # type: ignore
 from sirn.matrix import Matrix  # type: ignore
 from sirn.named_matrix import NamedMatrix  # type: ignore
-from sirn.pair_criteria_count_matrix import PairCriteriaCountMatrix  # type: ignore
-from sirn.single_criteria_count_matrix import SingleCriteriaCountMatrix  # type: ignore
 from sirn.stoichometry import Stoichiometry  # type: ignore
 from sirn import util  # type: ignore
 import sirn.constants as cn # type: ignore
 from sirn.assignment_pair import AssignmentPair  # type: ignore
+from sirn.reaction_constraint import ReactionConstraint  # type: ignore
+from sirn.species_constraint import SpeciesConstraint  # type: ignore
 
 import collections
-import itertools
 import json
 import numpy as np
 import os
 import pandas as pd  # type: ignore
 from pynauty import Graph  # type: ignore
-import time
 from typing import Optional, Tuple, List, Dict
 
 
-CRITERIA_VECTOR = CriteriaVector()
 Edge = collections.namedtuple('Edge', ['source', 'destination'])
 GraphDescriptor = collections.namedtuple('GraphDescriptor', ['vertex_dct', 'label_dct'])
+ConstraintPair = collections.namedtuple('ConstraintPair', ['reaction', 'species'])
 
 
 class NetworkBase(object):
@@ -36,8 +33,7 @@ class NetworkBase(object):
                  product_arr:np.ndarray,
                  reaction_names:Optional[np.ndarray[str]]=None,  # type: ignore
                  species_names:Optional[np.ndarray[str]]=None,   # type: ignore
-                 network_name:Optional[str]=None,
-                 criteria_vector:CriteriaVector=CRITERIA_VECTOR)->None:
+                 network_name:Optional[str]=None)->None:
         """
         Args:
             reactant_mat (np.ndarray): Reactant matrix.
@@ -50,23 +46,21 @@ class NetworkBase(object):
         if not np.all(reactant_arr.shape == product_arr.shape):
             raise ValueError("Reactant and product matrices must have the same shape.")
         self.num_species, self.num_reaction = np.shape(reactant_arr)
-        self.criteria_vector = criteria_vector
         self.reactant_nmat = NamedMatrix(reactant_arr, row_names=species_names, column_names=reaction_names,
               row_description="species", column_description="reactions")
         self.product_nmat = NamedMatrix(product_arr, row_names=species_names, column_names=reaction_names,
               row_description="species", column_description="reactions")
-        self.standard_mat = NamedMatrix(product_arr - reactant_arr, row_names=species_names,
+        self.standard_nmat = NamedMatrix(product_arr - reactant_arr, row_names=species_names,
               column_names=reaction_names, row_description="species", column_description="reactions")
         # The following are deferred execution for efficiency considerations
         self._species_names = species_names
         self._reaction_names = reaction_names
         self._network_name = network_name
         self._stoichiometry_mat:Optional[NamedMatrix] = None
-        self._network_mats:Optional[dict] = None # Network matrices populated on demand by getNetworkMat
         self._strong_hash:Optional[int] = None  # Hash for strong identity
         self._weak_hash:Optional[int] = None  # Hash for weak identity
+        self._constraint_pair_dct:dict = {}  # keys are identity, is_subset
 
-    # Properties for handling deferred execution
     @property
     def species_names(self)->np.ndarray[str]:  # type: ignore
         if self._species_names is None:
@@ -86,26 +80,13 @@ class NetworkBase(object):
     @property
     def weak_hash(self):
         if self._weak_hash is None:
-            single_criteria_matrices = [self.getNetworkMatrix(
-                                  matrix_type=cn.MT_SINGLE_CRITERIA, orientation=o,
-                                  identity=cn.ID_WEAK)
-                                  for o in [cn.OR_SPECIES, cn.OR_REACTION]]
-            # Maintain the order of species and reactions
-            hash_arr = np.sort([s.row_order_independent_hash for s in single_criteria_matrices])
-            self._weak_hash = util.makeRowOrderIndependentHash(hash_arr)
+            self._weak_hash = util.hashMatrix(self.standard_nmat.values)
         return self._weak_hash
-        
+
     @property
     def strong_hash(self):
         if self._strong_hash is None:
-            orientations = [cn.OR_SPECIES, cn.OR_REACTION]
-            participants = [cn.PR_REACTANT, cn.PR_PRODUCT]
-            combinations = itertools.product(orientations, participants)
-            single_criteria_matrices = [self.getNetworkMatrix(
-                  matrix_type=cn.MT_SINGLE_CRITERIA, orientation=o, identity=cn.ID_STRONG, participant=p)
-                  for o, p in combinations]
-            hash_arr = np.sort([s.row_order_independent_hash for s in single_criteria_matrices])
-            self._strong_hash = util.makeRowOrderIndependentHash(hash_arr)
+            self._strong_hash = util.hashMatrix(self.reactant_nmat.values + self.product_nmat.values)
         return self._strong_hash
 
     @property
@@ -117,86 +98,53 @@ class NetworkBase(object):
     def resetNetworkName(self)->None:
         self._network_name = None
 
-    @property
-    def stoichiometry_mat(self)->NamedMatrix:
-        if self._stoichiometry_mat is None:
-            stoichiometry_arr = self.product_nmat.values - self.reactant_nmat.values
-            self._stoichiometry_mat = NamedMatrix(stoichiometry_arr, row_names=self.species_names,
-               column_names=self.reaction_names, row_description="species", column_description="reactions")
-        return self._stoichiometry_mat
-
-    # Methods 
-    def getNetworkMatrix(self, matrix_type:Optional[str]=None, orientation:Optional[str]=None, participant:Optional[str]=None, identity:Optional[str]=None)->NamedMatrix: # type: ignore
-        """
-        Retrieves, possibly constructing, the matrix. The specific matrix is determined by the arguments.
-
-        Args:
-            marix_type: cn.MT_STOICHIOMETRY, cn.MT_SINGLE_CRITERIA, cn.MT_PAIR_CRITERIA
-            orientation: cn.OR_REACTION, cn.OR_SPECIES
-            participant: cn.PR_REACTANT, cn.PR_PRODUCT
-            identity: cn.ID_WEAK, cn.ID_STRONG
-
-        Returns:
-            subclass of Matrix
-        """
-        # Initialize the dictionary of matrices
-        if self._network_mats is None:
-            self._network_mats = {}
-            for i_matrix_type in cn.MT_LST:
-                for i_orientation in cn.OR_LST:
-                    for i_identity in cn.ID_LST:
-                        for i_participant in cn.PR_LST:
-                            if i_identity == cn.ID_WEAK:
-                                self._network_mats[(i_matrix_type, i_orientation, None, i_identity)] = None
-                            else:
-                                self._network_mats[(i_matrix_type, i_orientation, i_participant, i_identity)] = None
-        # Check if the matrix is already in the dictionary
-        if self._network_mats[(matrix_type, orientation, participant, identity)] is not None:
-            return self._network_mats[(matrix_type, orientation, participant, identity)]
-        # Obtain the matrix value
-        #   Identity and participant
-        if identity == cn.ID_WEAK:
-            matrix = self.stoichiometry_mat
-        elif identity == cn.ID_STRONG:
-            if participant == cn.PR_REACTANT:
-                matrix = self.reactant_nmat
-            elif participant == cn.PR_PRODUCT:
-                matrix = self.product_nmat
-            else:
-                raise ValueError("Invalid participant: {participant}.")
-        else:
-            raise ValueError("Invalid identity: {identity}.")
-        #   Orientation
-        if orientation == cn.OR_REACTION:
-            matrix = matrix.transpose()
-        elif orientation == cn.OR_SPECIES:
-            pass
-        else:
-            raise ValueError("Invalid orientation: {orientation}.")
-        #   Matrix type
-        if matrix_type == cn.MT_SINGLE_CRITERIA:
-            matrix = SingleCriteriaCountMatrix(matrix.values, criteria_vector=self.criteria_vector)
-        elif matrix_type == cn.MT_PAIR_CRITERIA:
-            matrix = PairCriteriaCountMatrix(matrix.values, criteria_vector=self.criteria_vector)
-        elif matrix_type == cn.MT_STOICHIOMETRY:
-            pass
-        else:
-            raise ValueError("Invalid matrix type: {matrix_type}.")
-        # Update the matrix
-        self._network_mats[(matrix_type, orientation, participant, identity)] = matrix
-        return matrix
-
     def copy(self)->'NetworkBase':
         return NetworkBase(self.reactant_nmat.values.copy(), self.product_nmat.values.copy(),
                        network_name=self.network_name, reaction_names=self.reaction_names,
-                       species_names=self.species_names,
-                       criteria_vector=self.criteria_vector)  # type: ignore
+                       species_names=self.species_names)
 
     def __repr__(self)->str:
         repr = f"{self.network_name}: {self.num_species} species, {self.num_reaction} reactions"
         reactions = ["  " + self.prettyPrintReaction(i) for i in range(self.num_reaction)]
         repr += '\n' + '\n'.join(reactions)
         return repr
+    
+    def getConstraints(self, identity:str, is_subset:bool)->ConstraintPair:
+        """
+        Get the constraints for the network.
+
+        Args:
+            identity (str): cn.ID_STRONG or cn.ID_WEAK
+            is_subset (bool): True if the constraints are for a subset.
+
+        Returns:
+            Tuple[SpeciesConstraint, ReactionConstraint]
+        """
+        key = (identity, is_subset)
+        if not key in self._constraint_pair_dct:
+            reactant_nmat, product_nmat = self.getMatricesForIdentity(identity)
+            constraint_pair = ConstraintPair(
+                  ReactionConstraint(reactant_nmat, product_nmat, is_subset=is_subset),
+                  SpeciesConstraint(reactant_nmat, product_nmat, is_subset=is_subset))
+            self._constraint_pair_dct[key] = constraint_pair
+        return self._constraint_pair_dct[key]
+    
+    def getMatricesForIdentity(self, identity:str)->Tuple[NamedMatrix, NamedMatrix]:
+        """Calculates the reactant and product NamedMatrix based on the identity calculation being done.
+
+        Args:
+            identity (str): cn.ID_STRONG or cn.ID_WEAK
+        """
+        if identity == cn.ID_STRONG:
+            return self.reactant_nmat, self.product_nmat
+        else:
+            reactant_arr = (self.standard_nmat.values<0)*self.reactant_nmat.values
+            reactant_nmat = self.reactant_nmat.copy()
+            reactant_nmat.values = reactant_arr
+            product_arr = (self.standard_nmat.values>0)*self.product_nmat.values
+            product_nmat = self.product_nmat.copy()
+            product_nmat.values = product_arr
+            return reactant_nmat, product_nmat
     
     def isMatrixEqual(self, other, identity:str=cn.ID_WEAK)->bool:
         """
@@ -205,30 +153,16 @@ class NetworkBase(object):
             strong identity: reactant and product matrices
 
         Args:
-            other (_type_): Network
+            other: Network
             identity (str, optional): Defaults to cn.ID_WEAK.
 
         Returns:
             bool
         """
-        def check(matrix_type, identity, participant=None):
-            matrix1 = self.getNetworkMatrix(matrix_type=matrix_type, orientation=cn.OR_SPECIES,
-                participant=participant, identity=identity)
-            matrix2 = other.getNetworkMatrix(matrix_type=matrix_type, orientation=cn.OR_SPECIES,
-                participant=participant, identity=identity)
-            if not np.all(matrix1.shape == matrix2.shape):
-                return False
-            return np.all(matrix1.values == matrix2.values)
-        #
-        if identity == cn.ID_WEAK:
-            if not check(cn.MT_STOICHIOMETRY, identity):
-                return False
-        else:
-            if not check(cn.MT_STOICHIOMETRY, identity, participant=cn.PR_REACTANT):
-                return False
-            if not check(cn.MT_STOICHIOMETRY, identity, participant=cn.PR_PRODUCT):
-                return False
-        return True
+        reference_reactant_nmat, reference_product_nmat = self.getMatricesForIdentity(identity)
+        target_reactant_nmat, target_product_nmat = other.getMatricesForIdentity(identity)
+        return bool(np.all(reference_reactant_nmat.values == target_reactant_nmat.values) 
+            and np.all(reference_product_nmat.values == target_product_nmat.values))
     
     def __eq__(self, other)->bool:
         if self.network_name != other.network_name:
@@ -560,14 +494,12 @@ class NetworkBase(object):
         """
         reactant_lst = self.reactant_nmat.values.tolist()
         product_lst = self.product_nmat.values.tolist()
-        criteria_vector_serialization = self.criteria_vector.serialize()
         dct = {cn.S_ID: self.__class__.__name__,
                cn.S_NETWORK_NAME: self.network_name,
                cn.S_REACTANT_LST: reactant_lst,
                cn.S_PRODUCT_LST: product_lst,
                cn.S_REACTION_NAMES: self.reaction_names.tolist(),
                cn.S_SPECIES_NAMES: self.species_names.tolist(),
-               cn.S_CRITERIA_VECTOR: criteria_vector_serialization,
                }
         return json.dumps(dct)
 
@@ -642,13 +574,8 @@ class NetworkBase(object):
         product_arr = np.array(dct[cn.S_PRODUCT_LST])
         reaction_names = np.array(dct[cn.S_REACTION_NAMES])
         species_names = np.array(dct[cn.S_SPECIES_NAMES])
-        if cn.S_CRITERIA_VECTOR in dct.keys():
-            criteria_vector = CriteriaVector.deserialize(dct[cn.S_CRITERIA_VECTOR])
-        else:
-            criteria_vector = None
         return cls(reactant_arr, product_arr, network_name=network_name,
-                       reaction_names=reaction_names, species_names=species_names,
-                       criteria_vector=criteria_vector)
+                       reaction_names=reaction_names, species_names=species_names)
     
     def getGraphDescriptor(self, identity=cn.ID_STRONG)->GraphDescriptor:
         """
@@ -687,7 +614,7 @@ class NetworkBase(object):
                         vertex_dct[reaction_vtx].append(species_vtx)
                 else:
                     # Weak identity. Use the standard stoichiometry matrix
-                    stoichiometry = int(self.standard_mat.values[i_species, i_reaction])
+                    stoichiometry = int(self.standard_nmat.values[i_species, i_reaction])
                     for _ in range(np.abs(stoichiometry)):
                         if stoichiometry > 0:
                             # Product
@@ -703,7 +630,6 @@ class NetworkBase(object):
 
         return GraphDescriptor(vertex_dct=vertex_dct, label_dct=label_dct)
 
-    # FIXME: Need colors for reactions? 
     def makePynautyNetwork(self, identity=cn.ID_STRONG)->Graph:
         """
         Make a pynauty graph from the network. Species are indices 0 to num_species - 1 and reactions are
@@ -746,29 +672,30 @@ class NetworkBase(object):
             outputs.append(f"{vertex},,{label}")
         return '\n'.join(outputs)
     
-    def fill(self, num_fill_species:Optional[int]=3,
-          num_fill_reaction:Optional[int]=3,
-          filler_network:Optional['NetworkBase']=None)->'NetworkBase':
+    def fill(self, num_fill_species:Optional[int]=3, num_fill_reaction:Optional[int]=3)->'NetworkBase':
         """Creates a new network that augments (fills) the existing network with new species and reactions.
 
         Args:
-            num_fill_species (int): Number of filler species
-            num_fill_reaction (int): Number of filler reactions
-            filler_network (Network): Network to use as filler. Ignores num_fill_species and num_fill_reaction.
+            num_fill_species (int): Number of filler species. Use num_reaction and num_species if None.
+            num_fill_reaction (int): Number of filler reactions. Use num_species and num_reaction if None.
 
         Returns:
             Network
         """
-        if filler_network is None:
-            if num_fill_species < 1:  # type: ignore
-                raise ValueError("Number of filler species must be at least 1.")
-            if num_fill_reaction < 1: # type: ignore
-                raise ValueError("Number of filler reaction must be at least 1.")
-            filler_network = NetworkBase.makeRandomNetworkByReactionType(num_fill_reaction,  # type: ignore
-                num_fill_species)
-        else:
-            num_fill_species = filler_network.num_species
-            num_fill_reaction = filler_network.num_reaction
+        # Check options
+        if num_fill_species is None and num_fill_reaction is None:
+            raise ValueError("Must specify either num_fill_species or num_fill_reaction.")
+        if num_fill_species is None:
+            num_fill_species = num_fill_reaction
+        if num_fill_reaction is None:
+            num_fill_reaction = num_fill_species
+        # Create the filler network
+        if num_fill_species < 1:  # type: ignore
+            raise ValueError("Number of filler species must be at least 1.")
+        if num_fill_reaction < 1: # type: ignore
+            raise ValueError("Number of filler reaction must be at least 1.")
+        filler_network = NetworkBase.makeRandomNetworkByReactionType(num_fill_reaction,  # type: ignore
+            num_fill_species)
         # Creates a supernetwork with the reference in the upper left corner of the matrices
         # and the filler network in the bottom right. Then, randomize.
         self_pad_arr = np.zeros((self.num_species, filler_network.num_reaction))   # type: ignore

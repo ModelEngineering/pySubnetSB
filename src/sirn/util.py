@@ -112,35 +112,6 @@ def arrayProd(arr:np.ndarray)->float:
         int: The product of the elements of the array.
     """
     return np.exp(np.sum(np.log(arr)))
-
-def deprecatedmakeRowOrderIndependentHash(array:np.ndarray)->int:
-    """Creates a single integer hash for a 1 or 2, or 3 dimensional array
-    that depends only on the order of values in the columns (last dimension in the array).
-    So, the resulting hash is invariant to permutations of the rows.
-
-    Args:
-        array (np.array): An array.
-
-    Returns:
-        int: Hash value.
-    """
-    def hash2DArray(array):
-        result = []
-        for row in array:
-            result.append(hash(str(row)))
-        return hash(str(np.sort(np.array(result))))
-    #
-    if array.ndim == 1:
-        return hash(str(array))
-    elif array.ndim == 2:
-        return hash2DArray(array)
-    elif array.ndim == 3:
-        result = []
-        for mat in array:
-            result.append(hash2DArray(mat))
-        return hash(str(np.sort(np.array(result))))
-    else:
-        raise ValueError("Array must be 1, 2, or 3 dimensional.")
     
 def makeRowOrderIndependentHash(array:np.ndarray)->int:
     """Creates a single integer hash for a 1 or 2 dimensional array
@@ -169,6 +140,29 @@ def makeRowOrderIndependentHash(array:np.ndarray)->int:
         return hash2DArray(array)
     else:
         raise ValueError("Array must be 1, 2 dimensional.")
+    
+def hashMatrix(matrix:np.ndarray)->int:
+    """Creates a single integer hash for a 2 dimensional array.
+
+    Args:
+        array (np.array): An 2d array.
+
+    Returns:
+        int: Hash value.
+    """
+    # Encode rows
+    is_0_arr = matrix == 0
+    is_1_arr = matrix == 1
+    is_minus_1_arr = matrix == -1
+    is_not_arr = np.logical_or(is_0_arr, is_1_arr)
+    is_not_arr = np.logical_or(is_minus_1_arr, is_not_arr)
+    is_not_arr = np.logical_not(is_not_arr)
+    values = np.sum(is_0_arr, axis=1)
+    values += 1000*np.sum(is_1_arr, axis=1)
+    values += 1000000*np.sum(is_minus_1_arr, axis=1)
+    values += 1000000000*np.sum(is_not_arr, axis=1)
+    result = hash(str(pd.util.hash_array(np.sort(values))))
+    return result
     
 def isArrayLessEqual(left_arr:np.ndarray, right_arr:np.ndarray)->bool:
     """Determines if one array is less than another.

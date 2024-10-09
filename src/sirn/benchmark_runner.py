@@ -274,7 +274,7 @@ class BenchmarkRunner(object):
         for experiment in self.experiments:
             start_time = time.process_time()
             result = experiment.reference.isStructurallyIdentical(experiment.target,
-                  identity=self.identity, is_subsets=True)
+                  identity=self.identity, is_subset=True)
             runtimes.append(time.process_time() - start_time)
             is_identical = any([ap == experiment.assignment_pair for ap in result.assignment_pairs])
             is_identicals.append(is_identical)

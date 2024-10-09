@@ -93,7 +93,6 @@ class TestFunctions(unittest.TestCase):
         def test(size=20, num_iteration=100):
             for _ in range(num_iteration):
                 row_perm = np.random.permutation(size)
-                mat_perm = np.random.permutation(size)
                 arr1 = np.random.randint(-2, 3, (size, size))
                 arr2 = arr1.copy()
                 arr2 = arr2[row_perm, :]
@@ -143,6 +142,33 @@ class TestFunctions(unittest.TestCase):
         #
         test(size=5, max_size=2)
         test()
+
+    def testHashMatrixTrue(self):
+        if IGNORE_TEST:
+            return
+        def test(size=10, num_iteration=100):
+            for _ in range(num_iteration):
+                row_perm = np.random.permutation(size)
+                arr1 = np.random.randint(0, 3, (size, size))
+                arr2 = arr1.copy()
+                arr2 = arr2[row_perm, :]
+                result1 = util.makeRowOrderIndependentHash(arr1)
+                result2 = util.makeRowOrderIndependentHash(arr2)
+                self.assertTrue(result1 == result2)
+        test(num_iteration=10000)
+
+    def testHashMatrixFalse(self):
+        if IGNORE_TEST:
+            return
+        def test(size=3, num_iteration=100):
+            num_collision = 0
+            for _ in range(num_iteration):
+                arr1 = np.random.randint(0, 3, (size, size))
+                arr2 = np.random.randint(0, 3, (size, size))
+                result1 = util.makeRowOrderIndependentHash(arr1)
+                result2 = util.makeRowOrderIndependentHash(arr2)
+                num_collision += result1 == result2
+        test(num_iteration=1000)
 
 
 if __name__ == '__main__':

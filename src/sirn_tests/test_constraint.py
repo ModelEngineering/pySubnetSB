@@ -1,6 +1,6 @@
 from sirn.constraint import Constraint, ReactionClassification, CompatibilityCollection    # type: ignore
 from sirn.named_matrix import NamedMatrix   # type: ignore
-from sirn.network import Network  # type: ignore
+#from sirn.network import Network  # type: ignore
 
 import itertools
 import numpy as np
@@ -51,11 +51,11 @@ class DummyConstraint(Constraint):
         return constraint
 
     @property
-    def categorical_nmat(self)->NamedMatrix:
+    def numerical_categorical_nmat(self)->NamedMatrix:
         return self._categorical_nmat
     
     @property
-    def enumerated_nmat(self)->NamedMatrix:
+    def numerical_enumerated_nmat(self)->NamedMatrix:
         return self._enumerated_nmat
     
     @property
@@ -101,11 +101,11 @@ class ScalableDummyConstraint(Constraint):
         return constraint
 
     @property
-    def categorical_nmat(self)->NamedMatrix:
+    def numerical_categorical_nmat(self)->NamedMatrix:
         return self._categorical_nmat
     
     @property
-    def enumerated_nmat(self)->NamedMatrix:
+    def numerical_enumerated_nmat(self)->NamedMatrix:
         return self._enumerated_nmat
     
     @property
@@ -160,12 +160,28 @@ class TestCompatibilityCollection(unittest.TestCase):
     def testPrune(self):
         if IGNORE_TEST:
             return
-        max_permutation = 1000
-        for size in np.random.randint(5, 20, 100):
+        log10_max_permutation = 4.0
+        for size in np.random.randint(5, 30, 100):
             collection = CompatibilityCollection(size, size)
             [collection.add(i-1, range(i)) for i in range(1, size+1)]
-            new_collection = collection.prune(max_permutation)
-            self.assertTrue(new_collection.log10_num_permutation <= max_permutation)
+            new_collection, is_changed = collection.prune(log10_max_permutation)
+            result = (collection.log10_num_permutation <= log10_max_permutation) and (not is_changed)
+            result = result or (collection.log10_num_permutation > log10_max_permutation) and is_changed
+            self.assertTrue(result)
+            if not is_changed:
+                self.assertEqual(new_collection, collection)
+            else:
+                self.assertNotEqual(new_collection, collection)
+
+    def testExpand(self):
+        if IGNORE_TEST:
+            return
+        size = 3
+        collection = CompatibilityCollection(size, size)
+        [collection.add(i-1, range(i)) for i in range(1, size+1)]
+        arr = collection.expand()
+        self.assertEqual(arr.shape[0], factorial(3))
+        self.assertEqual(arr.shape[1], 3)
 
 
 #############################
@@ -179,6 +195,15 @@ class TestConstraint(unittest.TestCase):
             return
         self.assertEqual(REACTANT_NMAT, self.constraint.reactant_nmat)
         self.assertEqual(PRODUCT_NMAT, self.constraint.product_nmat)
+
+    def testEq(self):
+        if IGNORE_TEST:
+            return
+        constraint = DummyConstraint(reactant_nmat=REACTANT_NMAT, product_nmat=PRODUCT_NMAT)
+        self.assertTrue(self.constraint == constraint)
+        #
+        constraint = DummyConstraint(reactant_nmat=PRODUCT_NMAT, product_nmat=REACTANT_NMAT)
+        self.assertFalse(self.constraint == constraint)
 
     def testCopyEqual(self):
         if IGNORE_TEST:

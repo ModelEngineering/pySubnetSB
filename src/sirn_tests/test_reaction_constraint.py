@@ -28,8 +28,8 @@ class TestReactionConstraint(unittest.TestCase):
             return
         self.assertEqual(self.constraint.reactant_nmat, REACTANT_MATRIX)
         self.assertEqual(self.constraint.product_nmat, PRODUCT_MATRIX)
-        self.assertEqual(self.constraint._categorical_nmat, NULL_NMAT)
-        self.assertEqual(self.constraint._enumerated_nmat, NULL_NMAT)
+        self.assertEqual(self.constraint._numerical_categorical_nmat, NULL_NMAT)
+        self.assertEqual(self.constraint._numerical_enumerated_nmat, NULL_NMAT)
 
     def testMakeReactionClassificationConstraintMatrix(self):
         if IGNORE_TEST:
@@ -50,7 +50,7 @@ class TestReactionConstraint(unittest.TestCase):
             size = 5
             network = Network.makeRandomNetworkByReactionType(size, size)
             constraint = ReactionConstraint(network.reactant_nmat, network.product_nmat)
-            named_matrix = constraint._makeSuccessorPredecessorConstraintMatrix()
+            named_matrix = constraint.makeSuccessorPredecessorConstraintMatrix()
             num_unique = len(np.unique(named_matrix.values, axis=0))
             frac_duplicate = 1 - num_unique / len(named_matrix.values)
             frac_duplicates.append(frac_duplicate)
@@ -108,8 +108,6 @@ class TestReactionConstraint(unittest.TestCase):
             for i, arr in enumerate(compatibility_collection.compatibilities):
                 reference_name = "J" + str(i)
                 target_names = [name_arr[i] for i in arr]
-                if not reference_name in target_names:
-                    import pdb; pdb.set_trace()
                 self.assertTrue(reference_name in target_names)
             num_permutations.append(compatibility_collection.log10_num_permutation)
         #print(np.mean(num_permutations))
@@ -142,8 +140,6 @@ class TestReactionConstraint(unittest.TestCase):
         for i, arr in enumerate(compatibility_collection.compatibilities):
                 reference_name = "J" + str(i)
                 target_names = [name_arr[i] for i in arr]
-                if not reference_name in target_names:
-                    import pdb; pdb.set_trace()
                 self.assertTrue(reference_name in target_names)
 
 

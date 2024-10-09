@@ -9,20 +9,23 @@ Constraints are NamedMatrices such that the columns are constraints and the rows
 For reaction networks, instances are either species or reactions.
 
 Subclasses are responsible for implementing:
-  property: categorical_nmat - NamedMatrix of categorical constraints
-  property: enumerated_nmat - NamedMatrix of enumerated constraints
+  property: numerical_categorical_nmat - NamedMatrix of categorical constraints
+  property: numerical_enumerated_nmat - NamedMatrix of enumerated constraints
   property: one_step_nmat - NamedMatrix of one step transitions
+  property: logical_categorical_nmat - NamedMatrix of logical (boolean) constraints
+  property: logical_enumerated_nmat - NamedMatrix of logical (boolean) constraints such that the target
+    must have a one bit for every bit in the reference.
 """
 
 import scipy.special  # type: ignore
 import sirn.constants as cn # type: ignore
 from sirn.named_matrix import NamedMatrix # type: ignore
 
+import itertools
 import json
 import numpy as np
 import scipy  # type: ignore
-import time
-from typing import Optional, List
+from typing import List, Tuple
 
 NULL_NMAT = NamedMatrix(np.array([[]]))
 NULL_INT = -1
@@ -51,25 +54,39 @@ class CompatibilityCollection(object):
     
     def __len__(self)->int:
         return len(self.compatibilities)
+
+    def __eq__(self, other)->bool:
+        if len(self.compatibilities) != len(other.compatibilities):
+            return False
+        trues = [np.all(self.compatibilities[i] == other.compatibilities[i]) for i in range(len(self.compatibilities))]
+        return bool(np.all(trues))
      
     @property
-    def log10_num_permutation(self)->int:
+    def log10_num_permutation(self)->float:
         # Calculates the log of the number of permutations implied by the compatibility collection
+        lengths = [len(l) for l in self.compatibilities]
+        if 0 in lengths:
+            return -np.inf
         return np.sum([np.log10(len(l)) for l in self.compatibilities])
     
-    def prune(self, max_permutation:int)->'CompatibilityCollection':
+    def expand(self)->np.ndarray:
+        # Expands the compatibilities into a two dimensional array where each row is a permutation
+        return  np.array(list(itertools.product(*self.compatibilities)))
+
+    def prune(self, log10_max_permutation:float)->Tuple['CompatibilityCollection', bool]:
         """Randomly prune the compatibility collection to a maximum number of permutations
 
         Args:
-            max_permutation (int)
+            log10_max_permutation (float): log10 of the maximum number of permutations
 
         Returns:
             CompatibilityCollection
         """
         collection = self.copy()
         #
+        is_changed = False
         for idx in range(1000000):
-            if collection.log10_num_permutation <= np.log(max_permutation):
+            if collection.log10_num_permutation <= log10_max_permutation:
                 break
             candidate_rows = [i for i in range(collection.num_self_row)
                               if len(collection.compatibilities[i]) > 1]  
@@ -86,22 +103,29 @@ class CompatibilityCollection(object):
                 continue
             # Delete the element
             del collection.compatibilities[irow][pos]
+            is_changed = True
         else:
             raise ValueError("Could not prune the collection.")
         #
-        return collection
+        return collection, is_changed
 
 
 #####################################
 class ReactionClassification(object):
     MAX_REACTANT = 3
     MAX_PRODUCT = 3
+    MAX_ENCODING = 1000
     LABELS = ["null", "uni", "bi", "multi"]
+    REACTION_CLASSES:List['ReactionClassification'] = []
 
     def __init__(self, num_reactant:int, num_product:int):
         self.num_reactant = num_reactant
         self.num_product = num_product
-        self.encoding = self.num_reactant*10 + self.num_product
+        if num_reactant > self.MAX_ENCODING:
+            raise ValueError(f"num_reactant must be less than {self.MAX_ENCODING}.")
+        if num_product > self.MAX_ENCODING:
+            raise ValueError(f"num_product must be less than {self.MAX_ENCODING}.")
+        self.encoding = self.num_reactant*100 + self.num_product
 
     def __repr__(self)->str:
         result = f"{self.LABELS[int(self.num_reactant)]}-{self.LABELS[int(self.num_product)]}"
@@ -110,12 +134,13 @@ class ReactionClassification(object):
     @classmethod 
     def getReactionClassifications(cls)->List['ReactionClassification']:
         """Gets a list of reaction classifications."""
-        classifications = []
+        if len(cls.REACTION_CLASSES) > 0:
+            return cls.REACTION_CLASSES
         pairs = [(n, m) for n in range(cls.MAX_REACTANT+1) for m in range(cls.MAX_PRODUCT+1)]
         for num_reactant, num_product in pairs:
-            classifications.append(cls(num_reactant, num_product))
-        return classifications
-
+            cls.REACTION_CLASSES.append(cls(num_reactant, num_product))
+        return cls.REACTION_CLASSES
+    
 
 #####################################
 class Constraint(object):
@@ -165,12 +190,20 @@ class Constraint(object):
     ################ SUBCLASS MUST IMPLEMENT ################
         
     @property
-    def categorical_nmat(self)->NamedMatrix:
-        raise NotImplementedError("categorical_nmat be implemented by subclass.")
+    def numerical_categorical_nmat(self)->NamedMatrix:
+        raise NotImplementedError("numerical_categorical_nmat be implemented by subclass.")
     
     @property
-    def enumerated_nmat(self)->NamedMatrix:
-        raise NotImplementedError("categorical_nmat be implemented by subclass.")
+    def numerical_enumerated_nmat(self)->NamedMatrix:
+        raise NotImplementedError("numerical_enumerated_nmat be implemented by subclass.")
+
+    @property
+    def bitwise_categorical_nmat(self)->NamedMatrix:
+        raise NotImplementedError("logical_categorical_nmat be implemented by subclass.")
+    
+    @property
+    def bitwise_enumerated_nmat(self)->NamedMatrix:
+        raise NotImplementedError("logical_enumerated_nmat be implemented by subclass.")
     
     @property
     def one_step_nmat(self)->NamedMatrix:
@@ -183,17 +216,17 @@ class Constraint(object):
         if self._is_subset_initialized:
             return
         if self.is_subset:
-            self._equality_nmat = self.categorical_nmat
-            self._inequality_nmat = self.enumerated_nmat
+            self._equality_nmat = self.numerical_categorical_nmat
+            self._inequality_nmat = self.numerical_enumerated_nmat
             self._equality_nmat.values = self._equality_nmat.values.astype(int)
             self._inequality_nmat.values = self._inequality_nmat.values.astype(int)
         else:
-            if self.categorical_nmat == NULL_NMAT:
-                self._equality_nmat = self.enumerated_nmat
-            elif self.enumerated_nmat == NULL_NMAT:
-                self._equality_nmat = self.categorical_nmat
+            if self.numerical_categorical_nmat == NULL_NMAT:
+                self._equality_nmat = self.numerical_enumerated_nmat
+            elif self.numerical_enumerated_nmat == NULL_NMAT:
+                self._equality_nmat = self.numerical_categorical_nmat
             else:
-                self._equality_nmat = NamedMatrix.hstack([self.categorical_nmat, self.enumerated_nmat])
+                self._equality_nmat = NamedMatrix.hstack([self.numerical_categorical_nmat, self.numerical_enumerated_nmat])
             self._equality_nmat.values = self._equality_nmat.values.astype(int)
             self._inequality_nmat = NULL_NMAT
         self._is_subset_initialized = True
@@ -209,7 +242,7 @@ class Constraint(object):
         return self._inequality_nmat
 
     def __repr__(self)->str:
-        return "Categorical\n" + str(self.categorical_nmat) + "\n\nEnumerated\n" +  str(self.enumerated_nmat)
+        return "Categorical\n" + str(self.numerical_categorical_nmat) + "\n\nEnumerated\n" +  str(self.numerical_enumerated_nmat)
 
     def __eq__(self, other)->bool:
         if self.__class__.__name__ != other.__class__.__name__:
@@ -331,7 +364,7 @@ class Constraint(object):
             compatibility_collection.add(irow, target_rows)
         return compatibility_collection
     
-    def _makeSuccessorPredecessorConstraintMatrix(self)->NamedMatrix:
+    def makeSuccessorPredecessorConstraintMatrix(self)->NamedMatrix:
         """Make a marix of count of successor and predecessor counts. Uses
         subclass.one_step_arr to calculate the counts.
 
@@ -339,7 +372,7 @@ class Constraint(object):
             NamedMatrix: Rows are reactions, columns are constraints by count of reaction type.
               <ReactionType>
         """
-        NUM_TRAVERSAL = 4
+        NUM_TRAVERSAL = 2
         def makeTraversalCounts(one_step_arr):
             # one_step_arr: N X N where row is current and column is next
             # Returns: N X NUM_TRAVERSAL where row is current and column is count of next
@@ -365,3 +398,6 @@ class Constraint(object):
                            column_description="constraints",
                            column_names=column_names)
         return named_matrix
+    
+#####################################
+NULL_CONSTRAINT = Constraint(NULL_NMAT, NULL_NMAT)

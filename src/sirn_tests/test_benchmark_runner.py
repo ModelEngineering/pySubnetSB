@@ -7,7 +7,7 @@ import shutil
 import unittest
 
 
-IGNORE_TEST = True
+IGNORE_TEST = False
 IS_PLOT = False
 SIZE = 3
 EXPANSION_FACTOR = 2
@@ -71,8 +71,8 @@ class TestBenchmarkRunner(unittest.TestCase):
         self.assertEqual(self.benchmark_runner, benchmark_runner)
 
     def testRun(self):
-        #if IGNORE_TEST:
-        #    return
+        if IGNORE_TEST:
+            return
         num_experiment = 3
         for identity in cn.ID_LST:
             for expansion_factor in [2, 10]:
@@ -90,8 +90,6 @@ class TestBenchmarkRunner(unittest.TestCase):
                         count = min(count, num_experiment)
                     else:
                         count = experiment_result.num_success
-                    if num_experiment*is_identical != count:
-                        import pdb; pdb.set_trace()
                     self.assertEqual(num_experiment*is_identical, count)
 
     def testExportExperimentAsCSV(self):

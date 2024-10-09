@@ -59,7 +59,8 @@ class TestBenchmark(unittest.TestCase):
     def testPlotHeatmap(self):
         if IGNORE_TEST:
             return
-        df = self.benchmark.plotHeatmap(range(5, 35, 5), range(10, 100, 10), percentile=50, is_plot=IS_PLOT, num_iteration=20)
+        df = self.benchmark.plotHeatmap(range(5, 35, 5), range(10, 100, 10), percentile=50, is_plot=IS_PLOT,
+                                        num_iteration=300)
         self.assertTrue(isinstance(df, pd.DataFrame))
 
 
