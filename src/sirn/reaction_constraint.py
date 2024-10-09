@@ -48,13 +48,9 @@ class ReactionConstraint(Constraint):
         return self._numerical_enumerated_nmat
     
     @property
-    def numerical_categorical_nmat(self)->NamedMatrix:
+    def categorical_nmat(self)->NamedMatrix:
         self._initialize()
         return self._numerical_categorical_nmat
-    
-    @property
-    def bitwise_categorical_nmat(self)->NamedMatrix:
-        return self._bitwise_categorical_nmat
 
     @property
     def bitwise_enumerated_nmat(self)->NamedMatrix:

@@ -51,7 +51,7 @@ class DummyConstraint(Constraint):
         return constraint
 
     @property
-    def numerical_categorical_nmat(self)->NamedMatrix:
+    def categorical_nmat(self)->NamedMatrix:
         return self._categorical_nmat
     
     @property
@@ -101,7 +101,7 @@ class ScalableDummyConstraint(Constraint):
         return constraint
 
     @property
-    def numerical_categorical_nmat(self)->NamedMatrix:
+    def categorical_nmat(self)->NamedMatrix:
         return self._categorical_nmat
     
     @property

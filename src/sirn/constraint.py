@@ -116,7 +116,9 @@ class ReactionClassification(object):
     MAX_PRODUCT = 3
     MAX_ENCODING = 1000
     LABELS = ["null", "uni", "bi", "multi"]
+    NUM_CLASSIFICATION = len(LABELS)**2
     REACTION_CLASSES:List['ReactionClassification'] = []
+    REACTION_BITS = [1 << i for i in range(NUM_CLASSIFICATION)]
 
     def __init__(self, num_reactant:int, num_product:int):
         self.num_reactant = num_reactant
@@ -126,6 +128,7 @@ class ReactionClassification(object):
         if num_product > self.MAX_ENCODING:
             raise ValueError(f"num_product must be less than {self.MAX_ENCODING}.")
         self.encoding = self.num_reactant*100 + self.num_product
+        self.index = int(self.num_product*len(self.LABELS) + self.num_product)
 
     def __repr__(self)->str:
         result = f"{self.LABELS[int(self.num_reactant)]}-{self.LABELS[int(self.num_product)]}"
@@ -190,17 +193,13 @@ class Constraint(object):
     ################ SUBCLASS MUST IMPLEMENT ################
         
     @property
-    def numerical_categorical_nmat(self)->NamedMatrix:
+    def categorical_nmat(self)->NamedMatrix:
         raise NotImplementedError("numerical_categorical_nmat be implemented by subclass.")
     
     @property
     def numerical_enumerated_nmat(self)->NamedMatrix:
         raise NotImplementedError("numerical_enumerated_nmat be implemented by subclass.")
 
-    @property
-    def bitwise_categorical_nmat(self)->NamedMatrix:
-        raise NotImplementedError("logical_categorical_nmat be implemented by subclass.")
-    
     @property
     def bitwise_enumerated_nmat(self)->NamedMatrix:
         raise NotImplementedError("logical_enumerated_nmat be implemented by subclass.")
@@ -216,17 +215,17 @@ class Constraint(object):
         if self._is_subset_initialized:
             return
         if self.is_subset:
-            self._equality_nmat = self.numerical_categorical_nmat
+            self._equality_nmat = self.categorical_nmat
             self._inequality_nmat = self.numerical_enumerated_nmat
             self._equality_nmat.values = self._equality_nmat.values.astype(int)
             self._inequality_nmat.values = self._inequality_nmat.values.astype(int)
         else:
-            if self.numerical_categorical_nmat == NULL_NMAT:
+            if self.categorical_nmat == NULL_NMAT:
                 self._equality_nmat = self.numerical_enumerated_nmat
             elif self.numerical_enumerated_nmat == NULL_NMAT:
-                self._equality_nmat = self.numerical_categorical_nmat
+                self._equality_nmat = self.categorical_nmat
             else:
-                self._equality_nmat = NamedMatrix.hstack([self.numerical_categorical_nmat, self.numerical_enumerated_nmat])
+                self._equality_nmat = NamedMatrix.hstack([self.categorical_nmat, self.numerical_enumerated_nmat])
             self._equality_nmat.values = self._equality_nmat.values.astype(int)
             self._inequality_nmat = NULL_NMAT
         self._is_subset_initialized = True
@@ -242,7 +241,7 @@ class Constraint(object):
         return self._inequality_nmat
 
     def __repr__(self)->str:
-        return "Categorical\n" + str(self.numerical_categorical_nmat) + "\n\nEnumerated\n" +  str(self.numerical_enumerated_nmat)
+        return "Categorical\n" + str(self.categorical_nmat) + "\n\nEnumerated\n" +  str(self.numerical_enumerated_nmat)
 
     def __eq__(self, other)->bool:
         if self.__class__.__name__ != other.__class__.__name__:

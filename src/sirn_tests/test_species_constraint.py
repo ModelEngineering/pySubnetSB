@@ -13,6 +13,7 @@ IGNORE_TEST = False
 IS_PLOT = False
 REACTANT_MATRIX = NamedMatrix(np.array([[1, 0], [0, 1], [0, 0]]))
 PRODUCT_MATRIX = NamedMatrix(np.array([[1, 1], [1, 0], [0, 0]]))
+NUM_ITERATION = 10
 
 
 #############################
@@ -28,7 +29,7 @@ class TestSpeciesConstraint(unittest.TestCase):
             return
         self.assertEqual(self.constraint.reactant_nmat, REACTANT_MATRIX)
         self.assertEqual(self.constraint.product_nmat, PRODUCT_MATRIX)
-        self.assertEqual(self.constraint._numerical_categorical_nmat, NULL_NMAT)
+        self.assertEqual(self.constraint._categorical_nmat, NULL_NMAT)
         self.assertEqual(self.constraint._numerical_enumerated_nmat, NULL_NMAT)
 
     def testMakeSpeciesConstraintMatrixScale(self):
@@ -113,6 +114,33 @@ class TestSpeciesConstraint(unittest.TestCase):
                 self.assertTrue(reference_name in target_names)
             num_permutations.append(compatibility_collection.log10_num_permutation)
         #print(np.mean(num_permutations))
+
+    def testMakeBitwiseReactantProductConstraintMatrix(self):
+        if IGNORE_TEST:
+            return
+        for _ in range(NUM_ITERATION):
+            size = 10
+            network = Network.makeRandomNetworkByReactionType(size, size)
+            species_constraint = SpeciesConstraint(network.reactant_nmat, network.product_nmat)
+            named_matrix = species_constraint._makeBitwiseReactantProductConstraintMatrix()
+            self.assertTrue(isinstance(named_matrix, NamedMatrix))
+            df = named_matrix.dataframe
+            self.assertGreater(len(df), 0)
+
+    def testMakeReactantProductCountConstraintMatrix(self):
+        if IGNORE_TEST:
+            return
+        for _ in range(NUM_ITERATION):
+            size = 10
+            network = Network.makeRandomNetworkByReactionType(size, size)
+            species_constraint = SpeciesConstraint(network.reactant_nmat, network.product_nmat)
+            named_matrix = species_constraint._makeReactantProductCountConstraintMatrix()
+            count_arr = np.sum(named_matrix.values, axis=1)
+            for idx in range(len(count_arr)):
+                scanned_count = str(network).count("S" + str(idx))
+                self.assertEqual(count_arr[idx], scanned_count)
+            df = named_matrix.dataframe
+            self.assertGreater(len(df), 0)
 
 
 if __name__ == '__main__':
