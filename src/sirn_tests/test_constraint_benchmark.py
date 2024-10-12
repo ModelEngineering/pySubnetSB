@@ -3,7 +3,7 @@ from sirn.network import Network  # type: ignore
 from sirn.species_constraint import SpeciesConstraint  # type: ignore
 from sirn.reaction_constraint import ReactionConstraint  # type: ignore
 
-import pandas as pd
+import pandas as pd # type: ignore
 import unittest
 
 

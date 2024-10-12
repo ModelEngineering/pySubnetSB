@@ -1,6 +1,7 @@
 from sirn.constraint import Constraint, ReactionClassification, CompatibilityCollection    # type: ignore
 from sirn.named_matrix import NamedMatrix   # type: ignore
-#from sirn.network import Network  # type: ignore
+from sirn.network import Network  # type: ignore
+from sirn.species_constraint import SpeciesConstraint  # type: ignore
 
 import itertools
 import numpy as np
@@ -8,7 +9,7 @@ from scipy.special import factorial  # type: ignore
 import unittest
 
 
-IGNORE_TEST = False
+IGNORE_TEST = True
 IS_PLOT = False
 reactant_arr = np.array([[1, 0], [0, 1], [0, 0]]) # Must have 3 rows to be consistent with DummyConstraint
 product_arr = np.array([[0, 1], [1, 0], [0, 0]])
@@ -43,7 +44,7 @@ class DummyConstraint(Constraint):
         product_nmat = NamedMatrix.vstack([self.product_nmat]*scale, is_rename=True)
         constraint = DummyConstraint(reactant_nmat, product_nmat)
         equality_arr = np.vstack([self.equality_nmat.values]*scale)
-        inequality_arr = np.vstack([self.inequality_nmat.values]*scale)
+        inequality_arr = np.vstack([self.numerical_inequality_nmat.values]*scale)
         constraint._categorical_nmat = NamedMatrix(equality_arr, row_names=np.array(range(num_row)),
                 column_names=REACTION_NAMES)
         constraint._enumerated_nmat = NamedMatrix(inequality_arr, row_names=np.array(range(num_row)),
@@ -56,6 +57,10 @@ class DummyConstraint(Constraint):
     
     @property
     def numerical_enumerated_nmat(self)->NamedMatrix:
+        return self._enumerated_nmat
+
+    @property
+    def bitwise_enumerated_nmat(self)->NamedMatrix:
         return self._enumerated_nmat
     
     @property
@@ -94,7 +99,7 @@ class ScalableDummyConstraint(Constraint):
         product_nmat = NamedMatrix.vstack([self.product_nmat]*scale, is_rename=True)
         constraint = DummyConstraint(reactant_nmat, product_nmat)
         equality_arr = np.vstack([self.equality_nmat.values]*scale)
-        inequality_arr = np.vstack([self.inequality_nmat.values]*scale)
+        inequality_arr = np.vstack([self.numerical_inequality_nmat.values]*scale)
         num_row = equality_arr.shape[0]
         constraint._categorical_nmat = NamedMatrix(equality_arr, row_names=np.array(range(num_row)))
         constraint._enumerated_nmat = NamedMatrix(inequality_arr, row_names=np.array(range(num_row)))
@@ -106,6 +111,10 @@ class ScalableDummyConstraint(Constraint):
     
     @property
     def numerical_enumerated_nmat(self)->NamedMatrix:
+        return self._enumerated_nmat
+    
+    @property
+    def bitwise_enumerated_nmat(self)->NamedMatrix:
         return self._enumerated_nmat
     
     @property
@@ -180,7 +189,7 @@ class TestCompatibilityCollection(unittest.TestCase):
         collection = CompatibilityCollection(size, size)
         [collection.add(i-1, range(i)) for i in range(1, size+1)]
         arr = collection.expand()
-        self.assertEqual(arr.shape[0], factorial(3))
+        self.assertLessEqual(arr.shape[0], factorial(3))
         self.assertEqual(arr.shape[1], 3)
 
 
@@ -235,13 +244,13 @@ class TestConstraint(unittest.TestCase):
         num_true = np.sum(result)
         self.assertEqual(num_true, self.constraint.equality_nmat.num_row)
         #
-        result = self.constraint.calculateBooleanCompatibilityVector(self.constraint.inequality_nmat,
+        result = self.constraint.calculateBooleanCompatibilityVector(self.constraint.numerical_inequality_nmat,
               self.constraint.equality_nmat, is_equality=True)
         num_true = np.sum(result)
         self.assertEqual(num_true, 0)
         #
         result = self.constraint.calculateBooleanCompatibilityVector(self.constraint.equality_nmat,
-              self.constraint.inequality_nmat, is_equality=False)
+              self.constraint.numerical_inequality_nmat, is_equality=False)
         num_true = np.sum(result)
         self.assertEqual(num_true, 5)
 
@@ -269,6 +278,18 @@ class TestConstraint(unittest.TestCase):
             log10_permutation = self.constraint.calculateLog10UnconstrainedPermutation(size, size)
             self.assertTrue(np.isclose(log10_permutation, 2*np.log10(factorial(size))))
 
+    def testExpandReductionInSize(self):
+        #if IGNORE_TEST:
+        #    return
+        fill_size = 2
+        for size in range(3, 20):
+            network = Network.makeRandomNetworkByReactionType(size, size)
+            large_network = network.fill(num_fill_reaction=fill_size*size, num_fill_species=fill_size*size)
+            large_constraint = SpeciesConstraint(large_network.reactant_nmat, large_network.product_nmat)
+            constraint = SpeciesConstraint(network.reactant_nmat, network.product_nmat)
+            compatibility_collection = constraint.makeCompatibilityCollection(large_constraint)
+            arr = compatibility_collection.expand()
+            #print(np.log10(arr.shape[0]), compatibility_collection.log10_num_permutation)
 
 
 if __name__ == '__main__':

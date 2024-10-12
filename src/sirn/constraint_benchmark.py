@@ -206,18 +206,11 @@ class ConstraintBenchmark(object):
             plt.show()
         #
         return df
-        """
-
-# pivot the dataframe from long to wide form
-result = df.pivot(index='SymmetricDivision', columns='MutProb', values='value')
-
-sns.heatmap(result, annot=True, fmt="g", cmap='viridis')
-plt.show()
-
-        """
-        return df
     
 
 if __name__ == '__main__':
     size = 6
-    ConstraintBenchmark.plotConstraintStudy(size, 9*size, num_iteration=50, is_plot=True)
+    #ConstraintBenchmark.plotConstraintStudy(size, 9*size, num_iteration=50, is_plot=True)
+    benchmark = ConstraintBenchmark(6, 6, 20)
+    _ = benchmark.plotHeatmap(list(range(4, 22, 2)), list(range(10, 65, 5)), percentile=50,
+                                        num_iteration=300)

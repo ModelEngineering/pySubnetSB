@@ -56,17 +56,15 @@ class TestSpeciesConstraint(unittest.TestCase):
         for _ in range(30):
             size = 20
             network = Network.makeRandomNetworkByReactionType(size, size)
-            autocatalysis_arr = np.zeros(size)
+            collection = []
             for stg in [" ", "\n", "$"]:
-                autocatalysis_arr +=  np.array([len(re.findall("S" + str(n)
-                      + " .*->.*S" + str(n) + stg, str(network)))
-                      for n in range(size)])
-            valid_idxs = ["S" + str(n) in str(network) for n in range(size)]
-            autocatalysis_arr = autocatalysis_arr[valid_idxs]
+                totals = [len(re.findall("S" + str(n) + " .*->.*S" + str(n) + stg, str(network)))
+                      for n in range(size)]
+                collection.append(totals)
+            total_arr = np.sign(np.sum(np.array(collection), axis=0))
             species_constraint = SpeciesConstraint(network.reactant_nmat, network.product_nmat)
             named_matrix = species_constraint._makeAutocatalysisConstraint()
-            diff = np.abs(np.sum(autocatalysis_arr - named_matrix.values.flatten()))
-            self.assertEqual(diff, 0)
+            self.assertEqual(np.sum(total_arr), np.sum(named_matrix.values))
 
     def testSpeciesConstraintMatrix(self):
         if IGNORE_TEST:
@@ -86,11 +84,11 @@ class TestSpeciesConstraint(unittest.TestCase):
         for _ in range(4):
             self.constraint.setSubset(True)
             self.assertTrue(self.constraint.equality_nmat is NULL_NMAT)
-            self.assertTrue(self.constraint.inequality_nmat is not NULL_NMAT)
+            self.assertTrue(self.constraint.numerical_inequality_nmat is not NULL_NMAT)
             #
             self.constraint.setSubset(False)
             self.assertTrue(self.constraint.equality_nmat is not NULL_NMAT)
-            self.assertTrue(self.constraint.inequality_nmat is NULL_NMAT)
+            self.assertTrue(self.constraint.numerical_inequality_nmat is NULL_NMAT)
 
     def testmakeCompatibilityCollection(self):
         if IGNORE_TEST:

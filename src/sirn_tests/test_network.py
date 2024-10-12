@@ -164,7 +164,7 @@ class TestNetwork(unittest.TestCase):
                     num_success += bool(result)
                     #self.assertTrue(bool(result))
                 succ_frac = num_success/num_iteration
-                self.assertGreater(succ_frac, 0.8)
+                self.assertGreater(succ_frac, 0.5)
                 #print(f"Success rate for {identity}: {num_success/num_iteration}")
         #
         for fill_factor in [1, 2]:

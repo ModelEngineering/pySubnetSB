@@ -37,17 +37,26 @@ class SpeciesConstraint(Constraint):
     @property
     def numerical_enumerated_nmat(self)->NamedMatrix:
         if not self._is_initialized:
-            self._numerical_enumerated_nmat = NamedMatrix.hstack([self._makeReactantProductConstraintMatrix(),
-                  self._makeAutocatalysisConstraint(), self.makeSuccessorPredecessorConstraintMatrix()])
+            self._numerical_enumerated_nmat = NamedMatrix.hstack([
+                  #self._makeReactantProductCountConstraintMatrix(),
+                  self._makeAutocatalysisConstraint(),
+                  self._makeReactantProductConstraintMatrix(),
+                  self.makeSuccessorPredecessorConstraintMatrix()])
             self._is_initialized = True
         return self._numerical_enumerated_nmat
 
     @property
     def categorical_nmat(self)->NamedMatrix:
+        if self._categorical_nmat is NULL_NMAT:
+              #self._categorical_mat = self._makeAutocatalysisConstraint()  # Categorical version
+              pass
         return self._categorical_nmat
 
     @property
     def bitwise_enumerated_nmat(self)->NamedMatrix:
+        if self._bitwise_enumerated_nmat is NULL_NMAT:
+            #self._bitwise_enumerated_nmat = self._makeBitwiseReactantProductConstraintMatrix()
+            pass
         return self._bitwise_enumerated_nmat
     
     @property
@@ -155,15 +164,16 @@ class SpeciesConstraint(Constraint):
         return named_matrix
     
     def _makeAutocatalysisConstraint(self)->NamedMatrix:
-        """Counts the number of reactions in which a species is both a reactant and product.
+        """Indicates if the species is involved in an autocatalysis reaction.
 
         Returns:
-            NamedMatrix
+            NamedMatrix. is_autocatalysis
         """
-        column_names =  ['num_autocatalysis']
+        column_names =  ['is_autocatalysis']
         array = self.reactant_nmat.values * self.product_nmat.values > 0
         vector = np.sum(array, axis=1)
         vector = np.reshape(vector, (len(vector), 1)).astype(int)
+        #vector = np.sign(vector)
         named_matrix = NamedMatrix(vector, row_names=self.reactant_nmat.row_names,
                            row_description='species',
                            column_description='constraints',

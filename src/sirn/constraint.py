@@ -9,105 +9,25 @@ Constraints are NamedMatrices such that the columns are constraints and the rows
 For reaction networks, instances are either species or reactions.
 
 Subclasses are responsible for implementing:
-  property: numerical_categorical_nmat - NamedMatrix of categorical constraints
+  property: categorical_nmat - NamedMatrix of categorical constraints, those that are tested by equality
   property: numerical_enumerated_nmat - NamedMatrix of enumerated constraints
-  property: one_step_nmat - NamedMatrix of one step transitions
-  property: logical_categorical_nmat - NamedMatrix of logical (boolean) constraints
-  property: logical_enumerated_nmat - NamedMatrix of logical (boolean) constraints such that the target
+  property: bitwise_enumerated_nmat - NamedMatrix of boolean constraints such that the target
     must have a one bit for every bit in the reference.
+  property: one_step_nmat - NamedMatrix of one step transitions
 """
 
-import scipy.special  # type: ignore
 import sirn.constants as cn # type: ignore
 from sirn.named_matrix import NamedMatrix # type: ignore
+from sirn.compatibility_collection import CompatibilityCollection # type: ignore
 
-import itertools
 import json
+import scipy.special  # type: ignore
 import numpy as np
 import scipy  # type: ignore
-from typing import List, Tuple
+from typing import List
 
 NULL_NMAT = NamedMatrix(np.array([[]]))
 NULL_INT = -1
-
-
-#####################################
-class CompatibilityCollection(object):
-    # A compatibility collection specifies the rows in self that are compatible with other.
-
-    def __init__(self, num_self_row:int, num_other_row:int):
-        self.num_self_row = num_self_row
-        self.num_other_row = num_other_row
-        self.compatibilities:list = [ [] for _ in range(num_self_row)]
-
-    def add(self, reference_row:int, target_rows:List[int]):
-        # Add rows in target that are compatible with a row in reference
-        self.compatibilities[reference_row].extend(target_rows)
-
-    def copy(self)->'CompatibilityCollection':
-        new_collection = CompatibilityCollection(self.num_self_row, self.num_other_row)
-        new_collection.compatibilities = [l.copy() for l in self.compatibilities]
-        return new_collection
-
-    def __repr__(self):
-        return str(self.compatibilities)
-    
-    def __len__(self)->int:
-        return len(self.compatibilities)
-
-    def __eq__(self, other)->bool:
-        if len(self.compatibilities) != len(other.compatibilities):
-            return False
-        trues = [np.all(self.compatibilities[i] == other.compatibilities[i]) for i in range(len(self.compatibilities))]
-        return bool(np.all(trues))
-     
-    @property
-    def log10_num_permutation(self)->float:
-        # Calculates the log of the number of permutations implied by the compatibility collection
-        lengths = [len(l) for l in self.compatibilities]
-        if 0 in lengths:
-            return -np.inf
-        return np.sum([np.log10(len(l)) for l in self.compatibilities])
-    
-    def expand(self)->np.ndarray:
-        # Expands the compatibilities into a two dimensional array where each row is a permutation
-        return  np.array(list(itertools.product(*self.compatibilities)))
-
-    def prune(self, log10_max_permutation:float)->Tuple['CompatibilityCollection', bool]:
-        """Randomly prune the compatibility collection to a maximum number of permutations
-
-        Args:
-            log10_max_permutation (float): log10 of the maximum number of permutations
-
-        Returns:
-            CompatibilityCollection
-        """
-        collection = self.copy()
-        #
-        is_changed = False
-        for idx in range(1000000):
-            if collection.log10_num_permutation <= log10_max_permutation:
-                break
-            candidate_rows = [i for i in range(collection.num_self_row)
-                              if len(collection.compatibilities[i]) > 1]  
-            idx = np.random.randint(0, len(candidate_rows))
-            irow = candidate_rows[idx]
-            if len(collection.compatibilities[irow]) <= 1:
-                continue
-            # Check for duplicate single values
-            pos = np.random.randint(0, len(collection.compatibilities[irow]))
-            singles = list(np.array([v for v in collection.compatibilities if len(v) == 1]).flatten())
-            lst = collection.compatibilities[irow][0:pos]
-            lst.extend(collection.compatibilities[irow][pos+1:])
-            if (len(lst) == 1) and (lst[0] in singles):
-                continue
-            # Delete the element
-            del collection.compatibilities[irow][pos]
-            is_changed = True
-        else:
-            raise ValueError("Could not prune the collection.")
-        #
-        return collection, is_changed
 
 
 #####################################
@@ -166,7 +86,8 @@ class Constraint(object):
         # Outputs are categorical_nmat and enumerated_nmat, which are implemented by subclass
         self._is_subset_initialized = False
         self._equality_nmat = NULL_NMAT
-        self._inequality_nmat = NULL_NMAT
+        self._numerical_inequality_nmat = NULL_NMAT
+        self._bitwise_inequality_nmat = NULL_NMAT
 
     @property
     def num_row(self)->int:
@@ -216,9 +137,8 @@ class Constraint(object):
             return
         if self.is_subset:
             self._equality_nmat = self.categorical_nmat
-            self._inequality_nmat = self.numerical_enumerated_nmat
-            self._equality_nmat.values = self._equality_nmat.values.astype(int)
-            self._inequality_nmat.values = self._inequality_nmat.values.astype(int)
+            self._numerical_inequality_nmat = self.numerical_enumerated_nmat
+            self._bitwise_inequality_nmat = self.bitwise_enumerated_nmat
         else:
             if self.categorical_nmat == NULL_NMAT:
                 self._equality_nmat = self.numerical_enumerated_nmat
@@ -226,8 +146,9 @@ class Constraint(object):
                 self._equality_nmat = self.categorical_nmat
             else:
                 self._equality_nmat = NamedMatrix.hstack([self.categorical_nmat, self.numerical_enumerated_nmat])
-            self._equality_nmat.values = self._equality_nmat.values.astype(int)
-            self._inequality_nmat = NULL_NMAT
+            if self.bitwise_enumerated_nmat != NULL_NMAT:
+                self._equality_nmat = NamedMatrix.hstack([self._equality_nmat, self.bitwise_enumerated_nmat])
+            self._numerical_inequality_nmat = NULL_NMAT
         self._is_subset_initialized = True
    
     @property
@@ -236,9 +157,14 @@ class Constraint(object):
         return self._equality_nmat
     
     @property
-    def inequality_nmat(self)->NamedMatrix:
+    def numerical_inequality_nmat(self)->NamedMatrix:
         self._initializeSubset()
-        return self._inequality_nmat
+        return self._numerical_inequality_nmat
+
+    @property
+    def bitwise_inequality_nmat(self)->NamedMatrix:
+        self._initializeSubset()
+        return self._bitwise_inequality_nmat
 
     def __repr__(self)->str:
         return "Categorical\n" + str(self.categorical_nmat) + "\n\nEnumerated\n" +  str(self.numerical_enumerated_nmat)
@@ -291,13 +217,15 @@ class Constraint(object):
 
     @classmethod 
     def calculateBooleanCompatibilityVector(cls, self_constraint_nmat:NamedMatrix,
-              other_constraint_nmat:NamedMatrix, is_equality:bool=True)->np.ndarray[bool]:  # type: ignore
+              other_constraint_nmat:NamedMatrix, is_equality:bool=True,
+              is_bitwise:bool=False)->np.ndarray[bool]:  # type: ignore
         """
         Calculates the compatibility of two matrices of constraints.
 
         Args:
             other: Constraint
             is_equality: bool (default: True) Equality or inequality
+            is_bitwise: bool (default: False) Bitwise comparisons
 
         Returns:
             np.ndarray[bool] - vector of booleans
@@ -322,10 +250,13 @@ class Constraint(object):
         if is_equality:
             satisfy_arr = self_arr == other_arr
         else:
-            satisfy_arr = self_arr <= other_arr
+            if is_bitwise:
+                satisfy_arr = np.bitwise_and(self_arr, other_arr) == self_arr
+            else:
+                satisfy_arr = self_arr <= other_arr
         return np.sum(satisfy_arr, axis=1) == num_column
     
-    def makeCompatibilityCollection(self, other:'Constraint')->CompatibilityCollection:
+    def makeCompatibilityCollection(self, target:'Constraint')->CompatibilityCollection:
         """
         Makes a collection of compatible constraints.
         """
@@ -333,13 +264,18 @@ class Constraint(object):
         if self.equality_nmat != NULL_NMAT:
             is_equality_compatibility = True
             equality_compatibility_arr = self.calculateBooleanCompatibilityVector(self.equality_nmat,
-                  other.equality_nmat, is_equality=True)
+                  target.equality_nmat, is_equality=True)
         else:
             is_equality_compatibility = False
-        if self.inequality_nmat != NULL_NMAT:
+        if self.numerical_inequality_nmat != NULL_NMAT:
             is_inequality_compatibility = True
-            inequality_compatibility_arr = self.calculateBooleanCompatibilityVector(self.inequality_nmat,
-                  other.inequality_nmat, is_equality=False)
+            inequality_compatibility_arr = self.calculateBooleanCompatibilityVector(
+                  self.numerical_inequality_nmat,
+                  target.numerical_inequality_nmat, is_equality=False)
+            if self.bitwise_inequality_nmat != NULL_NMAT:
+                inequality_compatibility_arr &= self.calculateBooleanCompatibilityVector(
+                  self.bitwise_inequality_nmat,
+                  target.bitwise_inequality_nmat, is_equality=False, is_bitwise=True)
         else:
             is_inequality_compatibility = False
         # Calculate the compatibility vector by combining the equality and inequality constraints
@@ -352,12 +288,12 @@ class Constraint(object):
         else:
             raise ValueError("No compatibility constraints.")
         # Create the compatibility collection
-        compatibility_collection = CompatibilityCollection(self.num_row, other.num_row)
-        target_arr = np.array(range(other.num_row))
+        compatibility_collection = CompatibilityCollection(self.num_row, target.num_row)
+        target_arr = np.array(range(target.num_row))
         for irow in range(self.num_row):
             #  Select the rows in other that are compatible with the row in self
-            base_pos = irow*other.num_row
-            idxs = np.array(range(base_pos, base_pos+other.num_row))
+            base_pos = irow*target.num_row
+            idxs = np.array(range(base_pos, base_pos+target.num_row))
             sel_idxs = compatibility_arr[idxs]
             target_rows = target_arr[sel_idxs]
             compatibility_collection.add(irow, target_rows)

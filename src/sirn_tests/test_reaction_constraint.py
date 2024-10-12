@@ -82,11 +82,11 @@ class TestReactionConstraint(unittest.TestCase):
         for _ in range(4):
             self.constraint.setSubset(True)
             self.assertTrue(self.constraint.equality_nmat is not NULL_NMAT)
-            self.assertTrue(self.constraint.inequality_nmat is not NULL_NMAT)
+            self.assertTrue(self.constraint.numerical_inequality_nmat is not NULL_NMAT)
             #
             self.constraint.setSubset(False)
             self.assertTrue(self.constraint.equality_nmat is not NULL_NMAT)
-            self.assertTrue(self.constraint.inequality_nmat is NULL_NMAT)
+            self.assertTrue(self.constraint.numerical_inequality_nmat is NULL_NMAT)
 
     def testmakeCompatibilityCollection(self):
         if IGNORE_TEST:

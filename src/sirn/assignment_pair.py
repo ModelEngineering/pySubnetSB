@@ -4,7 +4,7 @@ import sirn.constants as cn  # type: ignore
 
 import json
 import numpy as np  # type: ignore
-from typing import List
+from typing import List, Tuple
 
 class AssignmentPair(object):
 
@@ -15,6 +15,8 @@ class AssignmentPair(object):
             raise RuntimeError("Must specify reaction assignment!")
         self.species_assignment = species_assignment
         self.reaction_assignment = reaction_assignment
+        self.row_assignment = self.species_assignment
+        self.column_assignment = self.reaction_assignment
 
     def __repr__(self):
         return f"species: {self.species_assignment}, reaction: {self.reaction_assignment}"
