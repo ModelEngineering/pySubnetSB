@@ -32,6 +32,7 @@ from typing import Union, Tuple, Optional, List
 
 
 MAX_BATCH_SIZE = 1000000  # Number of matrix values in a comparison batch
+DEBUG = False
 
 
 #########################################################
@@ -47,9 +48,9 @@ class _Assignment(object):
 
 #########################################################
 class ComparisonCriteria(object):
-    # Describes the comparisons to be made between the reference and target matrices
+    # Describes the comparisons to be made between the reference and target matrices. Choices are mutually exclusive.
 
-    def __init__(self, is_equality:bool=True, is_numerical_inequality:bool=False,
+    def __init__(self, is_equality:bool=False, is_numerical_inequality:bool=False,
             is_bitwise_inequality:bool=False):
             """
             Args:
@@ -57,6 +58,8 @@ class ComparisonCriteria(object):
                 is_numerical_inequality (bool): if True, the comparison is for numerical inequality
                 is_bitwise_inequality (bool): if True, the comparison is for bitwise inequality
             """
+            if is_equality + is_numerical_inequality + is_bitwise_inequality != 1:
+                raise ValueError("Must specify exactly one comparison criteria")
             self.is_equality = is_equality
             self.is_numerical_inequality = is_numerical_inequality
             self.is_bitwise_inequality = is_bitwise_inequality
@@ -85,40 +88,46 @@ class AssignmentEvaluator(object):
         self.comparison_criteria = comparison_criteria
         self.max_batch_size = max_batch_size
 
-    def vectorToLinear(self, row_idx:Union[int, np.ndarray[int]],  # type: ignore
+    def vectorToLinear(self, num_column_assignment:int, row_idx:Union[int, np.ndarray[int]],  # type: ignore
           column_idx:Union[int, np.ndarray[int]])->Union[int, np.ndarray[int]]:  # type: ignore
         """
         Converts a vector address of the candidate pair assignments (row, column) to a linear address.
         The linearlization is column first.
 
         Args:
-            reference_idx (np.ndarray): vector index
+            num_column_assignment (int): number of column assignments
+            row_idx (int): row index
+            column_idx (int): column index
 
         Returns:
             np.ndarray: linear index
         """
-        return row_idx*self.num_reference_column + column_idx
+        return row_idx*num_column_assignment + column_idx
 
-    def linearToVector(self, index:Union[int, np.ndarray])->Union[Tuple[int, int], Tuple[np.ndarray, np.ndarray]]:  
+    def linearToVector(self, num_column_assignment:int,
+          index:Union[int, np.ndarray])->Union[Tuple[int, int], Tuple[np.ndarray, np.ndarray]]:  
         """
         Converts a linear address of the candidate assignments to a vector index.
         Converts a vector representation of the candidate assignments (row, column) to a linear index
 
         Args:
+            num_column_assignment (int): number of column assignments
             index (int): linear index
 
         Returns:
             row_idx (int): row index
             column_idx (int): column index
         """
-        row_idx = index//self.num_reference_row
-        column_idx = index%self.num_reference_column
+        row_idx = index//num_column_assignment
+        column_idx = index%num_column_assignment
         return row_idx, column_idx  # type: ignore
     
     def _makeBatch(self, start_idx:int, end_idx:int, row_assignment:_Assignment, column_assignment:_Assignment,
           big_reference_arr:Optional[np.ndarray]=None)->Tuple[np.ndarray, np.ndarray]:
         """
-        Constructs the reference and target matrices for a batch of comparisons.
+        Constructs the reference and target matrices for a batch of comparisons. The approach is:
+        1. Construct a flattened version of the target matrix for each comparison so that elements are ordered by
+            row, then column, then comparison instance.
 
         Args:
             start_idx (int): start index
@@ -134,23 +143,36 @@ class AssignmentEvaluator(object):
         num_comparison = end_idx - start_idx + 1
         if num_comparison > row_assignment.num_row*column_assignment.num_row:
             raise ValueError("Number of comparisons exceeds the number of assignments")
-        row_assignment_sel_arr, column_assignment_sel_arr = self.linearToVector(np.array(range(start_idx, end_idx+1)))
-        # Calculate the rows for the flattened target matrix
+        num_column_assignment = column_assignment.num_row
+        row_assignment_sel_arr, column_assignment_sel_arr = self.linearToVector(
+              num_column_assignment, np.array(range(start_idx, end_idx+1)))
+        if row_assignment_sel_arr.shape[0] != num_comparison:  # type: ignore
+            raise ValueError("Number of comparisons does not match the indices.")
+        if column_assignment_sel_arr.shape[0] != num_comparison:  # type: ignore
+            raise ValueError("Number of comparisons does not match the indices.")
+        # Calculate the index of rows for the flattened target matrix. There is a row value for each
+        #   comparison and element of the reference matrix.
+        #      Index of the target rows
         row1_idx_arr = row_assignment.array[row_assignment_sel_arr].flatten()
-        row2_idx_arr = np.repeat(row1_idx_arr, column_assignment.num_row)
-        # Calculate the columns for the flattened target matrix
-        column1_idxs = list(column_assignment.array[column_assignment_sel_arr])
-        column_idx_arr = np.repeat(np.vstack(column1_idxs), row_assignment.num_row, axis=0).flatten()
+        #      Replicate each index for the number of columns
+        row2_idx_arr = np.repeat(row1_idx_arr, self.num_reference_column)
+        # Calculate the column for each element of the target flattened matrix
+        column1_idx_arr = column_assignment.array[column_assignment_sel_arr]
+        column_idx_arr = np.repeat(column1_idx_arr, self.num_reference_row, axis=0).flatten()
+        if DEBUG:
+            assert(len(row2_idx_arr) == len(column_idx_arr))
         # Construct the selected parts of the target matrix
         flattened_target_arr = self.target_arr[row2_idx_arr, column_idx_arr]
         big_target_arr = np.reshape(flattened_target_arr,
-              (row_assignment.num_row*num_comparison, column_assignment.num_column))
+              (self.num_reference_row*num_comparison, self.num_reference_column))
+        if DEBUG:
+            assert(big_target_arr.shape[0] == self.num_reference_row*num_comparison)
         # Construct the reference array
         if big_reference_arr is None:
             big_references = [self.reference_arr.flatten()]*num_comparison
             flattened_big_reference_arr = np.concatenate(big_references, axis=0)
             big_reference_arr = np.reshape(flattened_big_reference_arr,
-                (row_assignment.num_row*num_comparison, column_assignment.num_column))
+                (self.num_reference_row*num_comparison, self.num_reference_column))
         return big_reference_arr, big_target_arr
     
     def _compare(self, big_reference_arr:np.ndarray, big_target_arr:np.ndarray)->np.ndarray:
@@ -170,10 +192,12 @@ class AssignmentEvaluator(object):
         # Do the comparisons
         if self.comparison_criteria.is_equality:
             big_compatible_arr &= big_reference_arr == big_target_arr
-        if self.comparison_criteria.is_numerical_inequality:
+        elif self.comparison_criteria.is_numerical_inequality:
             big_compatible_arr &= big_reference_arr <= big_target_arr
-        if self.comparison_criteria.is_bitwise_inequality:
+        elif self.comparison_criteria.is_bitwise_inequality:
             big_compatible_arr &= big_reference_arr & big_target_arr == big_reference_arr
+        else:
+            raise RuntimeError("Unknown comparison criteria.")
         # Determine the successful assignment pairs
         big_row_sum = np.sum(big_compatible_arr, axis=1)
         big_row_satisfy = big_row_sum == num_big_column # Sucessful row comparisons
@@ -215,7 +239,7 @@ class AssignmentEvaluator(object):
             assignment_satisfy_arr = self._compare(big_reference_arr, big_target_arr)
             assignment_satisfy_idx = np.where(assignment_satisfy_arr)[0]
             for idx in assignment_satisfy_idx:
-                row_idx, column_idx = self.linearToVector(idx)
+                row_idx, column_idx = self.linearToVector(num_column_assignment, idx)
                 assignment_pair = AssignmentPair(row_assignment=row_assignment_arr[row_idx],
                       column_assignment=column_assignment_arr[column_idx])
                 assignment_pairs.append(assignment_pair)
