@@ -262,12 +262,16 @@ class AssignmentEvaluator(object):
         """Finds the pair of row and column assignments that satsify the comparison criteria.
 
         Args:
-            assignment_pairs (Optional[List[AssignmentPair]], optional): _description_. Defaults to None.
-
-        Raises:
-            NotImplementedError: _description_
+            assignment_pairs: List[AssignmentPair] - pairs of row and column assignments
 
         Returns:
-            List[AssignmentPair]: _description_
+            List[AssignmentPair]: Assignment pairs that successfully compare
         """
-        raise NotImplementedError("Must implement.")
+        successful_assignment_pairs = []
+        for assignment_pair in assignment_pairs:
+            target_arr = self.target_arr[assignment_pair.row_assignment, :]
+            target_arr = target_arr[:, assignment_pair.column_assignment]
+            result = self._compare(self.reference_arr, target_arr)
+            if result:
+                successful_assignment_pairs.append(assignment_pair)
+        return successful_assignment_pairs
