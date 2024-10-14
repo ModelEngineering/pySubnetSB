@@ -23,6 +23,7 @@
     * AssignmentArray is a two dimensional array of assignments. Columns are the index of the target row that
         is assigned to the reference row (column index).
         Rows are instances of an assignment. There is an AssignmentArray for the rows and for the columns.
+    * A Comparison is a comparison betweeen the reference matrix and an assignment of rows and columns in the target
 
  """
 from sirn.assignment_pair import AssignmentPair # type: ignore
@@ -31,7 +32,7 @@ import numpy as np
 from typing import Union, Tuple, Optional, List
 
 
-MAX_BATCH_SIZE = 1000000  # Number of matrix values in a comparison batch
+MAX_BATCH_SIZE = int(1e7)  # Matrix memory in bytes used in a comparison batch
 DEBUG = False
 
 
@@ -188,14 +189,13 @@ class AssignmentEvaluator(object):
         """
         # Initializations
         num_big_row, num_big_column = big_reference_arr.shape
-        big_compatible_arr = np.repeat(True, num_big_row)
         # Do the comparisons
         if self.comparison_criteria.is_equality:
-            big_compatible_arr &= big_reference_arr == big_target_arr
+            big_compatible_arr = big_reference_arr == big_target_arr
         elif self.comparison_criteria.is_numerical_inequality:
-            big_compatible_arr &= big_reference_arr <= big_target_arr
+            big_compatible_arr = big_reference_arr <= big_target_arr
         elif self.comparison_criteria.is_bitwise_inequality:
-            big_compatible_arr &= big_reference_arr & big_target_arr == big_reference_arr
+            big_compatible_arr = big_reference_arr & big_target_arr == big_reference_arr
         else:
             raise RuntimeError("Unknown comparison criteria.")
         # Determine the successful assignment pairs
@@ -221,25 +221,38 @@ class AssignmentEvaluator(object):
         # Initializations
         num_row_assignment = row_assignment_arr.shape[0]
         num_column_assignment = column_assignment_arr.shape[0]
-        total_assignment_index = num_row_assignment*num_column_assignment
+        num_comparison = num_row_assignment*num_column_assignment
         row_assignment = _Assignment(row_assignment_arr)
         column_assignment = _Assignment(column_assignment_arr)
+        # Error checks
+        if row_assignment.num_column != self.num_reference_row:
+            raise ValueError("Number of reference rows does not match the number of row assignments")
+        if column_assignment.num_column != self.num_reference_column:
+            raise ValueError("Number of reference columns does not match the number of row assignments")
         # Calculate the number of assignment pair indices in a batch
-        bytes_per_assignment_pair = 2*self.reference_arr.itemsize*self.num_reference_row*self.num_reference_column
-        num_assignment_pair_index = self.max_batch_size//bytes_per_assignment_pair
-        max_num_batch = total_assignment_index//num_assignment_pair_index + 1
+        bytes_per_comparison = 2*self.reference_arr.itemsize*self.num_reference_row*self.num_reference_column
+        total_bytes = bytes_per_comparison*num_comparison
+        max_comparison_per_batch = max(self.max_batch_size//bytes_per_comparison, 1)
+        num_batch = num_comparison//max_comparison_per_batch + 1
         # Iterative do the assignments
         assignment_pairs = []
         big_reference_arr = None
-        for ibatch in range(max_num_batch):
-            start_idx = ibatch*num_assignment_pair_index
-            end_idx = min((ibatch+1)*num_assignment_pair_index, total_assignment_index)
+        for ibatch in range(num_batch):
+            start_idx = ibatch*max_comparison_per_batch
+            if start_idx >= num_comparison:
+                continue
+            end_idx = min((ibatch+1)*max_comparison_per_batch, num_comparison - 1)
+            if end_idx == num_comparison - 1:
+                # Last batch must adjust the size of the reference array
+                big_reference_arr = None
             big_reference_arr, big_target_arr = self._makeBatch(start_idx, end_idx, row_assignment, column_assignment,
                   big_reference_arr=big_reference_arr)
             assignment_satisfy_arr = self._compare(big_reference_arr, big_target_arr)
             assignment_satisfy_idx = np.where(assignment_satisfy_arr)[0]
+            # Add the assignment pairs
             for idx in assignment_satisfy_idx:
-                row_idx, column_idx = self.linearToVector(num_column_assignment, idx)
+                adjusted_idx = idx + start_idx
+                row_idx, column_idx = self.linearToVector(num_column_assignment, adjusted_idx)
                 assignment_pair = AssignmentPair(row_assignment=row_assignment_arr[row_idx],
                       column_assignment=column_assignment_arr[column_idx])
                 assignment_pairs.append(assignment_pair)

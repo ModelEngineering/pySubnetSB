@@ -7,16 +7,41 @@ import numpy as np  # type: ignore
 from typing import List, Tuple
 
 class AssignmentPair(object):
+    # species and row are equivalent. reaction and column are equivalent.
 
-    def __init__(self, species_assignment=None, reaction_assignment=None):
-        if species_assignment is None:
+    def __init__(self, species_assignment=None, reaction_assignment=None, row_assignment=None, column_assignment=None):
+        if (species_assignment is None) and (row_assignment is None):
             raise RuntimeError("Must specify species assignment!")
-        if reaction_assignment is None:
+        if (reaction_assignment is None) and (column_assignment is None):
             raise RuntimeError("Must specify reaction assignment!")
-        self.species_assignment = species_assignment
-        self.reaction_assignment = reaction_assignment
-        self.row_assignment = self.species_assignment
-        self.column_assignment = self.reaction_assignment
+        self._species_assignment = species_assignment
+        self._reaction_assignment = reaction_assignment
+        self._row_assignment = row_assignment
+        self._column_assignment = column_assignment
+
+    @property
+    def species_assignment(self)->np.ndarray:
+        if self._species_assignment is None:
+            self._species_assignment = self._row_assignment
+        return self._species_assignment
+    
+    @property
+    def row_assignment(self)->np.ndarray:
+        if self._row_assignment is None:
+            self._row_assignment = self._species_assignment
+        return self._row_assignment
+    
+    @property
+    def reaction_assignment(self)->np.ndarray:
+        if self._reaction_assignment is None:
+            self._reaction_assignment = self._column_assignment
+        return self._reaction_assignment
+    
+    @property
+    def column_assignment(self)->np.ndarray:
+        if self._column_assignment is None:
+            self._column_assignment = self._reaction_assignment
+        return self._column_assignment
 
     def __repr__(self):
         return f"species: {self.species_assignment}, reaction: {self.reaction_assignment}"
@@ -35,7 +60,7 @@ class AssignmentPair(object):
                               reaction_assignment=np.argsort(self.reaction_assignment.copy()))
     
     def __eq__(self, other)->bool:
-        if not isinstance(other, AssignmentPair):
+        if not self.__class__.__name__ in str(type(other)):
             return False
         if (len(self.species_assignment) != len(other.species_assignment)):
             return False
