@@ -170,6 +170,16 @@ class TestFunctions(unittest.TestCase):
                 num_collision += result1 == result2
         test(num_iteration=1000)
 
+    def testListOfLists(self):
+        if IGNORE_TEST:
+            return
+        for num_list in range(2, 20):
+            lengths = np.random.randint(2, 10, num_list)
+            list_of_lists = [np.random.randint(0, length, length) for length in lengths]
+            sample_arr = util.sampleListOfLists(list_of_lists, 10)
+            for sample in sample_arr:
+                self.assertTrue(np.all([s in list_of_lists[i] for i, s in enumerate(sample)]))
+
 
 if __name__ == '__main__':
     unittest.main()

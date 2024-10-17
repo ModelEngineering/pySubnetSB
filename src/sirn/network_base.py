@@ -36,8 +36,8 @@ class NetworkBase(object):
                  network_name:Optional[str]=None)->None:
         """
         Args:
-            reactant_mat (np.ndarray): Reactant matrix.
-            product_mat (np.ndarray): Product matrix.
+            reactant_arr (np.ndarray): Reactant matrix.
+            product_arr (np.ndarray): Product matrix.
             network_name (str): Name of the network.
             reaction_names (np.ndarray[str]): Names of the reactions.
             species_names (np.ndarray[str]): Names of the species
@@ -56,10 +56,18 @@ class NetworkBase(object):
         self._species_names = species_names
         self._reaction_names = reaction_names
         self._network_name = network_name
-        self._stoichiometry_mat:Optional[NamedMatrix] = None
+        self._stoichiometry_nmat:Optional[NamedMatrix] = None
         self._strong_hash:Optional[int] = None  # Hash for strong identity
         self._weak_hash:Optional[int] = None  # Hash for weak identity
         self._constraint_pair_dct:dict = {}  # keys are identity, is_subset
+
+    @property
+    def stoichiometry_nmat(self)->NamedMatrix:
+        if self._stoichiometry_nmat is None:
+            self._stoichiometry_nmat = NamedMatrix(self.product_nmat.values - self.reactant_nmat.values,
+                  row_names=self.species_names, column_names=self.reaction_names,
+                  row_description="species", column_description="reactions")
+        return self._stoichiometry_nmat
 
     @property
     def species_names(self)->np.ndarray[str]:  # type: ignore
@@ -318,9 +326,9 @@ class NetworkBase(object):
         Returns:
             Network
         """
-        reactant_mat = np.random.randint(0, 3, (num_species, num_reaction))
-        product_mat = np.random.randint(0, 3, (num_species, num_reaction))
-        return cls(reactant_mat, product_mat)
+        reactant_arr = np.random.randint(0, 3, (num_species, num_reaction))
+        product_arr = np.random.randint(0, 3, (num_species, num_reaction))
+        return cls(reactant_arr, product_arr)
     
     @classmethod
     def makeRandomNetworkByReactionType(cls, 
@@ -451,11 +459,11 @@ class NetworkBase(object):
         Returns:
             str
         """
-        def makeSpeciesExpression(reaction_idx:int, stoichiometry_mat:np.ndarray)->str:
+        def makeSpeciesExpression(reaction_idx:int, stoichiometry_arr:np.ndarray)->str:
             all_idxs = np.array(range(self.num_species))
-            species_idxs = all_idxs[stoichiometry_mat[:, reaction_idx] > 0]
+            species_idxs = all_idxs[stoichiometry_arr[:, reaction_idx] > 0]
             species_names = self.species_names[species_idxs]
-            stoichiometries = [s for s in stoichiometry_mat[species_idxs, reaction_idx]]
+            stoichiometries = [s for s in stoichiometry_arr[species_idxs, reaction_idx]]
             stoichiometries = ["" if np.isclose(s, 1) else str(s) + " " for s in stoichiometries]
             expressions = [f"{stoichiometries[i]}{species_names[i]}" for i in range(len(species_names))]
             result =  ' + '.join(expressions)

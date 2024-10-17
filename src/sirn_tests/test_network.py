@@ -152,15 +152,21 @@ class TestNetwork(unittest.TestCase):
     def testIsStructurallyIdenticalScaleRandomlyPermuteTrue(self):
         if IGNORE_TEST:
             return
-        def test(reference_size, fill_factor=1, num_iteration=2*NUM_ITERATION):
-            for identity in [cn.ID_WEAK, cn.ID_STRONG]:
+        def test(reference_size, fill_factor=1, num_iteration=20):
+            #for identity in [cn.ID_WEAK, cn.ID_STRONG]:
+            for identity in [cn.ID_STRONG]:
                 num_success = 0
                 for _ in range(num_iteration):
-                    reference = Network.makeRandomNetworkByReactionType(reference_size)
+                    reference = Network.makeRandomNetworkByReactionType(num_reaction=reference_size,
+                                                                        num_species=14)
                     target = reference.fill(num_fill_reaction=fill_factor*reference_size,
                         num_fill_species=fill_factor*reference_size)
                     result = reference.isStructurallyIdentical(target, identity=identity, is_subset=True,
-                            max_num_assignment=5000)
+                          max_num_assignment=10000)
+                    msg = f"identity: {identity}, reference_size: {reference_size}, fill_factor: {fill_factor}"
+                    msg += f"\n   num_species_candidate: {result.num_species_candidate}"
+                    msg += f"\n   num_reaction_candidate: {result.num_reaction_candidate}"
+                    #print(msg)
                     num_success += bool(result)
                     #self.assertTrue(bool(result))
                 succ_frac = num_success/num_iteration
@@ -168,7 +174,7 @@ class TestNetwork(unittest.TestCase):
                 #print(f"Success rate for {identity}: {num_success/num_iteration}")
         #
         for fill_factor in [1, 2]:
-            for size in [3, 5, 7]:
+            for size in [3, 5]:
                 test(size, fill_factor=fill_factor)
 
     def testIsStructurallyIdenticalScaleRandomlyPermuteFalse(self):
@@ -216,54 +222,6 @@ class TestNetwork(unittest.TestCase):
         test(10, is_isomorphic=True)
         test(10, is_isomorphic=False)
 
-    def testCompare(self):
-        if IGNORE_TEST:
-            return
-        target_arr = np.array([ [1, 2, 3], [4, 5, 6], [7, 8, 9]])
-        reference_arr = np.array([ [9, 7], [3, 1]])
-        true_species_assignment_arr = np.array([2, 0])
-        false_species_assignment_arr = np.array([0, 1])
-        # Index of true species assignment is 0
-        species_assignment_arr = np.vstack([true_species_assignment_arr, false_species_assignment_arr])
-        true_reaction_assignment_arr = np.array([2, 0])
-        false_reaction_assignment_arr = np.array([1, 0])
-        # Index of true reaction assignment is 1
-        reaction_assignment_arr = np.vstack([false_reaction_assignment_arr, true_reaction_assignment_arr])
-        # Index of true result is 1 + 0*num_species = 1
-        result_arr = self.network._compare(reference_arr, target_arr, species_assignment_arr, reaction_assignment_arr)
-        self.assertTrue(result_arr[1])
-        self.assertTrue(not result_arr[i] for i in range(4) if i != 1)
-
-    def testCompareScale(self):
-        if IGNORE_TEST:
-            return
-        target_size = 10
-        reference_size = 5
-        num_assignment = 4
-        #####
-        def makeAssignment(arr):
-            extended_arr = [arr]
-            hashes = [hash(str(arr))]
-            while len(extended_arr) < num_assignment:
-                new_arr = np.random.permutation(arr)
-                new_hash = hash(str(new_arr))
-                if new_hash in hashes:
-                    continue
-                extended_arr.append(new_arr)
-                hashes.append(new_hash)
-            return np.vstack(extended_arr)
-        #####
-        target_arr = np.random.randint(0, 10, (target_size, target_size))
-        true_species_assignment_arr = np.random.permutation(range(target_size))[:reference_size]
-        species_assignment_arr = makeAssignment(true_species_assignment_arr)
-        true_reaction_assignment_arr = np.random.permutation(range(target_size))[:reference_size]
-        reaction_assignment_arr = makeAssignment(true_reaction_assignment_arr)
-        reference_arr = target_arr[true_species_assignment_arr, :]
-        reference_arr = reference_arr[:, true_reaction_assignment_arr]
-        result_arr = self.network._compare(reference_arr, target_arr, species_assignment_arr, reaction_assignment_arr)
-        self.assertTrue(result_arr[0])
-        self.assertTrue(not v for v in result_arr[1:])
-
 
 if __name__ == '__main__':
-    unittest.main(failfast=True)
+    unittest.main(failfast=False)

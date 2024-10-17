@@ -26,7 +26,8 @@ for _ in range(3):
     OSCILLATOR_PROJECT = os.path.dirname(OSCILLATOR_PROJECT)
 OSCILLATOR_PROJECT = os.path.join(OSCILLATOR_PROJECT, 'OscillatorDatabase')
 #
-MAX_NUM_ASSIGNMENT = 1e8  # Maximum number of permutations to search
+MAX_NUM_ASSIGNMENT = 1e7  # Maximum number of permutations to search
+MAX_BATCH_SIZE = int(1e7)  # Matrix memory in bytes used in a comparison batch
 STRUCTURAL_IDENTITY = "structural_identity"
 UNKNOWN_STRUCTURAL_IDENTITY_NAME = "*" # Used for networks whose structural identity cannot be determined
 NETWORK_DELIMITER = "---"

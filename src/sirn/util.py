@@ -240,3 +240,22 @@ def string2Array(array_context:ArrayContext)->np.ndarray:
     array = np.array(eval(array_context.string))
     array = np.reshape(array, (array_context.num_row, array_context.num_column))
     return array
+
+def sampleListOfLists(list_of_lists:List[List[int]], num_samples:int)->np.ndarray:
+    """Randomly samples the permutations implied by a list of lists.
+
+    Args:
+        list_of_lists (List[List[int]]): A list of lists.
+        num_samples (int): Number of samples.
+
+    Returns:
+        np.ndarray: An array of samples. Columns are instances from list, rows are samples.
+    """
+    lengths = [len(lst) for lst in list_of_lists]
+    arrays = [np.array(lst) for lst in list_of_lists]
+    sample_position_arr = np.array([np.random.randint(0, l, num_samples) for l in lengths]).T
+    samples = []
+    for sample_position in sample_position_arr:
+        sample = [a[s] for a, s in zip(arrays, sample_position)]
+        samples.append(sample)
+    return np.array(samples)

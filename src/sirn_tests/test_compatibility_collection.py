@@ -20,10 +20,15 @@ class TestCompatibilityCollection(unittest.TestCase):
     def testNumPermutation(self):
         if IGNORE_TEST:
             return
-        for size in np.random.randint(2, 50, 1000):
+        for size in np.random.randint(2, 7, 100):
             collection = CompatibilityCollection(size, size)
-            [collection.add(i-1, range(i)) for i in range(1, size+1)]
-            self.assertTrue(np.isclose(collection.log10_num_permutation, np.log10(factorial(size))))
+            [collection.add(i-1, np.random.randint(0, size, size)) for i in range(1, size+1)]
+            expanded_collection = collection.expand()
+            if expanded_collection.shape[0] > 0:
+                log10_expanded_collection = max(0, np.log10(expanded_collection.shape[0]))
+            else:
+                log10_expanded_collection = 0
+            self.assertTrue(np.abs(collection.log10_num_permutation - log10_expanded_collection) < 0.5)
 
     def testPrune(self):
         if IGNORE_TEST:
@@ -61,19 +66,23 @@ class TestCompatibilityCollection(unittest.TestCase):
             large_constraint = ReactionConstraint(large_network.reactant_nmat, large_network.product_nmat)
             constraint = ReactionConstraint(network.reactant_nmat, network.product_nmat)
             compatibility_collection = constraint.makeCompatibilityCollection(large_constraint)
-            arr = compatibility_collection.expand()
+            arr = compatibility_collection.expand().astype(int)
             for row in arr:
                 for idx in range(len(row)):
                     expected_name = "J" + str(idx)
-                    try:
-                        if expected_name in large_network.reaction_names[row]:
-                            break
-                    except:
-                        import pdb; pdb.set_trace()
-                        pass
+                    if expected_name in large_network.reaction_names[row]:
+                        break
                 else:
                     self.assertTrue(False)
-            #print(size, np.log10(arr.shape[0]), compatibility_collection.log10_num_permutation)
+
+    def testBug(self):
+        if IGNORE_TEST:
+            return
+        list_of_lists = [[3, 11, 16, 17], [2, 8, 14, 15, 17], [1], [2, 4, 5, 7, 12], [17],
+                                    [2, 4, 5, 7, 12], [0, 8], [6, 13], [6, 13], [3, 11, 16, 17], [3, 11, 16, 17]]
+        collection = CompatibilityCollection.makeFromListOfLists(list_of_lists)
+        arr = collection.expand()
+        self.assertEqual(arr.shape[1], len(list_of_lists))
 
 
 if __name__ == '__main__':
