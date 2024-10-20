@@ -12,6 +12,7 @@ from typing import List, Tuple
 
 NULL_NMAT = NamedMatrix(np.array([[]]))
 NULL_INT = -1
+NUM_SAMPLE = 1000  # Number of samples to estimate the number of assignments
 
 
 class CompatibilityCollection(object):
@@ -59,7 +60,7 @@ class CompatibilityCollection(object):
             return -np.inf
         unadjusted_estimate = np.sum([np.log10(len(l)) for l in self.compatibilities])
         # Estimate the number of assignments with duplicate indices
-        sample_arr = util.sampleListOfLists(self.compatibilities, 100)
+        sample_arr = util.sampleListOfLists(self.compatibilities, NUM_SAMPLE)
         unique_sample_arr = self._selectUnique(sample_arr)
         frac_unique = max(unique_sample_arr.shape[0] / sample_arr.shape[0], 1e-9)
         adjusted_estimate = max(0, unadjusted_estimate + np.log10(frac_unique))

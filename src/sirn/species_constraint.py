@@ -33,6 +33,13 @@ class SpeciesConstraint(Constraint):
         self._one_step_nmat = NULL_NMAT
 
     ################# OVERLOADED PARENT CLASS METHODS #################
+    @property
+    def row_names(self)->List[str]:
+        return self.reactant_nmat.row_names
+    
+    @property
+    def description(self)->str:
+        return "species"
 
     @property
     def numerical_enumerated_nmat(self)->NamedMatrix:
@@ -42,7 +49,7 @@ class SpeciesConstraint(Constraint):
                   self._makeAutocatalysisConstraint(),
                   self._makeReactantProductConstraintMatrix(),
                   self.makeSuccessorPredecessorConstraintMatrix()],
-                  self._makeNStepConstraintMatrix(num_step=2))
+                  self.makeNStepConstraintMatrix(num_step=2))
             self._is_initialized = True
         return self._numerical_enumerated_nmat
 
@@ -77,6 +84,10 @@ class SpeciesConstraint(Constraint):
                                 column_description='species',
                                 column_names=self.reactant_nmat.row_names)
         return self._one_step_nmat
+    
+    @property
+    def to_reaction_arr(self)->np.ndarray:
+        return self.reactant_nmat.values
     
     ##################################
 
@@ -176,49 +187,6 @@ class SpeciesConstraint(Constraint):
         vector = np.reshape(vector, (len(vector), 1)).astype(int)
         #vector = np.sign(vector)
         named_matrix = NamedMatrix(vector, row_names=self.reactant_nmat.row_names,
-                           row_description='species',
-                           column_description='constraints',
-                           column_names=column_names)
-        return named_matrix
-
-    def _makeNStepConstraintMatrix(self, num_step:int=1)->NamedMatrix:
-        """Make constraints for a one step navigation of the bipartite graph. The successor constraint
-        is the count of reaction types reachable from the species as a reactant via a product of a reaction.
-        Converseley, the predecessor constraint is the count of reaction types that reachable from reactions
-        that produce the species.
-
-        Args:
-            num_step (int): Number of steps to consider.
-
-        Returns:
-            NamedMatrix: Rows are species, columns are constraints
-        """
-        reaction_to_classification_nmat = ReactionClassification.makeReactionClassificationMatrix(
-              self.reactant_nmat.column_names, self.reaction_classification_arr)
-        classification_names = reaction_to_classification_nmat.column_names
-        forwards:list = []
-        reactant_to_product_arr = np.matmul(self.reactant_nmat.values, self.product_nmat.values.T)
-        for idx in range(num_step):
-            matrix_power = np.sign(np.linalg.matrix_power(reactant_to_product_arr, idx+1))
-            reactant_to_N_product_arr = np.matmul(matrix_power, self.reactant_nmat.values)
-            forward_classification_arr = np.matmul(reactant_to_N_product_arr, reaction_to_classification_nmat.values)
-            forwards.append(forward_classification_arr)
-        #
-        product_to_reactant_arr = reactant_to_product_arr.T
-        backwards:list = []
-        for idx in range(num_step):
-            matrix_power = np.sign(np.linalg.matrix_power(product_to_reactant_arr, idx+1))
-            reactant_to_N_product_arr = np.matmul(matrix_power, self.reactant_nmat.values)
-            backward_classification_arr = np.matmul(reactant_to_N_product_arr, reaction_to_classification_nmat.values)
-            backwards.append(backward_classification_arr)
-        # Column names
-        successor_column_names = [f"s{n+1}_{c}" for n in range(num_step) for c in classification_names]
-        predecessor_column_names = [f"p{n+1}_{c}" for n in range(num_step) for c in classification_names]
-        column_names = successor_column_names + predecessor_column_names
-        arrays = forwards + backwards
-        array = np.concatenate(arrays, axis=1)
-        # Construct a matrix where the columns are reaction classifications and the rows are reactions
-        named_matrix = NamedMatrix(array, row_names=self.reactant_nmat.row_names,
                            row_description='species',
                            column_description='constraints',
                            column_names=column_names)

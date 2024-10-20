@@ -150,7 +150,7 @@ class TestSpeciesConstraint(unittest.TestCase):
         """
         network = Network.makeFromAntimonyStr(antimony)
         species_constraint = SpeciesConstraint(network.reactant_nmat, network.product_nmat)
-        named_matrix = species_constraint._makeNStepConstraintMatrix()
+        named_matrix = species_constraint.makeNStepConstraintMatrix()
         df = named_matrix.dataframe
         ser = df.loc["S0", :]
         result_dct = {"s1_uni-uni": 1, "s1_bi-uni": 2, "p1_uni-uni": 2, "p1_bi-uni": 1}
@@ -172,8 +172,8 @@ class TestSpeciesConstraint(unittest.TestCase):
         factor = 5
         network = Network.makeFromAntimonyStr(antimony)
         species_constraint = SpeciesConstraint(network.reactant_nmat, network.product_nmat)
-        named_matrix_one = species_constraint._makeNStepConstraintMatrix(num_step=1)
-        named_matrix_factor = species_constraint._makeNStepConstraintMatrix(num_step=factor)
+        named_matrix_one = species_constraint.makeNStepConstraintMatrix(num_step=1)
+        named_matrix_factor = species_constraint.makeNStepConstraintMatrix(num_step=factor)
         self.assertEqual(len(named_matrix_factor.column_names), factor*len(named_matrix_one.column_names))
         self.assertEqual(len(named_matrix_factor.row_names), len(named_matrix_one.row_names))
 

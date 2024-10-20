@@ -12,6 +12,7 @@ from sirn.named_matrix import NamedMatrix # type: ignore
 from sirn.constraint import Constraint, NULL_NMAT # type: ignore
 
 import numpy as np
+from typing import List
 
 
 #####################################
@@ -31,16 +32,27 @@ class ReactionConstraint(Constraint):
         self._bitwise_enumerated_nmat = NULL_NMAT
         self._bitwise_categorical_nmat = NULL_NMAT
         self._one_step_nmat = NULL_NMAT
+        self._to_reaction_arr = np.eye(self.num_reaction)
 
     def _initialize(self):
         if self._is_initialized:
             return
-        self._numerical_enumerated_nmat = self.makeSuccessorPredecessorConstraintMatrix()
+        self._numerical_enumerated_nmat = NamedMatrix.hstack([
+              self.makeSuccessorPredecessorConstraintMatrix(),
+              self.makeNStepConstraintMatrix(num_step=2),
+        ])
         self._numerical_categorical_nmat = NamedMatrix.hstack([self._makeClassificationConstraintMatrix(),
             self._makeAutocatalysisConstraintMatrix()])
         self._is_initialized = True
 
     ################# OVERLOADED PARENT CLASS METHODS #################
+    @property
+    def row_names(self)->List[str]:
+        return self.reactant_nmat.column_names
+    
+    @property
+    def description(self)->str:
+        return "reactions"
 
     @property
     def numerical_enumerated_nmat(self)->NamedMatrix:
@@ -73,6 +85,10 @@ class ReactionConstraint(Constraint):
                                 column_description='reactions',
                                 column_names=self.reactant_nmat.column_names)
         return self._one_step_nmat
+    
+    @property
+    def to_reaction_arr(self)->np.ndarray:
+        return self._to_reaction_arr
     
     ##################################
 

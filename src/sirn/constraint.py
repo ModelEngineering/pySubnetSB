@@ -9,11 +9,14 @@ Constraints are NamedMatrices such that the columns are constraints and the rows
 For reaction networks, instances are either species or reactions.
 
 Subclasses are responsible for implementing:
+  property: row_names - List[str] of row names
+  property: description - str of description
   property: categorical_nmat - NamedMatrix of categorical constraints, those that are tested by equality
   property: numerical_enumerated_nmat - NamedMatrix of enumerated constraints
   property: bitwise_enumerated_nmat - NamedMatrix of boolean constraints such that the target
     must have a one bit for every bit in the reference.
   property: one_step_nmat - NamedMatrix of one step transitions
+  property: to_reaction_arr - np.ndarray of reaction types for each reaction
 """
 
 import sirn.constants as cn # type: ignore
@@ -140,6 +143,14 @@ class Constraint(object):
     ################ SUBCLASS MUST IMPLEMENT ################
         
     @property
+    def description(self)->str:
+        raise NotImplementedError("self be implemented by subclass.")
+        
+    @property
+    def row_names(self)->List[str]:
+        raise NotImplementedError("row_names be implemented by subclass.")
+        
+    @property
     def categorical_nmat(self)->NamedMatrix:
         raise NotImplementedError("numerical_categorical_nmat be implemented by subclass.")
     
@@ -154,6 +165,10 @@ class Constraint(object):
     @property
     def one_step_nmat(self)->NamedMatrix:
         raise NotImplementedError("one_step_nmat be implemented by subclass.")
+    
+    @property
+    def to_reaction_arr(self)->np.ndarray:
+        raise NotImplementedError("to_reaction_arr be implemented by subclass.")
 
     ########################################################
     
@@ -357,6 +372,48 @@ class Constraint(object):
         named_matrix = NamedMatrix(count_arr, row_names=self.one_step_nmat.row_names,
                            row_description=self.one_step_nmat.row_description,
                            column_description="constraints",
+                           column_names=column_names)
+        return named_matrix
+    
+    def makeNStepConstraintMatrix(self, num_step:int=1)->NamedMatrix:
+        """Make constraints for a one step navigation of the bipartite graph. For species, the successor constraint
+        is the count of reaction types reachable from the species as a reactant via a product of a reaction. For
+        reactions, the successor constraint is the count of reaction types reachable from the reactions that produce
+        Converseley, the predecessor constraint is the count of reaction types that reachable from previous
+        species/reaction.
+
+        Args:
+            num_step (int): Number of steps to consider.
+
+        Returns:
+            NamedMatrix: Rows are species, columns are constraints
+        """
+        #####
+        def makeStepArr(one_step_arr:np.ndarray)->np.ndarray:
+            arrays = []
+            for idx in range(num_step):
+                matrix_power = np.sign(np.linalg.matrix_power(one_step_arr, idx+1))
+                #reactant_to_N_product_arr = np.matmul(matrix_power, self.reactant_nmat.values)
+                reactant_to_N_product_arr = np.matmul(matrix_power, self.to_reaction_arr)
+                forward_classification_arr = np.matmul(reactant_to_N_product_arr, reaction_to_classification_nmat.values)
+                arrays.append(forward_classification_arr)
+            return np.concatenate(arrays, axis=1)
+        #####
+        reaction_to_classification_nmat = ReactionClassification.makeReactionClassificationMatrix(
+              self.reactant_nmat.column_names, self.reaction_classification_arr)
+        classification_names = reaction_to_classification_nmat.column_names
+        reactant_to_product_arr = np.matmul(self.reactant_nmat.values, self.product_nmat.values.T)
+        forward_step_arr = makeStepArr(self.one_step_nmat.values)
+        backward_step_arr = makeStepArr(self.one_step_nmat.values.T)
+        # Column names
+        successor_column_names = [f"s{n+1}_{c}" for n in range(num_step) for c in classification_names]
+        predecessor_column_names = [f"p{n+1}_{c}" for n in range(num_step) for c in classification_names]
+        column_names = successor_column_names + predecessor_column_names
+        array = np.concatenate([forward_step_arr, backward_step_arr], axis=1)
+        # Construct a matrix where the columns are reaction classifications and the rows are reactions
+        named_matrix = NamedMatrix(array, row_names=self.row_names,
+                           row_description=self.description,
+                           column_description='constraints',
                            column_names=column_names)
         return named_matrix
     
