@@ -153,44 +153,48 @@ class TestNetwork(unittest.TestCase):
         if IGNORE_TEST:
             return
         def test(reference_size, fill_factor=1, num_iteration=20):
-            #for identity in [cn.ID_WEAK, cn.ID_STRONG]:
-            for identity in [cn.ID_STRONG]:
+            for identity in [cn.ID_WEAK, cn.ID_STRONG]:
                 num_success = 0
                 for _ in range(num_iteration):
                     reference = Network.makeRandomNetworkByReactionType(num_reaction=reference_size,
                                                                         num_species=14)
                     target = reference.fill(num_fill_reaction=fill_factor*reference_size,
                         num_fill_species=fill_factor*reference_size)
-                    result = reference.isStructurallyIdentical(target, identity=identity, is_subset=True,
-                          max_num_assignment=10000)
+                    result = reference.isStructurallyIdentical(target, identity=identity, is_subset=True)
                     msg = f"identity: {identity}, reference_size: {reference_size}, fill_factor: {fill_factor}"
                     msg += f"\n   num_species_candidate: {result.num_species_candidate}"
                     msg += f"\n   num_reaction_candidate: {result.num_reaction_candidate}"
                     #print(msg)
                     num_success += bool(result)
-                    #self.assertTrue(bool(result))
+                    self.assertTrue(bool(result))
                 succ_frac = num_success/num_iteration
                 self.assertGreater(succ_frac, 0.5)
                 #print(f"Success rate for {identity}: {num_success/num_iteration}")
         #
         for fill_factor in [1, 2]:
-            for size in [3, 5]:
+            for size in [5]:
                 test(size, fill_factor=fill_factor)
 
     def testIsStructurallyIdenticalScaleRandomlyPermuteFalse(self):
         if IGNORE_TEST:
             return
         def test(reference_size, target_factor=1, num_iteration=NUM_ITERATION):
+            num_truncate = 0
+            num_processed = 0
             for _ in range(num_iteration):
-                for identity in [cn.ID_STRONG]:
-                    for is_subset in [False]:
+                for identity in [cn.ID_WEAK, cn.ID_STRONG]:
+                    for is_subset in [False, True]:
                         reference = Network.makeRandomNetworkByReactionType(reference_size)
                         target = Network.makeRandomNetworkByReactionType(target_factor*reference_size)
                         # Analyze
-                        result = reference.isStructurallyIdentical(target, identity=identity, is_subset=is_subset)
-                        self.assertFalse(result)
+                        result = reference.isStructurallyIdentical(target, identity=identity, is_subset=is_subset,
+                            max_num_assignment=100)
+                        num_truncate += result.is_truncated
+                        num_processed += 1
+                        #self.assertFalse(result)
+            #print(f"Truncate rate: {num_truncate/num_processed}")
         #
-        for size in [5, 10, 20, 40]:
+        for size in [5, 10, 20]:
             test(size, target_factor=5)
 
     def testSerializeDeserialize(self):

@@ -109,7 +109,7 @@ class TestReactionConstraint(unittest.TestCase):
                 reference_name = "J" + str(i)
                 target_names = [name_arr[i] for i in arr]
                 self.assertTrue(reference_name in target_names)
-            num_permutations.append(compatibility_collection.log10_num_permutation)
+            num_permutations.append(compatibility_collection.log10_num_assignment)
         #print(np.mean(num_permutations))
 
     def testBug(self):

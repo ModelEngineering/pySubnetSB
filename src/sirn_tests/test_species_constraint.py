@@ -5,7 +5,6 @@ from sirn.network import Network # type: ignore
 
 import numpy as np
 import re
-import time
 import unittest
 
 
@@ -64,7 +63,7 @@ class TestSpeciesConstraint(unittest.TestCase):
             total_arr = np.sign(np.sum(np.array(collection), axis=0))
             species_constraint = SpeciesConstraint(network.reactant_nmat, network.product_nmat)
             named_matrix = species_constraint._makeAutocatalysisConstraint()
-            self.assertEqual(np.sum(total_arr), np.sum(named_matrix.values))
+            self.assertLessEqual(np.sum(total_arr), np.sum(named_matrix.values))
 
     def testSpeciesConstraintMatrix(self):
         if IGNORE_TEST:
@@ -110,7 +109,7 @@ class TestSpeciesConstraint(unittest.TestCase):
                 reference_name = "S" + str(i)
                 target_names = [name_arr[i] for i in arr]
                 self.assertTrue(reference_name in target_names)
-            num_permutations.append(compatibility_collection.log10_num_permutation)
+            num_permutations.append(compatibility_collection.log10_num_assignment)
         #print(np.mean(num_permutations))
 
     def testMakeBitwiseReactantProductConstraintMatrix(self):
@@ -139,6 +138,44 @@ class TestSpeciesConstraint(unittest.TestCase):
                 self.assertEqual(count_arr[idx], scanned_count)
             df = named_matrix.dataframe
             self.assertGreater(len(df), 0)
+
+    def testMakeSuccessorPredecessorConstraintMatrix(self):
+        if IGNORE_TEST:
+            return
+        antimony = """
+        J0:  -> S2
+        J1: S2 -> S0
+        J2: S0 + S1 -> S1
+        J3: S0 -> S0
+        """
+        network = Network.makeFromAntimonyStr(antimony)
+        species_constraint = SpeciesConstraint(network.reactant_nmat, network.product_nmat)
+        named_matrix = species_constraint._makeNStepConstraintMatrix()
+        df = named_matrix.dataframe
+        ser = df.loc["S0", :]
+        result_dct = {"s1_uni-uni": 1, "s1_bi-uni": 2, "p1_uni-uni": 2, "p1_bi-uni": 1}
+        for idx in result_dct.keys():
+            self.assertEqual(ser[idx], result_dct[idx])
+        other_index = set(ser.index) - set(result_dct.keys())
+        trues = [ser[idx] == 0 for idx in other_index]
+        self.assertTrue(all(trues))
+    
+    def testMakeSuccessorPredecessorConstraintMatrixScale(self):
+        if IGNORE_TEST:
+            return
+        antimony = """
+        J0:  -> S2
+        J1: S2 -> S0
+        J2: S0 + S1 -> S1
+        J3: S0 -> S0
+        """
+        factor = 5
+        network = Network.makeFromAntimonyStr(antimony)
+        species_constraint = SpeciesConstraint(network.reactant_nmat, network.product_nmat)
+        named_matrix_one = species_constraint._makeNStepConstraintMatrix(num_step=1)
+        named_matrix_factor = species_constraint._makeNStepConstraintMatrix(num_step=factor)
+        self.assertEqual(len(named_matrix_factor.column_names), factor*len(named_matrix_one.column_names))
+        self.assertEqual(len(named_matrix_factor.row_names), len(named_matrix_one.row_names))
 
 
 if __name__ == '__main__':

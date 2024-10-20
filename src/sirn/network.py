@@ -121,7 +121,6 @@ class Network(NetworkBase):
         target_graph = target.makePynautyNetwork()
         return pynauty.isomorphic(self_graph, target_graph)
 
-    # TODO: (1) use AssignmentEvaluator; (2) argument - max_memory_bytes 
     def isStructurallyIdentical(self, target:'Network', is_subset:bool=False,
             max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT,
             max_batch_size:int=cn.MAX_BATCH_SIZE, identity:str=cn.ID_WEAK)->StructurallyIdenticalResult:
@@ -146,24 +145,37 @@ class Network(NetworkBase):
         reference_reactant_nmat, reference_product_nmat = self.getMatricesForIdentity(identity)
         target_reactant_nmat, target_product_nmat = target.getMatricesForIdentity(identity)
         #####
-        def makeAssignmentArr(cls:type)->Tuple[np.ndarray[int], bool]:  # type: ignore
+        def makeAssignmentArr(cls:type)->Tuple[np.ndarray[int], bool, bool]:  # type: ignore
             reference_constraint = cls(reference_reactant_nmat, reference_product_nmat, is_subset=is_subset)
             target_constraint = cls(target_reactant_nmat, target_product_nmat, is_subset=is_subset)
             compatibility_collection = reference_constraint.makeCompatibilityCollection(target_constraint)
-            num_column = reference_reactant_nmat.values.shape[0] if 'Species' in str(cls) else reference_reactant_nmat.values.shape[1]
-            if compatibility_collection.num_self_row != num_column:
-                import pdb; pdb.set_trace()
-            compatibility_collection, is_truncated = compatibility_collection.prune(log10_max_num_assignment)
-            return compatibility_collection.expand(), is_truncated
+            compatibility_collection, prune_is_truncated = compatibility_collection.prune(log10_max_num_assignment)
+            is_null = compatibility_collection.log10_num_assignment == -np.inf
+            if is_null:
+                return NULL_ARRAY, prune_is_truncated, is_null
+            else:
+                assignment_arr, expand_is_truncated = compatibility_collection.expand()
+                if assignment_arr is NULL_ARRAY:
+                    return NULL_ARRAY, expand_is_truncated, is_null
+                if assignment_arr.ndim < 2:
+                    return NULL_ARRAY, expand_is_truncated, is_null
+                if assignment_arr.shape[1] == 0:
+                    return NULL_ARRAY, expand_is_truncated, is_null
+                is_truncated = prune_is_truncated or expand_is_truncated
+                return assignment_arr, is_truncated, is_null
         #####
         # Calculate the compatibility vectors for species and reactions and then construct the assignment arrays
-        species_assignment_arr, is_species_truncated = makeAssignmentArr(SpeciesConstraint)
-        reaction_assignment_arr, is_reaction_truncated = makeAssignmentArr(ReactionConstraint)
+        species_assignment_arr, is_species_truncated, is_species_null = makeAssignmentArr(SpeciesConstraint)
+        reaction_assignment_arr, is_reaction_truncated, is_reaction_null = makeAssignmentArr(ReactionConstraint)
+        is_null = is_species_null or is_reaction_null
         is_truncated = is_species_truncated or is_reaction_truncated
-        if len(species_assignment_arr) == 0 or len(reaction_assignment_arr) == 0:
+        if len(species_assignment_arr) == 0 or len(reaction_assignment_arr) == 0 or is_null:
             if IS_DEBUG:
                 import pdb; pdb.set_trace()
-            return StructurallyIdenticalResult(assignment_pairs=[], is_truncated=is_truncated)
+            return StructurallyIdenticalResult(assignment_pairs=[], 
+                  num_reaction_candidate=reaction_assignment_arr.shape[0],
+                  num_species_candidate=species_assignment_arr.shape[0],
+                  is_truncated=is_truncated)
         # Evaluate the assignments
         evaluator = AssignmentEvaluator(reference_reactant_nmat.values, target_reactant_nmat.values)
         if False:

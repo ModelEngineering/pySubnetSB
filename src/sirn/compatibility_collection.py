@@ -52,14 +52,14 @@ class CompatibilityCollection(object):
         return bool(np.all(trues))
 
     @property
-    def log10_num_permutation(self)->float:
-        # Calculates the log of the number of permutations implied by the compatibility collection
+    def log10_num_assignment(self)->float:
+        # Calculates the log of the number of assignments implied by the compatibility collection
         lengths = [len(l) for l in self.compatibilities]
         if 0 in lengths:
             return -np.inf
         unadjusted_estimate = np.sum([np.log10(len(l)) for l in self.compatibilities])
-        # Estimate the number of permutations with duplicate indices
-        sample_arr = util.sampleListOfLists(self.compatibilities, 1000)
+        # Estimate the number of assignments with duplicate indices
+        sample_arr = util.sampleListOfLists(self.compatibilities, 100)
         unique_sample_arr = self._selectUnique(sample_arr)
         frac_unique = max(unique_sample_arr.shape[0] / sample_arr.shape[0], 1e-9)
         adjusted_estimate = max(0, unadjusted_estimate + np.log10(frac_unique))
@@ -75,30 +75,42 @@ class CompatibilityCollection(object):
             result = np.array([])
         return result
 
-    def expand(self)->np.ndarray:
-        MAX_BATCH_SIZE = 10000
+    def expand(self, max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT)->Tuple[np.ndarray, bool]:
+        """Expands the compatibility collection into a two dimensional array of assignments
+
+        Args:
+            max_num_assignment (int, optional): maximum number of assignments Defaults to cn.MAX_NUM_ASSIGNMENT.
+
+        Returns:
+            Tuple[np.ndarray, bool]: _description_
+        """
+        MAX_BATCH_SIZE = 100
         #####
         def expandCollection(collection:List[List[int]])->np.ndarray:
-            # Expands the compatibilities into a two dimensional array where each row is a permutation
+            # Expands the compatibilities into a two dimensional array where each row is an assignment
             candidate_arr = np.array(list(itertools.product(*collection)))
             return self._selectUnique(candidate_arr)
         #####
         def mergeAssignments(assignment1:np.ndarray, assignment2:np.ndarray)->np.ndarray:
             # Merges two assignments into a single assignment
-            num_row1, num_row2 = assignment1.shape[0], assignment2.shape[0]
-            assignment1 = np.repeat(assignment1, num_row2, axis=0)
-            assignment2 = np.tile(assignment2, (num_row1, 1))
+            # Check for degenerate conditions
             if assignment1.shape[0] == 0:
                 return self._selectUnique(assignment2)
             if assignment2.shape[0] == 0:
                 return self._selectUnique(assignment1)
-            merged_arr = np.concatenate([assignment1, assignment2], axis=1)
+            # Merge the assignments
+            num_row1, num_row2 = assignment1.shape[0], assignment2.shape[0]
+            big_assignment1 = np.repeat(assignment1, num_row2, axis=0)
+            big_assignment2 = np.vstack([assignment2]*num_row1)
+            merged_arr = np.concatenate([big_assignment1, big_assignment2], axis=1)
             result = self._selectUnique(merged_arr)
             return result
         #####
         # Form batches of assignments no more than the maximum size and then merge the batches
+        log10_max_num_assignment = np.log10(max_num_assignment)
+        collection, is_truncated = self.prune(log10_max_num_assignment=log10_max_num_assignment)
+        list_of_lists = collection.compatibilities
         batches = []
-        list_of_lists = copy.deepcopy(self.compatibilities)
         for _ in range(self.num_self_row):
             if len(list_of_lists) == 0:
                 break
@@ -116,30 +128,33 @@ class CompatibilityCollection(object):
                 list_of_lists = list_of_lists[assignment_idx+1:]
             else:
                 list_of_lists = []
-            batch_assignment = expandCollection(batch_collection)
-            batches.append(batch_assignment)
+            expanded_collection = expandCollection(list(batch_collection))
+            if expanded_collection.shape[0] == 0:
+                return np.array([]), True
+            batches.append(expandCollection(list(batch_collection)))
         # Merge the batches
         assignment_arr = batches[0]
         for idx in range(1, len(batches)):
             assignment_arr = mergeAssignments(assignment_arr, batches[idx])
         #
         #assert(assignment_arr.shape[1] == len(self.compatibilities))
-        return assignment_arr
+        return assignment_arr, is_truncated
 
-    def prune(self, log10_max_permutation:float)->Tuple['CompatibilityCollection', bool]:
-        """Randomly prune the compatibility collection to a maximum number of permutations
+    def prune(self, log10_max_num_assignment:float)->Tuple['CompatibilityCollection', bool]:
+        """Randomly prune the compatibility collection to a maximum number of assignments
 
         Args:
-            log10_max_permutation (float): log10 of the maximum number of permutations
+            log10_max_assignment (float): log10 of the maximum number of assignments
 
         Returns:
             CompatibilityCollection
+            bool: is changed
         """
         collection = self.copy()
         #
         is_changed = False
         for idx in range(1000000):
-            if collection.log10_num_permutation <= log10_max_permutation:
+            if collection.log10_num_assignment <= log10_max_num_assignment:
                 break
             candidate_rows = [i for i in range(collection.num_self_row)
                               if len(collection.compatibilities[i]) > 1]  

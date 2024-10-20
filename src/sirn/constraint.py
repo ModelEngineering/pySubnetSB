@@ -48,7 +48,11 @@ class ReactionClassification(object):
         if num_product > self.MAX_ENCODING:
             raise ValueError(f"num_product must be less than {self.MAX_ENCODING}.")
         self.encoding = self.num_reactant*100 + self.num_product
-        self.index = int(self.num_product*len(self.LABELS) + self.num_product)
+        self.index = self.getIndex(self.num_reactant, self.num_product)
+
+    @classmethod
+    def getIndex(cls, num_reactant, num_product):
+        return int(num_reactant*len(cls.LABELS) + num_product)
 
     def __repr__(self)->str:
         result = f"{self.LABELS[int(self.num_reactant)]}-{self.LABELS[int(self.num_product)]}"
@@ -59,10 +63,32 @@ class ReactionClassification(object):
         """Gets a list of reaction classifications."""
         if len(cls.REACTION_CLASSES) > 0:
             return cls.REACTION_CLASSES
-        pairs = [(n, m) for n in range(cls.MAX_REACTANT+1) for m in range(cls.MAX_PRODUCT+1)]
-        for num_reactant, num_product in pairs:
-            cls.REACTION_CLASSES.append(cls(num_reactant, num_product))
+        pair_arr = np.array([f"{cls.LABELS[n]}-{cls.LABELS[m]}" for n in range(cls.MAX_REACTANT+1)
+              for m in range(cls.MAX_PRODUCT+1)])
+        idx_arr = np.array([cls.getIndex(n, m) for n in range(cls.MAX_REACTANT+1) for m in range(cls.MAX_PRODUCT+1)])
+        cls.REACTION_CLASSES = list(pair_arr[idx_arr])
         return cls.REACTION_CLASSES
+
+    @classmethod 
+    def makeReactionClassificationMatrix(cls, reaction_names:List[str],
+          classifications:List['ReactionClassification'])->NamedMatrix:
+        """Makes a matrix whose rows are reactions and columns are classifications.
+
+        Args:
+            reaction_names: List[str]
+            classifications: List[ReactionClassification]
+
+        Returns:
+            NamedMatrix: rows are reactions; columns are reaction classifications
+        """
+        zero_arr = np.zeros(cls.NUM_CLASSIFICATION)
+        arrays = []
+        for classification in classifications:
+            arr = zero_arr.copy()
+            arr[classification.index] = 1
+            arrays.append(arr)
+        result = NamedMatrix(np.array(arrays), row_names=reaction_names, column_names=cls.REACTION_CLASSES)
+        return result
     
 
 #####################################

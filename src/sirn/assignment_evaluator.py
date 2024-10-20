@@ -333,8 +333,10 @@ class AssignmentEvaluator(object):
         column_assignment = _Assignment(column_assignment_arr)
         # Error checks
         if row_assignment.num_column != self.num_reference_row:
+            import pdb; pdb.set_trace()
             raise ValueError("Number of reference rows does not match the number of row assignments")
         if column_assignment.num_column != self.num_reference_column:
+            import pdb; pdb.set_trace()
             raise ValueError("Number of reference columns does not match the number of row assignments")
         # Calculate the number of assignment pair indices in a batch
         bytes_per_comparison = 2*self.reference_arr.itemsize*self.num_reference_row*self.num_reference_column

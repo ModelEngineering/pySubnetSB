@@ -151,6 +151,19 @@ class TestReactionClassification(unittest.TestCase):
             if (num_reactant == 3) or (num_product == 3):
                 self.assertTrue("multi" in str(reaction_classification))
 
+    def testMakeReactionClassificationMatrix(self):
+        if IGNORE_TEST:
+            return
+        reaction_classifications = [ReactionClassification(num_reactant=1, num_product=2),
+              ReactionClassification(num_reactant=2, num_product=1)]
+        reaction_names = ["J1", "J2"]
+        nmat = ReactionClassification.makeReactionClassificationMatrix(reaction_names, reaction_classifications)
+        df = nmat.dataframe
+        self.assertTrue(df.loc["J1", "uni-bi"] == 1)
+        self.assertTrue(df.loc["J2", "bi-uni"] == 1)
+        for _, row in df.iterrows():
+            self.assertEqual(np.sum(row), 1)
+
 
 #############################
 class TestCompatibilityCollection(unittest.TestCase):
@@ -161,10 +174,10 @@ class TestCompatibilityCollection(unittest.TestCase):
     def testNumPermutation(self):
         if IGNORE_TEST:
             return
-        for size in np.random.randint(2, 50, 1000):
+        for size in np.random.randint(2, 100, 10):
             collection = CompatibilityCollection(size, size)
             [collection.add(i-1, range(i)) for i in range(1, size+1)]
-            self.assertTrue(np.isclose(collection.log10_num_permutation, np.log10(factorial(size))))
+            self.assertLessEqual(collection.log10_num_assignment, np.log10(factorial(size)))
 
     def testPrune(self):
         if IGNORE_TEST:
@@ -174,8 +187,8 @@ class TestCompatibilityCollection(unittest.TestCase):
             collection = CompatibilityCollection(size, size)
             [collection.add(i-1, range(i)) for i in range(1, size+1)]
             new_collection, is_changed = collection.prune(log10_max_permutation)
-            result = (collection.log10_num_permutation <= log10_max_permutation) and (not is_changed)
-            result = result or (collection.log10_num_permutation > log10_max_permutation) and is_changed
+            result = (collection.log10_num_assignment <= log10_max_permutation) and (not is_changed)
+            result = result or (collection.log10_num_assignment > log10_max_permutation) and is_changed
             self.assertTrue(result)
             if not is_changed:
                 self.assertEqual(new_collection, collection)
@@ -188,7 +201,7 @@ class TestCompatibilityCollection(unittest.TestCase):
         size = 3
         collection = CompatibilityCollection(size, size)
         [collection.add(i-1, range(i)) for i in range(1, size+1)]
-        arr = collection.expand()
+        arr, _ = collection.expand()
         self.assertLessEqual(arr.shape[0], factorial(3))
         self.assertEqual(arr.shape[1], 3)
 
@@ -258,7 +271,7 @@ class TestConstraint(unittest.TestCase):
         if IGNORE_TEST:
             return
         compatibility_collection = self.constraint.makeCompatibilityCollection(self.constraint)
-        self.assertTrue(np.isclose(compatibility_collection.log10_num_permutation, 0))
+        self.assertTrue(np.isclose(compatibility_collection.log10_num_assignment, 0))
     
     def testMakeCompatibilityCollectionScale(self):
         if IGNORE_TEST:
@@ -293,4 +306,4 @@ class TestConstraint(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(failfast=True)

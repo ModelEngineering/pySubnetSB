@@ -97,7 +97,7 @@ class ConstraintBenchmark(object):
                     is_subset=is_subset)
             compatibility_collection = reference_constraint.makeCompatibilityCollection(target_constraint)
             times.append(time.time() - start)
-            num_permutations.append(compatibility_collection.log10_num_permutation)
+            num_permutations.append(compatibility_collection.log10_num_assignment)
         self.benchmark_result_df = pd.DataFrame({C_TIME: times, C_LOG10_NUM_PERMUTATION: num_permutations})
         return self.benchmark_result_df
 

@@ -17,29 +17,29 @@ class TestCompatibilityCollection(unittest.TestCase):
     def setUp(self) -> None:
         self.collection = CompatibilityCollection(2, 3)
 
-    def testNumPermutation(self):
+    def testNumAssignment(self):
         if IGNORE_TEST:
             return
         for size in np.random.randint(2, 7, 100):
             collection = CompatibilityCollection(size, size)
             [collection.add(i-1, np.random.randint(0, size, size)) for i in range(1, size+1)]
-            expanded_collection = collection.expand()
+            expanded_collection, _ = collection.expand()
             if expanded_collection.shape[0] > 0:
                 log10_expanded_collection = max(0, np.log10(expanded_collection.shape[0]))
             else:
                 log10_expanded_collection = 0
-            self.assertTrue(np.abs(collection.log10_num_permutation - log10_expanded_collection) < 0.5)
+            self.assertTrue(np.abs(collection.log10_num_assignment - log10_expanded_collection) < 0.5)
 
     def testPrune(self):
         if IGNORE_TEST:
             return
-        log10_max_permutation = 4.0
+        log10_max_assignment = 4.0
         for size in np.random.randint(5, 30, 100):
             collection = CompatibilityCollection(size, size)
             [collection.add(i-1, range(i)) for i in range(1, size+1)]
-            new_collection, is_changed = collection.prune(log10_max_permutation)
-            result = (collection.log10_num_permutation <= log10_max_permutation) and (not is_changed)
-            result = result or (collection.log10_num_permutation > log10_max_permutation) and is_changed
+            new_collection, is_changed = collection.prune(log10_max_assignment)
+            result = (collection.log10_num_assignment <= log10_max_assignment) and (not is_changed)
+            result = result or (collection.log10_num_assignment > log10_max_assignment) and is_changed
             self.assertTrue(result)
             if not is_changed:
                 self.assertEqual(new_collection, collection)
@@ -52,9 +52,20 @@ class TestCompatibilityCollection(unittest.TestCase):
         size = 5
         collection = CompatibilityCollection(size, size)
         [collection.add(i-1, range(i)) for i in range(1, size+1)]
-        arr = collection.expand()
+        arr, is_truncated = collection.expand()
+        self.assertFalse(is_truncated)
         self.assertLessEqual(arr.shape[0], 1)
         self.assertEqual(arr.shape[1], size)
+
+    def testExpandTruncated(self):
+        if IGNORE_TEST:
+            return
+        size = 40
+        collection = CompatibilityCollection(size, size)
+        [collection.add(i-1, range(i)) for i in range(1, size+1)]
+        arr, is_truncated = collection.expand(max_num_assignment=10)
+        self.assertTrue(isinstance(arr, np.ndarray))
+        self.assertTrue(is_truncated)
 
     def testExpandReductionInSize(self):
         if IGNORE_TEST:
@@ -66,7 +77,7 @@ class TestCompatibilityCollection(unittest.TestCase):
             large_constraint = ReactionConstraint(large_network.reactant_nmat, large_network.product_nmat)
             constraint = ReactionConstraint(network.reactant_nmat, network.product_nmat)
             compatibility_collection = constraint.makeCompatibilityCollection(large_constraint)
-            arr = compatibility_collection.expand().astype(int)
+            arr, _ = compatibility_collection.expand()
             for row in arr:
                 for idx in range(len(row)):
                     expected_name = "J" + str(idx)
@@ -81,9 +92,9 @@ class TestCompatibilityCollection(unittest.TestCase):
         list_of_lists = [[3, 11, 16, 17], [2, 8, 14, 15, 17], [1], [2, 4, 5, 7, 12], [17],
                                     [2, 4, 5, 7, 12], [0, 8], [6, 13], [6, 13], [3, 11, 16, 17], [3, 11, 16, 17]]
         collection = CompatibilityCollection.makeFromListOfLists(list_of_lists)
-        arr = collection.expand()
+        arr, _ = collection.expand()
         self.assertEqual(arr.shape[1], len(list_of_lists))
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(failfast=True)
