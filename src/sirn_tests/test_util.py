@@ -14,18 +14,6 @@ IS_PLOT = False
 #############################
 class TestFunctions(unittest.TestCase):
 
-#    def testString2Array(self):
-#        if IGNORE_TEST:
-#            return
-#        def test(array):
-#            array_str = str(array)
-#            arr = util.string2Array(array_str)
-#            self.assertTrue(np.all(arr == arr))
-#        #
-#        array = np.array(range(10))
-#        test(array)
-#        test(np.reshape(array, (2,5)))
-
     def testTimeit(self):
         if IGNORE_TEST:
             return
@@ -179,6 +167,31 @@ class TestFunctions(unittest.TestCase):
             sample_arr = util.sampleListOfLists(list_of_lists, 10)
             for sample in sample_arr:
                 self.assertTrue(np.all([s in list_of_lists[i] for i, s in enumerate(sample)]))
+
+    def testPartitionArray(self):
+        if IGNORE_TEST:
+            return
+        arr = np.random.randint(0, 10, 45)
+        arr = np.reshape(arr, (15, 3))
+        num_partition = 4
+        partitions = util.partitionArray(arr, num_partition)
+        self.assertEqual(len(partitions), num_partition)
+        lengths = [len(partition) for partition in partitions]
+        self.assertTrue(np.max(lengths) - np.min(lengths) <= 1)
+        for row in arr:
+            is_true = False
+            for partition in partitions:
+                for partition_row in partition:
+                    is_true = is_true or np.all(row == partition_row)
+            self.assertTrue(is_true)
+    
+    def testPartitionArray2(self):
+        #if IGNORE_TEST:
+        #    return
+        arr = [ np.array([1, 0])]
+        num_partition = 2
+        partitions = util.partitionArray(arr, num_partition)
+        self.assertEqual(len(partitions), num_partition-1)
 
 
 if __name__ == '__main__':

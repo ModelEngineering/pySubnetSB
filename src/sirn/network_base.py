@@ -682,12 +682,14 @@ class NetworkBase(object):
             outputs.append(f"{vertex},,{label}")
         return '\n'.join(outputs)
     
-    def fill(self, num_fill_species:Optional[int]=3, num_fill_reaction:Optional[int]=3)->'NetworkBase':
+    def fill(self, num_fill_species:Optional[int]=3, num_fill_reaction:Optional[int]=3,
+               is_permute:bool=True)->'NetworkBase':
         """Creates a new network that augments (fills) the existing network with new species and reactions.
 
         Args:
             num_fill_species (int): Number of filler species. Use num_reaction and num_species if None.
             num_fill_reaction (int): Number of filler reactions. Use num_species and num_reaction if None.
+            is_permute (bool): Permute the network.
 
         Returns:
             Network
@@ -723,5 +725,6 @@ class NetworkBase(object):
         target_product_arr = makeTargetArray(self.product_nmat.values,
               filler_network.product_nmat.values)
         target_network = self.__class__(target_reactant_arr, target_product_arr)
-        target_network, _ = target_network.permute()
+        if is_permute:
+            target_network, _ = target_network.permute()
         return target_network

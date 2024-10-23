@@ -1,9 +1,10 @@
-DSIRN
-1. Do workflow diagram
-2. num_permutation estimates redudancies in a vectorized way
-3. Network.merge combines and randomizes multiple networks.
-4. Improve truncation so considers both constraints.
-5. Evaluate hash effectiveness
+FSIRN - finding structural subnets (pySubnetSB)
+1. Parallel implementation of AssignmentEvaluator.
+2. Search for cyclic subnets
+3. Select random subnetwork from an SBML model
+4. Reverse the order of arguments in NetworkBase.makeRandomReactionByType
+5. Good implementation of hash
+5.1 Evaluation of the effectiveness of constraints
 6. Script to find networks that contain an antimony file as a subset
 Analysis
   1. Plot indeterminant vs. max_num_perm; do for naive algorith as well

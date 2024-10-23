@@ -259,3 +259,19 @@ def sampleListOfLists(list_of_lists:List[List[int]], num_samples:int)->np.ndarra
         sample = [a[s] for a, s in zip(arrays, sample_position)]
         samples.append(sample)
     return np.array(samples)
+
+def partitionArray(array:np.ndarray, num_partition:int)->List[np.ndarray]:
+    """Partitions an array into num_partitions.
+
+    Args:
+        array (np.array): An array.
+        num_partitions (int): Number of partitions.
+
+    Returns:
+        List[np.ndarray]: A list of partitions.
+    """
+    actual_num_partition = min(num_partition, len(array))
+    partitions:list = [ [] for lst in range(actual_num_partition)]
+    [partitions[n%actual_num_partition].append(array[n].tolist()) for n in range(len(array))]
+    partitions = [np.array(partition) for partition in partitions]
+    return partitions

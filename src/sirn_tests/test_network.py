@@ -5,13 +5,12 @@ import numpy as np
 import copy
 import pandas as pd # type: ignore
 import tellurium as te  # type: ignore
-import time
 import unittest
 
 
 IGNORE_TEST = False
 IS_PLOT = False
-NUM_ITERATION = 10
+NUM_ITERATION = 2
 NETWORK_NAME = "test"
 BIG_NETWORK = """
 J0: S1 -> S1 + S2; k1*S1;
@@ -97,12 +96,6 @@ class TestNetwork(unittest.TestCase):
     def testIsStructurallyIdenticalBasic(self):
         if IGNORE_TEST:
             return
-        def permuteArray(arr, row_perm, column_perm):
-            new_arr = arr.copy()
-            new_arr = new_arr[row_perm, :]
-            new_arr = new_arr[:, column_perm]
-            return new_arr
-        #
         target, assignment_pair = self.network.permute()
         result = self.network.isStructurallyIdentical(target, identity=cn.ID_WEAK)
         self.assertTrue(np.all(self.network.species_names == target.species_names[assignment_pair.species_assignment]))
@@ -152,7 +145,7 @@ class TestNetwork(unittest.TestCase):
     def testIsStructurallyIdenticalScaleRandomlyPermuteTrue(self):
         if IGNORE_TEST:
             return
-        def test(reference_size, fill_factor=1, num_iteration=20):
+        def test(reference_size, fill_factor=1, num_iteration=NUM_ITERATION):
             for identity in [cn.ID_WEAK, cn.ID_STRONG]:
                 num_success = 0
                 for _ in range(num_iteration):

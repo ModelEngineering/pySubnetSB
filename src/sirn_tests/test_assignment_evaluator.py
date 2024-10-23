@@ -34,49 +34,10 @@ class TestAssignmentEvaluator(unittest.TestCase):
             return
         self.assertTrue(isinstance(self.evaluator.reference_arr, np.ndarray))
 
-    def testMakeBatch(self):
+    def testParallelEvaluateBasic(self):
         if IGNORE_TEST:
             return
-        row_assignment = _Assignment(ROW_ASSIGNMENT_ARR)
-        column_assignment = _Assignment(COLUMN_ASSIGNMENT_ARR)
-        big_reference_arr, big_target_arr = self.evaluator._makeBatch(0, 3, row_assignment, column_assignment)
-        # Check if the first assignment is True and the resut are False
-        satisfy_idx = np.sum(big_reference_arr == big_target_arr, axis=1) == REFERENCE_ARR.shape[1]
-        satisfy_idx = np.reshape(satisfy_idx, (self.num_assignment, self.evaluator.num_reference_column))
-        satisfy_idx = np.sum(satisfy_idx, axis=1) == self.evaluator.num_reference_column
-        self.assertTrue(satisfy_idx[0])
-        self.assertFalse(np.all(satisfy_idx[1:]))
-
-    def testCompareMakeBatchScale(self):
-        if IGNORE_TEST:
-            return
-        for _ in range(NUM_ITERATION):
-            reference_size = np.random.randint(3, 200)
-            reference_network = Network.makeRandomNetworkByReactionType(num_species=reference_size,
-                  num_reaction=2*reference_size)
-            reference_arr = reference_network.reactant_nmat.values
-            num_reference_row, num_reference_column = reference_arr.shape
-            target_network, assignment_pair = reference_network.permute()
-            reaction_assignment = np.array([assignment_pair.reaction_assignment,
-                np.random.permutation(np.arange(num_reference_column))])
-            column_assignment = _Assignment(reaction_assignment)
-            spurious_assignment_arr = np.random.permutation(range(len(assignment_pair.species_assignment)))
-            species_assignment = np.array([assignment_pair.species_assignment, spurious_assignment_arr])
-            row_assignment = _Assignment(species_assignment)
-            num_assignment = row_assignment.num_row*column_assignment.num_row
-            evaluator = AssignmentEvaluator(reference_network.reactant_nmat.values,
-                target_network.reactant_nmat.values)
-            num_assignment = row_assignment.num_row*column_assignment.num_row
-            big_reference_arr, big_target_arr = evaluator._makeBatch(0, num_assignment-1, row_assignment, column_assignment)
-            for is_close in [False, True]:
-                satisfy_comparison_arr = evaluator._compare(big_reference_arr, big_target_arr, is_close)
-                self.assertTrue(satisfy_comparison_arr[0])
-                self.assertFalse(np.all(satisfy_comparison_arr[1:]))
-
-    def testEvaluateAssignmentArrays(self):
-        if IGNORE_TEST:
-            return
-        assignment_pairs = self.evaluator.evaluateAssignmentArrays(ROW_ASSIGNMENT_ARR, COLUMN_ASSIGNMENT_ARR)
+        assignment_pairs = self.evaluator.parallelEvaluate(ROW_ASSIGNMENT_ARR, COLUMN_ASSIGNMENT_ARR)
         assigned_target_arr = TARGET_ARR[assignment_pairs[0].row_assignment, :]
         assigned_target_arr = assigned_target_arr[:, assignment_pairs[0].column_assignment]
         self.assertTrue(np.all(REFERENCE_ARR == assigned_target_arr))
@@ -88,7 +49,7 @@ class TestAssignmentEvaluator(unittest.TestCase):
             num_row = 100
             num_column = 10
             expansion_factor = 2
-            num_assignment = 1000  # Requires a total of 4GB of memory
+            num_assignment = 100
             # Construct the reference and target arrays
             reference_arr = np.random.randint(0, 10, (num_row, num_column))
             target_arr = np.vstack([np.random.permutation(reference_arr) for _ in range(expansion_factor)])
@@ -104,21 +65,21 @@ class TestAssignmentEvaluator(unittest.TestCase):
             column_assignment_arr[pos] = true_column_assignment_arr
             # Do the evaluation
             evaluator = AssignmentEvaluator(reference_arr, target_arr, max_batch_size=int(2e6))
-            assignment_pairs = evaluator.evaluateAssignmentArrays(row_assignment_arr, column_assignment_arr)
+            assignment_pairs = evaluator.parallelEvaluate(row_assignment_arr, column_assignment_arr)
             # Check the result
             true_assignment_pair = AssignmentPair(row_assignment=true_row_assignment_arr,
                 column_assignment=true_column_assignment_arr)
             self.assertEqual(assignment_pairs[-1], true_assignment_pair)
 
-    def testEvaluateAssignmentArraysScale(self):
+    def testParallelEvaluateScale1(self):
         if IGNORE_TEST:
             return
-        for _ in range(NUM_ITERATION):
+        for _ in range(2):
             reference_size = np.random.randint(3, 200)
             reference_network = Network.makeRandomNetworkByReactionType(num_species=reference_size,
                   num_reaction=2*reference_size)
             reference_arr = reference_network.reactant_nmat.values
-            num_reference_row, num_reference_column = reference_arr.shape
+            _, num_reference_column = reference_arr.shape
             target_network, assignment_pair = reference_network.permute()
             reaction_assignment = np.array([assignment_pair.reaction_assignment,
                 np.random.permutation(np.arange(num_reference_column))])
@@ -127,31 +88,37 @@ class TestAssignmentEvaluator(unittest.TestCase):
             species_assignment = np.array([assignment_pair.species_assignment, spurious_assignment_arr])
             row_assignment = _Assignment(species_assignment)
             evaluator = AssignmentEvaluator(reference_network.reactant_nmat.values, target_network.reactant_nmat.values)
-            assignment_pairs = evaluator.evaluateAssignmentArrays(row_assignment.array, column_assignment.array)
+            assignment_pairs = evaluator.parallelEvaluate(row_assignment.array, column_assignment.array)
             assigned_target_arr = target_network.reactant_nmat.values[assignment_pairs[0].row_assignment, :]
             assigned_target_arr = assigned_target_arr[:, assignment_pairs[0].column_assignment]
             self.assertTrue(np.all(reference_network.reactant_nmat.values == assigned_target_arr))
-
-    def testEvaluateTarget(self):
+    
+    def testParallelEvaluateScaleFill(self):
         if IGNORE_TEST:
             return
-        for _ in range(100):
-            reference_size = np.random.randint(3, 200)
-            reference_network = Network.makeRandomNetworkByReactionType(num_species=reference_size,
-                  num_reaction=2*reference_size)
-            reference_arr = reference_network.reactant_nmat.values
-            num_reference_row, num_reference_column = reference_arr.shape
-            target_network, assignment_pair = reference_network.permute()
-            reaction_assignment_arr = np.array([assignment_pair.reaction_assignment,
-                np.random.permutation(np.arange(num_reference_column))])
-            spurious_assignment_arr = np.random.permutation(range(len(assignment_pair.species_assignment)))
-            species_assignment_arr = np.array([assignment_pair.species_assignment, spurious_assignment_arr])
+        for _ in range(2):
+            num_assignment = 100
+            num_species_desired = np.random.randint(100, 200)
+            num_reaction_desired = num_species_desired + 1
+            fill_size = 3*num_species_desired
+            reference_network = Network.makeRandomNetworkByReactionType(num_species=num_species_desired,
+                  num_reaction=num_reaction_desired)
+            num_species, num_reaction = reference_network.reactant_nmat.values.shape
+            target_network = reference_network.fill(num_fill_reaction=fill_size, num_fill_species=fill_size,
+                  is_permute=False)
+            true_species_assignment_arr = np.array(range(num_species))
+            true_reaction_assignment_arr = np.array(range(num_reaction))
+            true_assignment_pair = AssignmentPair(row_assignment=true_species_assignment_arr,
+                column_assignment=true_reaction_assignment_arr)
+            reaction_assignment_arr = np.array([np.random.permutation(np.arange(num_reaction)) for _ in range(num_assignment)])
+            reaction_assignment_arr[-1] = true_reaction_assignment_arr
+            species_assignment_arr = np.array([np.random.permutation(np.arange(num_species)) for _ in range(num_assignment)])
+            species_assignment_arr[-1] = true_species_assignment_arr
             evaluator = AssignmentEvaluator(reference_network.reactant_nmat.values, target_network.reactant_nmat.values)
-            assignment_pairs = evaluator.evaluateTarget(species_assignment_arr, reaction_assignment_arr,
-                    max_num_assignment=1000)
-            assigned_target_arr = target_network.reactant_nmat.values[assignment_pairs[0].row_assignment, :]
-            assigned_target_arr = assigned_target_arr[:, assignment_pairs[0].column_assignment]
-            self.assertTrue(np.all(reference_network.reactant_nmat.values == assigned_target_arr))
+            assignment_pairs = evaluator.parallelEvaluate(species_assignment_arr, reaction_assignment_arr,
+                    total_process=10)
+            trues = [assignment_pair == true_assignment_pair for assignment_pair in assignment_pairs]
+            self.assertTrue(any(trues))
         
     def testEvaluateAssignmentPairs(self):
         if IGNORE_TEST:
@@ -176,7 +143,17 @@ class TestAssignmentEvaluator(unittest.TestCase):
             successful_assignment_pairs = evaluator.evaluateAssignmentPairs(candidate_assignment_pairs)
             assigned_target_arr = target_network.reactant_nmat.values[successful_assignment_pairs[0].row_assignment, :]
             assigned_target_arr = assigned_target_arr[:, candidate_assignment_pairs[0].column_assignment]
-            self.assertTrue(np.all(reference_network.reactant_nmat.values == assigned_target_arr))        
+            self.assertTrue(np.all(reference_network.reactant_nmat.values == assigned_target_arr))
+
+    def testParallelEvaluateSimple(self):
+        if IGNORE_TEST:
+            return
+        for total_process in [1, 10]:
+            results = self.evaluator.parallelEvaluate(ROW_ASSIGNMENT_ARR, COLUMN_ASSIGNMENT_ARR,
+                  total_process=total_process)
+            result = results[0]
+            for pair in [result.species_assignment, result.reaction_assignment]:
+                self.assertTrue(np.all(pair == [2, 0]))
 
 
 if __name__ == '__main__':

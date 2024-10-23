@@ -14,5 +14,6 @@ seaborn
 sbbadger
 simplesbml
 tellurium
+tqdm
 twine
 zipfile36

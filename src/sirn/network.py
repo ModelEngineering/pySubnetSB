@@ -8,7 +8,6 @@ from sirn.species_constraint import SpeciesConstraint   # type: ignore
 from sirn.network_base import NetworkBase, AssignmentPair  # type: ignore
 from sirn.assignment_evaluator import AssignmentEvaluator  # type: ignore
 
-import collections
 import pynauty  # type: ignore
 import numpy as np
 from typing import Optional, List, Tuple, Union
@@ -186,7 +185,8 @@ class Network(NetworkBase):
         else:
             evaluator = AssignmentEvaluator(reference_reactant_nmat.values.astype(np.int8),
                     target_reactant_nmat.values.astype(np.int8), max_batch_size=max_batch_size)
-            reactant_assignment_pairs = evaluator.evaluateAssignmentArrays(species_assignment_arr, reaction_assignment_arr)
+            reactant_assignment_pairs = evaluator.parallelEvaluate(species_assignment_arr, reaction_assignment_arr,
+                  total_process=2)
             evaluator = AssignmentEvaluator(reference_reactant_nmat.values,
                     target_reactant_nmat.values, max_batch_size=max_batch_size)
             reactant_assignment_pairs = evaluator.evaluateAssignmentPairs(reactant_assignment_pairs)
