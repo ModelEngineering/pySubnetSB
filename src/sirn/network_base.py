@@ -16,7 +16,7 @@ import numpy as np
 import os
 import pandas as pd  # type: ignore
 from pynauty import Graph  # type: ignore
-from typing import Optional, Tuple, List, Dict
+from typing import Optional, Tuple, Any, Union
 
 
 Edge = collections.namedtuple('Edge', ['source', 'destination'])
@@ -42,10 +42,22 @@ class NetworkBase(object):
             reaction_names (np.ndarray[str]): Names of the reactions.
             species_names (np.ndarray[str]): Names of the species
         """
+        self._network_name = network_name
         # Reactant stoichiometry matrix is negative
         if not np.all(reactant_arr.shape == product_arr.shape):
             raise ValueError("Reactant and product matrices must have the same shape.")
-        self.num_species, self.num_reaction = np.shape(reactant_arr)
+        try:
+            self.num_species, self.num_reaction = np.shape(reactant_arr)
+        except:
+            # Empty network
+            self.num_species = 0
+            self.num_reaction = 0
+            return
+        if reactant_arr.shape[0] == 0:
+            # Empty network
+            self.num_species = 0
+            self.num_reaction = 0
+            return
         self.reactant_nmat = NamedMatrix(reactant_arr, row_names=species_names, column_names=reaction_names,
               row_description="species", column_description="reactions")
         self.product_nmat = NamedMatrix(product_arr, row_names=species_names, column_names=reaction_names,
@@ -55,11 +67,13 @@ class NetworkBase(object):
         # The following are deferred execution for efficiency considerations
         self._species_names = species_names
         self._reaction_names = reaction_names
-        self._network_name = network_name
         self._stoichiometry_nmat:Optional[NamedMatrix] = None
         self._strong_hash:Optional[int] = None  # Hash for strong identity
         self._weak_hash:Optional[int] = None  # Hash for weak identity
         self._constraint_pair_dct:dict = {}  # keys are identity, is_subset
+
+    def __bool__(self)->bool:
+        return (self.num_species > 0) and (self.num_reaction > 0)
 
     @property
     def stoichiometry_nmat(self)->NamedMatrix:
@@ -277,26 +291,33 @@ class NetworkBase(object):
         return True
     
     @classmethod
-    def makeFromAntimonyStr(cls, antimony_str:str, network_name:Optional[str]=None)->'NetworkBase':
+    def makeFromAntimonyStr(cls, antimony_str:str, network_name:Optional[str]=None,
+          roadrunner:Optional[Any]=None)->Union['NetworkBase', None]:
         """
         Make a Network from an Antimony string.
 
         Args:
             antimony_str (str): Antimony string.
             network_name (str): Name of the network.
+            roadrunner (Any): Roadrunner object.
 
         Returns:
-            Network
+            Network or None
         """
-        clean_antimony_str = antimony_str.replace("\n", ";\n")
-        stoichiometry = Stoichiometry(clean_antimony_str)
+        if roadrunner is None:
+            clean_antimony_str = antimony_str.replace("\n", ";\n")
+        else:
+            clean_antimony_str = None
+        stoichiometry = Stoichiometry(clean_antimony_str, roadrunner=roadrunner)
+        if stoichiometry.reactant_mat is None:
+            return None
         network = cls(stoichiometry.reactant_mat, stoichiometry.product_mat, network_name=network_name,
                       species_names=stoichiometry.species_names, reaction_names=stoichiometry.reaction_names)
         return network
                    
     @classmethod
     def makeFromAntimonyFile(cls, antimony_path:str,
-                         network_name:Optional[str]=None)->'NetworkBase':
+                         network_name:Optional[str]=None)->Union['NetworkBase', None]:
         """
         Make a Network from an Antimony file. The default network name is the file name.
 
@@ -308,7 +329,10 @@ class NetworkBase(object):
             Network
         """
         with open(antimony_path, 'r') as fd:
-            antimony_str = fd.read()
+            try:
+                antimony_str = fd.read()
+            except:
+                raise ValueError(f"Could not read file {antimony_path}")
         if network_name is None:
             filename = os.path.basename(antimony_path)
             network_name = filename.split('.')[0]

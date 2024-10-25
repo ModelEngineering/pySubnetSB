@@ -1,6 +1,7 @@
 '''Utility functions for the SIRN package.'''
 import collections
 from functools import wraps, cmp_to_key
+import json
 import numpy as np
 import time
 import pandas as pd # type: ignore
@@ -275,3 +276,17 @@ def partitionArray(array:np.ndarray, num_partition:int)->List[np.ndarray]:
     [partitions[n%actual_num_partition].append(array[n].tolist()) for n in range(len(array))]
     partitions = [np.array(partition) for partition in partitions]
     return partitions
+
+def serializeDct(dct:dict)->str:
+    """Serializes a dictionary.
+
+    Args:
+        dct (dict): A dictionary.
+
+    Returns:
+        str: A serialized dictionary.
+    """
+    for key, val in dct.items():
+        if isinstance(val, np.ndarray):
+            dct[key] = val.tolist()
+    return json.dumps(dct)

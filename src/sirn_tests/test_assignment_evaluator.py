@@ -38,6 +38,7 @@ class TestAssignmentEvaluator(unittest.TestCase):
         if IGNORE_TEST:
             return
         assignment_pairs = self.evaluator.parallelEvaluate(ROW_ASSIGNMENT_ARR, COLUMN_ASSIGNMENT_ARR)
+        assignment_pairs = self.evaluator.parallelEvaluate(ROW_ASSIGNMENT_ARR, COLUMN_ASSIGNMENT_ARR)
         assigned_target_arr = TARGET_ARR[assignment_pairs[0].row_assignment, :]
         assigned_target_arr = assigned_target_arr[:, assignment_pairs[0].column_assignment]
         self.assertTrue(np.all(REFERENCE_ARR == assigned_target_arr))

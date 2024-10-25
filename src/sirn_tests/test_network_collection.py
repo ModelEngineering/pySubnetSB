@@ -14,6 +14,7 @@ IGNORE_TEST = False
 IS_PLOT = False
 COLLECTION_SIZE = 10
 NETWORK_COLLECTION = NetworkCollection.makeRandomCollection(num_network=COLLECTION_SIZE)
+XML_DIR = os.path.join(cn.TEST_DIR, "xml_files")
 
 
 #############################
@@ -63,10 +64,12 @@ class TestNetworkCollection(unittest.TestCase):
         directory = os.path.join(cn.TEST_DIR, "oscillators")
         network_collection = NetworkCollection.makeFromAntimonyDirectory(directory)
         self.assertTrue(len(network_collection) > 0)
-        #
-        network_collection = NetworkCollection.makeFromAntimonyDirectory(directory,
-              first_file=5, max_file=10)
-        self.assertTrue(len(network_collection) == 5)
+
+    def testMakeFromAntimonyDirectoryXML(self):
+        if IGNORE_TEST:
+            return
+        network_collection = NetworkCollection.makeFromAntimonyDirectory(XML_DIR, batch_size=-1)
+        self.assertTrue(len(network_collection) > 0)
 
     def checkSerializeDeserialize(self, collection:NetworkCollection):
         serialization_str = collection.serialize()

@@ -13,8 +13,6 @@ import numpy as np
 from typing import Optional, List, Tuple, Union
 
 
-IS_DEBUG = False
-
 NULL_ARRAY = np.array([])  # Null array
 ATTRS = ["reactant_nmat", "product_nmat", "reaction_names", "species_names", "network_name"]
 MAX_PREFIX_LEN = 3   # Maximum length of a prefix in the assignment to do a pairwise analysis
@@ -122,7 +120,8 @@ class Network(NetworkBase):
 
     def isStructurallyIdentical(self, target:'Network', is_subset:bool=False,
             max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT,
-            max_batch_size:int=cn.MAX_BATCH_SIZE, identity:str=cn.ID_WEAK)->StructurallyIdenticalResult:
+            max_batch_size:int=cn.MAX_BATCH_SIZE, identity:str=cn.ID_WEAK,
+            is_report:bool=True)->StructurallyIdenticalResult:
         """
         Determines if the network is structurally identical to another network or subnet of another network.
 
@@ -132,6 +131,7 @@ class Network(NetworkBase):
             max_num_assignment (int, optional): Maximum number of assignments to search (no limit if negative)
             max_batch_size (int, optional): Maximum batch size
             identity (str, optional): cn.ID_WEAK or cn.ID_STRONG
+            is_report (bool, optional): Print report
 
         Returns:
             StructurallyIdenticalResult
@@ -169,34 +169,18 @@ class Network(NetworkBase):
         is_null = is_species_null or is_reaction_null
         is_truncated = is_species_truncated or is_reaction_truncated
         if len(species_assignment_arr) == 0 or len(reaction_assignment_arr) == 0 or is_null:
-            if IS_DEBUG:
-                import pdb; pdb.set_trace()
             return StructurallyIdenticalResult(assignment_pairs=[], 
                   num_reaction_candidate=reaction_assignment_arr.shape[0],
                   num_species_candidate=species_assignment_arr.shape[0],
                   is_truncated=is_truncated)
         # Evaluate the assignments
         evaluator = AssignmentEvaluator(reference_reactant_nmat.values, target_reactant_nmat.values)
-        if False:
-            reactant_assignment_pairs = evaluator.evaluateTarget(species_assignment_arr, reaction_assignment_arr)
-        # Find the assignments of species and reactions that yield structurally identical networks
-        # Do evaluation on one byte arrays and then check the result on the full arrays
-        #print(species_assignment_arr.shape, reaction_assignment_arr.shape)
-        else:
-            evaluator = AssignmentEvaluator(reference_reactant_nmat.values.astype(np.int8),
-                    target_reactant_nmat.values.astype(np.int8), max_batch_size=max_batch_size)
-            reactant_assignment_pairs = evaluator.parallelEvaluate(species_assignment_arr, reaction_assignment_arr,
-                  total_process=2)
-            evaluator = AssignmentEvaluator(reference_reactant_nmat.values,
-                    target_reactant_nmat.values, max_batch_size=max_batch_size)
-            reactant_assignment_pairs = evaluator.evaluateAssignmentPairs(reactant_assignment_pairs)
+        reactant_assignment_pairs = evaluator.parallelEvaluate(species_assignment_arr, reaction_assignment_arr,
+                total_process=-1, is_report=is_report)
         evaluator = AssignmentEvaluator(reference_product_nmat.values, target_product_nmat.values,
             max_batch_size=max_batch_size)
         assignment_pairs = evaluator.evaluateAssignmentPairs(reactant_assignment_pairs)
         # Return result
-        if IS_DEBUG:
-            if len(assignment_pairs) == 0:
-                import pdb; pdb.set_trace()
         return StructurallyIdenticalResult(assignment_pairs=assignment_pairs,
               num_reaction_candidate=reaction_assignment_arr.shape[0], num_species_candidate=species_assignment_arr.shape[0],
               is_truncated=is_truncated)

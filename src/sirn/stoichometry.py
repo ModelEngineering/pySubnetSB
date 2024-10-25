@@ -4,6 +4,7 @@ import collections
 import tellurium as te  # type: ignore
 import simplesbml  # type: ignore
 import numpy as np  # type: ignore
+from typing import Any, Optional
 
 # Result: namedtuple
 #  reactant_mat: reactant stoichiometry matrix
@@ -15,7 +16,7 @@ import numpy as np  # type: ignore
 
 class Stoichiometry(object):
 
-    def __init__(self, antimony_str:str)->None:
+    def __init__(self, antimony_str:str, roadrunner:Optional[Any]=None)->None:
 
         """
         Calculate the stoichiometry matrix from an SBML model.
@@ -25,14 +26,19 @@ class Stoichiometry(object):
             Result: Result(reactant_mat, product_mat, stoichiometry_mat, species_names, reaction_names)
         """
         self. antimony_str = antimony_str
+        self.roadrunner = roadrunner
         self.reactant_mat, self.product_mat, self.standard_mat, self.species_names, self.reaction_names \
             = self.calculate() 
         
     def calculate(self):
-        roadrunner = te.loada(self.antimony_str)
+        if self.roadrunner is None:
+            self.roadrunner = te.loada(self.antimony_str)
         #roadrunner.conservedMoietyAnalysis = True
-        sbml = roadrunner.getSBML()
-        model = simplesbml.loadSBMLStr(sbml)
+        sbml = self.roadrunner.getSBML()
+        try:
+            model = simplesbml.loadSBMLStr(sbml)
+        except:
+            return None, None, None, None, None
         # Model inforeactant_mation
         num_floating_species = model.getNumFloatingSpecies()
         num_boundary_species = model.getNumBoundarySpecies()

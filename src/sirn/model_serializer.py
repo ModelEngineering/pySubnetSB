@@ -10,7 +10,7 @@ import argparse
 from typing import Optional
 
 
-BATCHSIZE = 500
+BATCHSIZE = 20
 
 class ModelSerializer(object):
 
@@ -29,7 +29,7 @@ class ModelSerializer(object):
         self.serialization_file = serialization_file
 
     def serialize(self, batch_size:int=BATCHSIZE, num_batch:Optional[int]=None,
-                           report_interval:Optional[int]=None)->None:
+                           report_interval:Optional[int]=10)->None:
         """
         Serializes Antimony models in a directory.
 
@@ -65,14 +65,15 @@ class ModelSerializer(object):
                     f.write(f'{network.serialize()}\n')
         print("Done!")
 
-    def deserialize(self, serialization_file:Optional[str]=None)->NetworkCollection:
+    def deserialize(self)->NetworkCollection:
         """Deserializes the network collection."""
         with open(self.serialization_file, 'r') as f:
             serialization_strs = f.readlines()
         networks = []
         for serialization_str in serialization_strs:
             network = Network.deserialize(serialization_str)
-            networks.append(network)
+            if network.num_species > 0:
+                networks.append(network)
         return NetworkCollection(networks, directory=self.model_directory)
 
 # Run as a main program
@@ -80,7 +81,5 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Serialize Antimony Models')
     parser.add_argument('model_directory', type=str, help='Name of directory')
     args = parser.parse_args()
-    if not args.model_directory in cn.OSCILLATOR_DIRS:
-        raise ValueError(f"{args.self.model_directory} not in {cn.OSCILLATOR_DIRS}")
     serializer = ModelSerializer(args.model_directory)
     serializer.serialize(report_interval=BATCHSIZE)

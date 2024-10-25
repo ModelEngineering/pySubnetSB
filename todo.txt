@@ -1,6 +1,7 @@
 FSIRN - finding structural subnets (pySubnetSB)
-1. Parallel implementation of AssignmentEvaluator.
 2. Search for cyclic subnets
+   a. Serialize BioModels
+   b. Look for oscillator file
 3. Select random subnetwork from an SBML model
 4. Reverse the order of arguments in NetworkBase.makeRandomReactionByType
 5. Good implementation of hash

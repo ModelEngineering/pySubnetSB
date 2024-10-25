@@ -77,7 +77,9 @@ class TestAssignmentEvaluator(unittest.TestCase):
     def testEvaluateAssignmentArrays(self):
         if IGNORE_TEST:
             return
-        assignment_pairs = self.evaluator.evaluateAssignmentArrays(ROW_ASSIGNMENT_ARR, COLUMN_ASSIGNMENT_ARR)
+        process_num, total_process = 0, 1
+        assignment_pairs = self.evaluator.evaluateAssignmentArrays(process_num, total_process,
+              ROW_ASSIGNMENT_ARR, COLUMN_ASSIGNMENT_ARR, is_report=False)
         assigned_target_arr = TARGET_ARR[assignment_pairs[0].row_assignment, :]
         assigned_target_arr = assigned_target_arr[:, assignment_pairs[0].column_assignment]
         self.assertTrue(np.all(REFERENCE_ARR == assigned_target_arr))
@@ -105,7 +107,8 @@ class TestAssignmentEvaluator(unittest.TestCase):
             column_assignment_arr[pos] = true_column_assignment_arr
             # Do the evaluation
             evaluator = AssignmentEvaluatorWorker(reference_arr, target_arr, max_batch_size=MAX_BATCH_SIZE)
-            assignment_pairs = evaluator.evaluateAssignmentArrays(row_assignment_arr, column_assignment_arr)
+            process_num, total_process = 0, 1
+            assignment_pairs = evaluator.evaluateAssignmentArrays(process_num, total_process, row_assignment_arr, column_assignment_arr)
             # Check the result
             true_assignment_pair = AssignmentPair(row_assignment=true_row_assignment_arr,
                 column_assignment=true_column_assignment_arr)
@@ -128,7 +131,9 @@ class TestAssignmentEvaluator(unittest.TestCase):
             species_assignment_arr = np.array([assignment_pair.species_assignment, spurious_assignment_arr])
             evaluator = AssignmentEvaluatorWorker(reference_network.reactant_nmat.values,
                   target_network.reactant_nmat.values, max_batch_size=MAX_BATCH_SIZE)
-            assignment_pairs = evaluator.evaluateAssignmentArrays(species_assignment_arr, reaction_assignment_arr)
+            process_num, total_process = 0, 1
+            assignment_pairs = evaluator.evaluateAssignmentArrays(process_num, total_process,
+                  species_assignment_arr, reaction_assignment_arr)
             assigned_target_arr = target_network.reactant_nmat.values[assignment_pairs[0].row_assignment, :]
             assigned_target_arr = assigned_target_arr[:, assignment_pairs[0].column_assignment]
             self.assertTrue(np.all(reference_network.reactant_nmat.values == assigned_target_arr))

@@ -147,6 +147,7 @@ class AssignmentEvaluator(object):
             column_assignment_arr (np.ndarray): assignments of target columns to reference columns
             num_process (int): number of processes
             total_process (int): number of processes (defaults to the number of CPUs)
+            is_report (bool): report progress
 
         Returns:
             AssignmentPair: Row and column assignments that result in equality

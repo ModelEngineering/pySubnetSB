@@ -44,12 +44,8 @@ class ReactionClassification(object):
     REACTION_BITS = [1 << i for i in range(NUM_CLASSIFICATION)]
 
     def __init__(self, num_reactant:int, num_product:int):
-        self.num_reactant = num_reactant
-        self.num_product = num_product
-        if num_reactant > self.MAX_ENCODING:
-            raise ValueError(f"num_reactant must be less than {self.MAX_ENCODING}.")
-        if num_product > self.MAX_ENCODING:
-            raise ValueError(f"num_product must be less than {self.MAX_ENCODING}.")
+        self.num_reactant = min(num_reactant, self.MAX_REACTANT)
+        self.num_product = min(num_product, self.MAX_PRODUCT)
         self.encoding = self.num_reactant*100 + self.num_product
         self.index = self.getIndex(self.num_reactant, self.num_product)
 

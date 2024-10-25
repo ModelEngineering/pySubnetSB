@@ -10,10 +10,11 @@ import copy
 import os
 import pandas as pd # type: ignore
 import numpy as np
+import tellurium as te  # type: ignore
 from typing import List, Optional, Dict
 
 
-ANTIMONY_EXTS = [".ant", ".txt", ""]  # Antimony file extensions
+ANTIMONY_EXTS = [".ant", ".txt"]  # Antimony file extensions
 
 
 ArrayContext = collections.namedtuple('ArrayContext', "string, num_row, num_column")
@@ -113,16 +114,16 @@ class NetworkCollection(object):
                     for _ in range(num_network)]
         return cls(networks)
 
-    # FIXME: Handle XML files
     @classmethod
     def makeFromAntimonyDirectory(cls, indir_path:str, 
-                batch_size:Optional[int]=None,
+                batch_size:Optional[float]=None,
                 processed_network_names:Optional[List[str]]=None,
                 report_interval:Optional[int]=None)->'NetworkCollection':
         """Creates a NetworkCollection from a directory of Antimony files.
 
         Args:
             indir_path (str): Path to the antimony model directory
+            batch_size (int): Number of files to process. Default is 5. -1 is all.
             max_file (int): Maximum number of files to process
             processed_network_names (List[str]): Names of models already processed
             report_interval (int): Report interval
@@ -130,6 +131,10 @@ class NetworkCollection(object):
         Returns:
             NetworkCollection
         """
+        if batch_size is None:
+            batch_size = 5
+        elif batch_size < 0:
+            batch_size = float("inf")
         ffiles = os.listdir(indir_path)
         networks = []
         network_names = []
@@ -148,10 +153,22 @@ class NetworkCollection(object):
                 if is_report:
                     print(".", end='')
                 continue
-            if not any([ffile.endswith(ext) for ext in ANTIMONY_EXTS]):
+            if ffile.endswith(".xml"):
+                try:
+                    roadrunner = te.loadSBMLModel(os.path.join(indir_path, ffile))
+                except:
+                    print(f"Could not process {ffile}")
+                    continue
+                clean_antimony_str = roadrunner.getAntimony()
+                network = Network.makeFromAntimonyStr(clean_antimony_str, roadrunner=roadrunner, network_name=network_name)
+            elif any([ffile.endswith(ext) for ext in ANTIMONY_EXTS]) or len(ffile.split('.')) == 1:
+                path = os.path.join(indir_path, ffile)
+                network = Network.makeFromAntimonyFile(path, network_name=network_name)
+            else:
                 continue
-            path = os.path.join(indir_path, ffile)
-            network = Network.makeFromAntimonyFile(path, network_name=network_name)
+            if network is None:
+                print(f"Could not process {ffile}")
+                continue
             networks.append(network)
             num_processed += 1
             if is_report:

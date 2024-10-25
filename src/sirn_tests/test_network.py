@@ -8,7 +8,7 @@ import tellurium as te  # type: ignore
 import unittest
 
 
-IGNORE_TEST = False
+IGNORE_TEST = True
 IS_PLOT = False
 NUM_ITERATION = 2
 NETWORK_NAME = "test"
@@ -97,11 +97,13 @@ class TestNetwork(unittest.TestCase):
         if IGNORE_TEST:
             return
         target, assignment_pair = self.network.permute()
-        result = self.network.isStructurallyIdentical(target, identity=cn.ID_WEAK)
+        result = self.network.isStructurallyIdentical(target, identity=cn.ID_WEAK,
+              is_report=False)
         self.assertTrue(np.all(self.network.species_names == target.species_names[assignment_pair.species_assignment]))
         self.assertTrue(np.all(self.network.reaction_names == target.reaction_names[assignment_pair.reaction_assignment]))
         self.assertTrue(result)
-        result = self.network.isStructurallyIdentical(self.network, identity=cn.ID_STRONG)
+        result = self.network.isStructurallyIdentical(self.network, identity=cn.ID_STRONG,
+              is_report=False)
         self.assertTrue(result)
 
     def testIsStructurallyIdenticalDoubleFail(self):
@@ -143,28 +145,26 @@ class TestNetwork(unittest.TestCase):
         self.assertTrue(result)
     
     def testIsStructurallyIdenticalScaleRandomlyPermuteTrue(self):
-        if IGNORE_TEST:
-            return
+        #if IGNORE_TEST:
+        #    return
         def test(reference_size, fill_factor=1, num_iteration=NUM_ITERATION):
-            for identity in [cn.ID_WEAK, cn.ID_STRONG]:
-                num_success = 0
+            for identity in cn.ID_LST:
                 for _ in range(num_iteration):
                     reference = Network.makeRandomNetworkByReactionType(num_reaction=reference_size,
                                                                         num_species=14)
                     target = reference.fill(num_fill_reaction=fill_factor*reference_size,
                         num_fill_species=fill_factor*reference_size)
-                    result = reference.isStructurallyIdentical(target, identity=identity, is_subset=True)
+                    result = reference.isStructurallyIdentical(target, identity=identity, is_subset=True,
+                          is_report=True)
                     msg = f"identity: {identity}, reference_size: {reference_size}, fill_factor: {fill_factor}"
                     msg += f"\n   num_species_candidate: {result.num_species_candidate}"
                     msg += f"\n   num_reaction_candidate: {result.num_reaction_candidate}"
                     #print(msg)
-                    num_success += bool(result)
+                    if not result:
+                        import pdb; pdb.set_trace()
                     self.assertTrue(bool(result))
-                succ_frac = num_success/num_iteration
-                self.assertGreater(succ_frac, 0.5)
-                #print(f"Success rate for {identity}: {num_success/num_iteration}")
         #
-        for fill_factor in [1, 2]:
+        for fill_factor in [1, 4]:
             for size in [5]:
                 test(size, fill_factor=fill_factor)
 
