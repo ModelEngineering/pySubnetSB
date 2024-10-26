@@ -12,6 +12,8 @@ import pandas as pd  # type: ignore
 import matplotlib.pyplot as plt
 from typing import List, Optional
 
+SERIALIZATION_FILE = "collection_serialization.txt"
+
 class FindSubnet(object):
 
     def __init__(self, reference_models:List[Network], target_models:List[Network], identity:str=cn.ID_WEAK)->None:
@@ -70,7 +72,8 @@ class FindSubnet(object):
         return df
     
     @classmethod
-    def findFromDirectories(cls, reference_directory, target_directory, identity:str=cn.ID_WEAK, is_report:bool=True)->pd.DataFrame:
+    def findFromDirectories(cls, reference_directory, target_directory, identity:str=cn.ID_WEAK,
+          is_report:bool=True)->pd.DataFrame:
         """
         Finds subnets of SBML/Antmony models in a target directory for SBML/Antimony models in a reference directory.
 
@@ -92,13 +95,19 @@ class FindSubnet(object):
             serialization_filename = os.path.split(reference_directory)[1] + ".serial"
             return os.path.join(directory, serialization_filename)
         #####
-        serialization_paths = [makeSerializationFilePath(directory) for directory in [reference_directory, target_directory]]
-        for idx in serialization_paths:
-            if os.path.exists(serialization_paths[idx]):
-                reference_models = ModelSerializer(reference_directory).deserialize()
-            target_models = ModelSerializer(target_directory).deserialize()
+        REFERENCE = "reference"
+        TARGET = "target"
+        directory_dct = {REFERENCE: reference_directory, TARGET: target_directory}
+        serialization_path_dct = {k: makeSerializationFilePath(d) for k,d in directory_dct.items()}
+        collection_dct:dict = {}
+        for dir_name, path in serialization_path_dct.items():
+            if os.path.exists(path):
+                collection_dct[dir_name] = ModelSerializer(reference_directory).deserialize()
+            else:
+                serialization_path = os.path.join(path, SERIALIZATION_FILE)
+                serializer = ModelSerializer(collection_dct[dir_name], model_parent_dir=None,
+                    serialization_path=serialization_path)
+                collection_dct[dir_name] = serializer.serialize()
         # Put the serialized models in the directory. Check for it on invocation.
-        reference_models = ModelSerializer(reference_directory).deserialize()
-        target_models = ModelSerializer(target_directory).deserialize()
-        finder = cls(reference_models, target_models, identity=identity)
+        finder = cls(collection_dct[REFERENCE], collection_dct[TARGET], identity=identity)
         return finder.find(is_report=is_report)

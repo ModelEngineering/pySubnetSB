@@ -15,18 +15,21 @@ BATCHSIZE = 20
 class ModelSerializer(object):
 
     def __init__(self, model_directory:str, model_parent_dir:str=cn.OSCILLATOR_PROJECT,
-                 serialization_file:Optional[str]=None)->None:
+                 serialization_path:Optional[str]=None)->None:
         """
         Args:
             model_directory (str): Directory that contains the model files
-            model_directory_parent (Optional[str], optional): Path to the model_directory
+            model_directory_parent (Optional[str], optional): Path to the model_directory. If None,
+                the model_directory is a complete path.
             serialization_file (Optional[str], optional): Where serialization results are stored
         """
+        if (model_parent_dir is not None) and ("/" in model_directory):
+            raise ValueError("model_directory should not contain a path.")
         self.model_directory = model_directory
         self.model_parent_dir = model_parent_dir
-        if serialization_file is None:
-            serialization_file = os.path.join(cn.DATA_DIR, f'{self.model_directory}_serializers.txt')
-        self.serialization_file = serialization_file
+        if serialization_path is None:
+            serialization_path = os.path.join(cn.DATA_DIR, f'{self.model_directory}_serializers.txt')
+        self.serialization_file = serialization_path
 
     def serialize(self, batch_size:int=BATCHSIZE, num_batch:Optional[int]=None,
                            report_interval:Optional[int]=10)->None:
@@ -38,7 +41,10 @@ class ModelSerializer(object):
             num_batch (Optional[int]): Number of batches to process
             report_interval (int): Interval to report progress. 
         """
-        directory_path = os.path.join(self.model_parent_dir, self.model_directory)
+        if self.model_parent_dir is not None:
+            directory_path = os.path.join(self.model_parent_dir, self.model_directory)
+        else:
+            directory_path = self.model_directory
         # Check if there is an existing output file
         processed_network_names:list = []
         if os.path.exists(self.serialization_file):
