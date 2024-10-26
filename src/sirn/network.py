@@ -166,6 +166,15 @@ class Network(NetworkBase):
         # Calculate the compatibility vectors for species and reactions and then construct the assignment arrays
         species_assignment_arr, is_species_truncated, is_species_null = makeAssignmentArr(SpeciesConstraint)
         reaction_assignment_arr, is_reaction_truncated, is_reaction_null = makeAssignmentArr(ReactionConstraint)
+        # Check if further truncation is required
+        num_species_assignment = species_assignment_arr.shape[0]
+        num_reaction_assignment = reaction_assignment_arr.shape[0]
+        if num_species_assignment*num_reaction_assignment > max_num_assignment:
+            species_frac = num_species_assignment/max_num_assignment
+            reaction_frac = num_reaction_assignment/max_num_assignment
+            species_assignment_arr = util.selectRandom(species_assignment_arr, int(species_frac*max_num_assignment))
+            reaction_assignment_arr = util.selectRandom(reaction_assignment_arr, int(reaction_frac*max_num_assignment))
+        # Handle null assignment
         is_null = is_species_null or is_reaction_null
         is_truncated = is_species_truncated or is_reaction_truncated
         if len(species_assignment_arr) == 0 or len(reaction_assignment_arr) == 0 or is_null:
@@ -174,9 +183,16 @@ class Network(NetworkBase):
                   num_species_candidate=species_assignment_arr.shape[0],
                   is_truncated=is_truncated)
         # Evaluate the assignments
-        evaluator = AssignmentEvaluator(reference_reactant_nmat.values, target_reactant_nmat.values)
+        #   Evaluate on single byte entries
+        evaluator = AssignmentEvaluator(reference_reactant_nmat.values.astype(np.int8),
+              target_reactant_nmat.values.astype(np.int8), max_batch_size=max_batch_size)
         reactant_assignment_pairs = evaluator.parallelEvaluate(species_assignment_arr, reaction_assignment_arr,
                 total_process=-1, is_report=is_report)
+        #   Check assignment pairs on single bytes
+        evaluator = AssignmentEvaluator(reference_reactant_nmat.values,
+              target_reactant_nmat.values, max_batch_size=max_batch_size)
+        reactant_assignment_pairs = evaluator.evaluateAssignmentPairs(reactant_assignment_pairs)
+        #   Evaluate on product matrices
         evaluator = AssignmentEvaluator(reference_product_nmat.values, target_product_nmat.values,
             max_batch_size=max_batch_size)
         assignment_pairs = evaluator.evaluateAssignmentPairs(reactant_assignment_pairs)

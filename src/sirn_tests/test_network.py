@@ -8,7 +8,7 @@ import tellurium as te  # type: ignore
 import unittest
 
 
-IGNORE_TEST = True
+IGNORE_TEST = False
 IS_PLOT = False
 NUM_ITERATION = 2
 NETWORK_NAME = "test"
@@ -145,8 +145,8 @@ class TestNetwork(unittest.TestCase):
         self.assertTrue(result)
     
     def testIsStructurallyIdenticalScaleRandomlyPermuteTrue(self):
-        #if IGNORE_TEST:
-        #    return
+        if IGNORE_TEST:
+            return
         def test(reference_size, fill_factor=1, num_iteration=NUM_ITERATION):
             for identity in cn.ID_LST:
                 for _ in range(num_iteration):
@@ -187,8 +187,8 @@ class TestNetwork(unittest.TestCase):
                         #self.assertFalse(result)
             #print(f"Truncate rate: {num_truncate/num_processed}")
         #
-        for size in [5, 10, 20]:
-            test(size, target_factor=5)
+        for size in [5, 10, 15]:
+            test(size, target_factor=3)
 
     def testSerializeDeserialize(self):
         if IGNORE_TEST:

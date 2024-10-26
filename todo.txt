@@ -1,4 +1,5 @@
 FSIRN - finding structural subnets (pySubnetSB)
+1. total_assignments counts the combination of reaction and species
 2. Search for cyclic subnets
    a. Serialize BioModels
    b. Look for oscillator file

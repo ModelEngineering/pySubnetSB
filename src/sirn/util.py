@@ -290,3 +290,16 @@ def serializeDct(dct:dict)->str:
         if isinstance(val, np.ndarray):
             dct[key] = val.tolist()
     return json.dumps(dct)
+
+def selectRandom(array:np.ndarray, num_select:int)->np.ndarray:
+    """Randomly selects elements from an array.
+
+    Args:
+        array (np.array): An array.
+        num_select (int): Number of elements to select.
+
+    Returns:
+        np.array: An array of selected elements.
+    """
+    idxs = np.random.permutation(len(array))[:num_select]
+    return array[idxs]
