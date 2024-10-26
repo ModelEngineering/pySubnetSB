@@ -166,6 +166,7 @@ class Network(NetworkBase):
         # Calculate the compatibility vectors for species and reactions and then construct the assignment arrays
         species_assignment_arr, is_species_truncated, is_species_null = makeAssignmentArr(SpeciesConstraint)
         reaction_assignment_arr, is_reaction_truncated, is_reaction_null = makeAssignmentArr(ReactionConstraint)
+        is_truncated = is_species_truncated or is_reaction_truncated
         # Check if further truncation is required
         num_species_assignment = species_assignment_arr.shape[0]
         num_reaction_assignment = reaction_assignment_arr.shape[0]
@@ -174,9 +175,9 @@ class Network(NetworkBase):
             reaction_frac = num_reaction_assignment/max_num_assignment
             species_assignment_arr = util.selectRandom(species_assignment_arr, int(species_frac*max_num_assignment))
             reaction_assignment_arr = util.selectRandom(reaction_assignment_arr, int(reaction_frac*max_num_assignment))
+            is_truncated = True
         # Handle null assignment
         is_null = is_species_null or is_reaction_null
-        is_truncated = is_species_truncated or is_reaction_truncated
         if len(species_assignment_arr) == 0 or len(reaction_assignment_arr) == 0 or is_null:
             return StructurallyIdenticalResult(assignment_pairs=[], 
                   num_reaction_candidate=reaction_assignment_arr.shape[0],

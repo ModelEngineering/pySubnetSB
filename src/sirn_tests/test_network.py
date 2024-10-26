@@ -187,7 +187,7 @@ class TestNetwork(unittest.TestCase):
                         #self.assertFalse(result)
             #print(f"Truncate rate: {num_truncate/num_processed}")
         #
-        for size in [5, 10, 15]:
+        for size in [5, 10, 20]:
             test(size, target_factor=3)
 
     def testSerializeDeserialize(self):
