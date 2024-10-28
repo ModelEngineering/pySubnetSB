@@ -68,8 +68,7 @@ class NetworkBase(object):
         self._species_names = species_names
         self._reaction_names = reaction_names
         self._stoichiometry_nmat:Optional[NamedMatrix] = None
-        self._strong_hash:Optional[int] = None  # Hash for strong identity
-        self._weak_hash:Optional[int] = None  # Hash for weak identity
+        self._network_hash:Optional[int] = None  # Hash for weak identity
         self._constraint_pair_dct:dict = {}  # keys are identity, is_subset
 
     def __bool__(self)->bool:
@@ -100,16 +99,10 @@ class NetworkBase(object):
         return self._reaction_names
 
     @property
-    def weak_hash(self):
-        if self._weak_hash is None:
-            self._weak_hash = util.hashMatrix(self.standard_nmat.values)
-        return self._weak_hash
-
-    @property
-    def strong_hash(self):
-        if self._strong_hash is None:
-            self._strong_hash = util.hashMatrix(self.reactant_nmat.values + self.product_nmat.values)
-        return self._strong_hash
+    def network_hash(self):
+        if self._network_hash is None:
+            self._network_hash = util.hashMatrix(self.standard_nmat.values)
+        return self._network_hash
 
     @property
     def network_name(self)->str:
@@ -267,9 +260,9 @@ class NetworkBase(object):
             return False
         if self.num_reaction != other.num_reaction:
             return False
-        is_identity = self.weak_hash == other.weak_hash
+        is_identity = self.network_hash == other.network_hash
         if identity == cn.ID_STRONG:
-            is_identity = self.strong_hash == other.strong_hash
+            is_identity = self.network_hash == other.network_hash
         return bool(is_identity)
 
     # FIXME: More sophisticated subset checking? 

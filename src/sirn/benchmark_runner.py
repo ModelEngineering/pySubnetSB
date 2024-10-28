@@ -187,7 +187,7 @@ class BenchmarkRunner(object):
             num_experiment (int): number of experiments in the benchmark
             reference_size (int)
             expansion_factor (int): Integer factor for size of target relative to reference
-            is_identical (bool): If True, the target has a subsetnet equivalent to the reference.
+            is_identical (bool): If True, the target has a subnet equivalent to the reference.
             identity (str)
         """
         self.reference_size = reference_size
@@ -195,7 +195,7 @@ class BenchmarkRunner(object):
         self.identity = identity
         self.num_experiment = num_experiment
         self.is_identical = is_identical
-        self.experiments = [self.makeExperiment(is_identical=is_identical)]*num_experiment
+        self.experiments = [self.makeExperiment(is_identical=self.is_identical)]*num_experiment
 
     def __eq__(self, other)->bool:
         if not isinstance(other, BenchmarkRunner):
@@ -219,7 +219,7 @@ class BenchmarkRunner(object):
         """Construct the elements of an experiment.
 
         Args:
-            is_identical (bool): If True, the target has a subsetnet equivalent to the reference.
+            is_identical (bool): If True, the target has a subnet equivalent to the reference.
 
         Returns:
             Experiment
@@ -258,6 +258,7 @@ class BenchmarkRunner(object):
             max_val = np.max(reference.reactant_nmat.values)
             # Insert an impossible value
             reference.reactant_nmat.values[i_species, i_reaction] =  max_val + 1
+            reference.standard_nmat.values = reference.product_nmat.values - reference.reactant_nmat.values
         return Experiment(reference=reference, target=target, assignment_pair=assignment_pair)
     
     def run(self)->ExperimentResult:

@@ -77,14 +77,7 @@ class ClusterBuilder(object):
             return hash_dct
         #
         if self.is_sirn:
-            hash_simple_dct = makeDct('weak_hash')
-            simple_max = self.sequenceMax([len(networks) for networks in hash_simple_dct.values()])
-            hash_nonsimple_dct = makeDct('strong_hash')
-            nonsimple_max = self.sequenceMax([len(networks) for networks in hash_nonsimple_dct.values()])
-            if simple_max < nonsimple_max:
-                hash_dct = hash_simple_dct
-            else:
-                hash_dct = hash_nonsimple_dct
+            hash_dct = makeDct('network_hash')
         else:
             hash_dct = {cn.NON_SIRN_HASH: self.network_collection.networks}
         return hash_dct
@@ -138,7 +131,7 @@ class ClusterBuilder(object):
                     first_network = self.processed2Network(first_processed_network)
                     result = first_network.isStructurallyIdentical(network,
                             max_num_assignment=self.max_num_assignment,
-                            identity=self.identity)
+                            identity=self.identity, is_subset=False, is_report=self.is_report)
                     if result:
                         processed_network_collection.add(processed_network)
                         is_selected = True

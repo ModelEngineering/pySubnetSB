@@ -89,6 +89,36 @@ class TestFunctions(unittest.TestCase):
                 self.assertTrue(result1 == result2)
         test(num_iteration=10000)
     
+    def testHashMarixPermutations(self):
+        if IGNORE_TEST:
+            return
+        def test(size=50, num_iteration=100):
+            for _ in range(num_iteration):
+                row_perm = np.random.permutation(size)
+                arr1 = np.random.randint(-2, 3, (size, 2*size))
+                arr2 = arr1.copy()
+                arr2 = arr2[row_perm, :]
+                result1 = util.hashMatrix(arr1)
+                result2 = util.hashMatrix(arr2)
+                self.assertTrue(result1 == result2)
+        test(num_iteration=10000)
+
+    def testHashMarixDistinct(self):
+        if IGNORE_TEST:
+            return
+        def test(size=10, num_iteration=100):
+            num_true = 0
+            for _ in range(num_iteration):
+                arr1 = np.random.randint(-2, 3, (size, 2*size))
+                arr2 = np.random.randint(-2, 3, (size, 2*size))
+                result1 = util.hashMatrix(arr1)
+                result2 = util.hashMatrix(arr2)
+                num_true += result1 == result2
+            self.assertLess(num_true/num_iteration, 0.1)
+            #print(f"{size}: fraction of true: {num_true/num_iteration}")
+        test(size=3, num_iteration=1000)
+        test(size=5, num_iteration=1000)
+    
     def testIsLessThan(self):
         if IGNORE_TEST:
             return
@@ -186,8 +216,8 @@ class TestFunctions(unittest.TestCase):
             self.assertTrue(is_true)
     
     def testPartitionArray2(self):
-        #if IGNORE_TEST:
-        #    return
+        if IGNORE_TEST:
+            return
         arr = [ np.array([1, 0])]
         num_partition = 2
         partitions = util.partitionArray(arr, num_partition)

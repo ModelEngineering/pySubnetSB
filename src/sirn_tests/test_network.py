@@ -85,8 +85,8 @@ class TestNetwork(unittest.TestCase):
         if IGNORE_TEST:
             return
         self.assertEqual(self.network.network_name, NETWORK_NAME)
-        self.assertTrue("int" in str(type(self.network.weak_hash)))
-        self.assertTrue("int" in str(type(self.network.strong_hash)))
+        self.assertTrue("int" in str(type(self.network.network_hash)))
+        self.assertTrue("int" in str(type(self.network.network_hash)))
 
     def makeRandomNetwork(self, num_species=5, num_reaction=5):
         big_reactant_mat = np.random.randint(0, 2, (num_species, num_reaction))
@@ -160,8 +160,6 @@ class TestNetwork(unittest.TestCase):
                     msg += f"\n   num_species_candidate: {result.num_species_candidate}"
                     msg += f"\n   num_reaction_candidate: {result.num_reaction_candidate}"
                     #print(msg)
-                    if not result:
-                        import pdb; pdb.set_trace()
                     self.assertTrue(bool(result))
         #
         for fill_factor in [1, 4]:

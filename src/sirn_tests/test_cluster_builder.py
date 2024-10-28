@@ -59,9 +59,10 @@ class TestClusterBuilder(unittest.TestCase):
         Returns:
             _type_: _description_
         """
-        array1 = Matrix.makeTrinaryMatrix(num_row=num_species, num_column=num_reaction)
-        array2 = Matrix.makeTrinaryMatrix(num_row=num_species, num_column=num_reaction)
-        network = Network(array1, array2)
+        """ array1 = np.random.randint(0, 3, size=(num_species, num_reaction))
+        array2 = np.random.randint(0, 3, size=(num_species, num_reaction))
+        network = Network(array1, array2) """
+        network = Network.makeRandomNetworkByReactionType(num_species=num_species, num_reaction=num_reaction)
         networks = []
         for _ in range(num_network):
             new_network, _ = network.permute()
@@ -105,8 +106,8 @@ class TestClusterBuilder(unittest.TestCase):
                 self.assertTrue(str(network_collection) in str(network_collections))
         #
         #test(num_collection=5, num_network=1000, num_species=15, num_reaction=15)
+        test(num_species=4, num_reaction=4)
         test(num_collection=5, num_network=10)
-        test()
         test(num_collection=5)
         test(num_collection=15, identity=cn.ID_WEAK)
             

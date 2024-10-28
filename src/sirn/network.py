@@ -153,7 +153,7 @@ class Network(NetworkBase):
             if is_null:
                 return NULL_ARRAY, prune_is_truncated, is_null
             else:
-                assignment_arr, expand_is_truncated = compatibility_collection.expand()
+                assignment_arr, expand_is_truncated = compatibility_collection.expand(max_num_assignment=max_num_assignment)
                 if assignment_arr is NULL_ARRAY:
                     return NULL_ARRAY, expand_is_truncated, is_null
                 if assignment_arr.ndim < 2:

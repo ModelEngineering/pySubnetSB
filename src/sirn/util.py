@@ -142,7 +142,7 @@ def makeRowOrderIndependentHash(array:np.ndarray)->int:
     else:
         raise ValueError("Array must be 1, 2 dimensional.")
     
-def hashMatrix(matrix:np.ndarray)->int:
+def deprecatedhashMatrix(matrix:np.ndarray)->int:
     """Creates a single integer hash for a 2 dimensional array.
 
     Args:
@@ -164,6 +164,41 @@ def hashMatrix(matrix:np.ndarray)->int:
     values += 1000000000*np.sum(is_not_arr, axis=1)
     result = hash(str(pd.util.hash_array(np.sort(values))))
     return result
+
+def hashMatrix(matrix:np.ndarray)->np.int64:
+    """Creates a single integer hash for a 2 dimensional array. Matrix cannot have a dimensin > 100.
+
+    Args:
+        array (np.array): An 2d array.
+
+    Returns:
+        int64: Hash value.
+    """
+    for dim in matrix.shape:
+        if dim > 100:
+            raise ValueError("Matrix cannot have a dimension > 100.")
+    #####
+    def hashRows(array:np.ndarray)->np.int64:
+        VALUES = [-2, -1, 0, 1, 2]
+        results = []
+        for row in array:
+            row_encoding = 0
+            for idx, val in enumerate(VALUES):
+                row_encoding += (10**idx)*np.sum(row == val)
+            results.append(row_encoding)
+        result_arr = np.sort(np.array(results, dtype=np.int64))
+        result = np.int64(np.sum(pd.util.hash_array(result_arr)))
+        return result
+    #####
+    row_hash = hashRows(matrix)
+    column_hash = hashRows(matrix.T)
+    # Hanlde possible overflow on summation
+    try:
+        np.seterr(over='raise')
+        final_hash = row_hash + column_hash
+    except:
+        final_hash = np.int64(0.1*row_hash + 0.1*column_hash)
+    return final_hash
     
 def isArrayLessEqual(left_arr:np.ndarray, right_arr:np.ndarray)->bool:
     """Determines if one array is less than another.

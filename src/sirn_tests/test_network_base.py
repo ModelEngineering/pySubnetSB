@@ -90,8 +90,8 @@ class TestNetwork(unittest.TestCase):
         self.assertEqual(self.network.network_name, NETWORK_NAME)
         for mat in [self.network.reactant_nmat, self.network.product_nmat]:
             self.assertTrue(isinstance(mat, NamedMatrix))
-        self.assertTrue("int" in str(type(self.network.weak_hash)))
-        self.assertTrue("int" in str(type(self.network.strong_hash)))
+        self.assertTrue("int" in str(type(self.network.network_hash)))
+        self.assertTrue("int" in str(type(self.network.network_hash)))
     
     @util.timeit
     def testCopyEqual(self):
@@ -127,8 +127,8 @@ class TestNetwork(unittest.TestCase):
                 self.assertTrue(network.isEquivalent(original_network))
                 self.assertEqual(network.num_species, new_network.num_species)
                 self.assertEqual(network.num_reaction, new_network.num_reaction)
-                self.assertEqual(network._weak_hash, new_network._weak_hash)
-                self.assertEqual(network.strong_hash, new_network.strong_hash)
+                self.assertEqual(network.network_hash, new_network.network_hash)
+                self.assertEqual(network.network_hash, new_network.network_hash)
         #
         test(3)
         test(30)
@@ -139,20 +139,16 @@ class TestNetwork(unittest.TestCase):
             return
         # Randomly change a value in the reactant matrix
         def test(size, num_iteration=500):
-            strong_hashes = []
-            weak_hashes = []
+            network_hashes = []
             for _ in range(num_iteration):
                 network = NetworkBase.makeRandomNetworkByReactionType(num_reaction=3*size, num_species=size)
-                strong_hashes.append(network.strong_hash)
-                weak_hashes.append(network.weak_hash)
-            num_distinct_weak_hashes = len(set(weak_hashes))
-            num_distinct_strong_hashes = len(set(strong_hashes))
-            frac_weak =  1 - num_distinct_weak_hashes/ num_iteration
-            frac_strong =  1 - num_distinct_strong_hashes/ num_iteration
-            self.assertLessEqual(frac_weak, 0.3)
-            self.assertLessEqual(frac_strong, 0.3)
+                network_hashes.append(network.network_hash)
+            num_distinct_weak_hashes = len(set(network_hashes))
+            frac_distinct_hashes =  num_distinct_weak_hashes/ num_iteration
+            #print(f"distinct hashes: {frac_distinct_hashes}")
+            self.assertGreater(frac_distinct_hashes, 0.9)
         #
-        test(3)
+        test(4)
 
     @util.timeit
     def testIsStructurallyCompatible(self):

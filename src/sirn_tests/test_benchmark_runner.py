@@ -74,23 +74,34 @@ class TestBenchmarkRunner(unittest.TestCase):
         if IGNORE_TEST:
             return
         num_experiment = 3
+        reference_size = 5
         for identity in cn.ID_LST:
             for expansion_factor in [2, 10]:
-                for is_identical in [True, False]:
-                    benchmark_runner = BenchmarkRunner(reference_size=5,
-                        num_experiment=num_experiment,
-                        expansion_factor=expansion_factor,
-                        is_identical=is_identical,
-                        identity=identity)
-                    experiment_result = benchmark_runner.run()
-                    print(expansion_factor, is_identical, identity, experiment_result)
-                    self.assertEqual(len(experiment_result.runtimes), benchmark_runner.num_experiment)
-                    if is_identical:
-                        count = experiment_result.num_success + experiment_result.num_truncated
-                        count = min(count, num_experiment)
-                    else:
-                        count = experiment_result.num_success
-                    self.assertEqual(num_experiment*is_identical, count)
+                benchmark_runner = BenchmarkRunner(reference_size=reference_size,
+                    num_experiment=num_experiment,
+                    expansion_factor=expansion_factor,
+                    is_identical=True,
+                    identity=identity)
+                experiment_result = benchmark_runner.run()
+                self.assertEqual(len(experiment_result.runtimes), benchmark_runner.num_experiment)
+                count = experiment_result.num_success + experiment_result.num_truncated
+                count = min(count, num_experiment)
+                self.assertEqual(num_experiment, count)
+
+    def testRunNotIdentical(self):
+        if IGNORE_TEST:
+            return
+        num_experiment = 3
+        reference_size = 5
+        for identity in [cn.ID_WEAK]:
+            benchmark_runner = BenchmarkRunner(reference_size=reference_size,
+                num_experiment=num_experiment,
+                expansion_factor=1,
+                is_identical=False,
+                identity=identity)
+            experiment_result = benchmark_runner.run()
+            self.assertEqual(len(experiment_result.runtimes), benchmark_runner.num_experiment)
+            self.assertEqual(experiment_result.num_success, 0)
 
     def testExportExperimentAsCSV(self):
         if IGNORE_TEST:

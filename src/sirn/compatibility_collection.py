@@ -85,7 +85,7 @@ class CompatibilityCollection(object):
         Returns:
             Tuple[np.ndarray, bool]: _description_
         """
-        MAX_BATCH_SIZE = 100
+        MAX_BATCH_SIZE = 1000
         #####
         def expandCollection(collection:List[List[int]])->np.ndarray:
             # Expands the compatibilities into a two dimensional array where each row is an assignment

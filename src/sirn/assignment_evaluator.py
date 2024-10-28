@@ -152,10 +152,13 @@ class AssignmentEvaluator(object):
         Returns:
             AssignmentPair: Row and column assignments that result in equality
         """
+        num_comparison = row_assignment_arr.shape[0]*column_assignment_arr.shape[0]
         # Initializations
         if total_process == -1:
             total_process = mp.cpu_count()
         num_process = min(mp.cpu_count(), total_process)
+        if num_comparison < MIN_ASSIGNMENT_PER_PARALLEL_CPU:
+            num_process = 1
         # Handle the case of a single process
         if num_process == 1:
             # Construct the assignments
