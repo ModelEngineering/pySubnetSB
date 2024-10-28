@@ -356,4 +356,3 @@ class BenchmarkRunner(object):
               expansion_factor=expansion_factor, is_identical=is_identical, identity=identity)
         benchmark_runner.experiments = experiments
         return benchmark_runner
-        

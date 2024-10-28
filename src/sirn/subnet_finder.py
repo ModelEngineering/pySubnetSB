@@ -14,7 +14,7 @@ from typing import List, Optional
 
 SERIALIZATION_FILE = "collection_serialization.txt"
 
-class FindSubnet(object):
+class SubnetFinder(object):
 
     def __init__(self, reference_models:List[Network], target_models:List[Network], identity:str=cn.ID_WEAK)->None:
         """
@@ -23,8 +23,8 @@ class FindSubnet(object):
             target_model_directory (str): Directory that contains the target model files
             identity (str): Identity type
         """
-        self.reference_model_directory = reference_models
-        self.target_model_directory = target_models
+        self.reference_models = reference_models
+        self.target_models = target_models
         self.identity = identity
 
     def find(self, is_report:bool=True)->pd.DataFrame:
@@ -44,26 +44,24 @@ class FindSubnet(object):
         INDUCED_NETWORK = "induced_network"
         COLUMNS = [REFERENCE_MODEL, TARGET_MODEL, REFERENCE_NETWORK, INDUCED_NETWORK]
         dct:dict = {k: [] for k in COLUMNS}
-        for reference in self.reference_model_directory:
+        for reference in self.reference_models:
             if is_report:
                 print(f"Processing reference model: {reference.network_name}")
-            for target in self.target_model_directory:
-                result = reference.isStructurallyIdentical(target, identity=self.identity)
+            for target in self.target_models:
+                result = reference.isStructurallyIdentical(target, identity=self.identity,
+                      is_report=is_report)
                 if result:
                     # Construct the induced subnet
                     species_assignment_arr = result.assignment_pairs[0].species_assignment
                     reaction_assignment_arr = result.assignment_pairs[0].reaction_assignment
-                    induced_reactant_arr = target.reactant_nmat.values[species_assignment_arr, :]
-                    induced_reactant_arr = induced_reactant_arr.reactant_nmat.values[:, reaction_assignment_arr]
-                    induced_product_arr = target.product_nmat.values[species_assignment_arr, :]
-                    induced_product_arr = induced_product_arr.product_nmat.values[:, reaction_assignment_arr]
                     species_names = target.species_names[species_assignment_arr]
                     reaction_names = target.reaction_names[reaction_assignment_arr]
                     network_name = f"{reference.network_name}_{target.network_name}"
-                    induced_network = Network(induced_reactant_arr, induced_product_arr,
+                    induced_network = Network(reference.reactant_nmat.values, reference.product_nmat.values,
                           reaction_names=reaction_names, species_names=species_names,
                           network_name=network_name)
-                    print(f"Found matching model: {reference.network_name} and {target.network_name}")
+                    if is_report:
+                        print(f"Found matching model: {reference.network_name} and {target.network_name}")
                     dct[REFERENCE_MODEL].append(reference.network_name)
                     dct[TARGET_MODEL].append(target.network_name)
                     dct[REFERENCE_NETWORK].append(str(reference))
@@ -92,22 +90,19 @@ class FindSubnet(object):
         """
         #####
         def makeSerializationFilePath(directory:str)->str:
-            serialization_filename = os.path.split(reference_directory)[1] + ".serial"
-            return os.path.join(directory, serialization_filename)
+            return os.path.join(directory, SERIALIZATION_FILE)
         #####
         REFERENCE = "reference"
         TARGET = "target"
         directory_dct = {REFERENCE: reference_directory, TARGET: target_directory}
-        serialization_path_dct = {k: makeSerializationFilePath(d) for k,d in directory_dct.items()}
+        path_dct = {k: makeSerializationFilePath(d) for k,d in directory_dct.items()}
         collection_dct:dict = {}
-        for dir_name, path in serialization_path_dct.items():
+        for dir_type, path in path_dct.items():
+            serializer = ModelSerializer(directory_dct[dir_type], model_parent_dir=None, serialization_path=path)
             if os.path.exists(path):
-                collection_dct[dir_name] = ModelSerializer(reference_directory).deserialize()
+                collection_dct[dir_type] = serializer.deserialize()
             else:
-                serialization_path = os.path.join(path, SERIALIZATION_FILE)
-                serializer = ModelSerializer(collection_dct[dir_name], model_parent_dir=None,
-                    serialization_path=serialization_path)
-                collection_dct[dir_name] = serializer.serialize()
+                collection_dct[dir_type] = serializer.serialize()
         # Put the serialized models in the directory. Check for it on invocation.
-        finder = cls(collection_dct[REFERENCE], collection_dct[TARGET], identity=identity)
+        finder = cls(collection_dct[REFERENCE].networks, collection_dct[TARGET].networks, identity=identity)
         return finder.find(is_report=is_report)
