@@ -25,7 +25,7 @@ OSCILLATOR_PROJECT = os.path.dirname(os.path.abspath(__file__))
 for _ in range(3):
     OSCILLATOR_PROJECT = os.path.dirname(OSCILLATOR_PROJECT)
 OSCILLATOR_PROJECT = os.path.join(OSCILLATOR_PROJECT, 'OscillatorDatabase')
-#
+# Constants
 MAX_NUM_ASSIGNMENT = 1e7  # Maximum number of permutations to search
 MAX_BATCH_SIZE = int(1e7)  # Matrix memory in bytes used in a comparison batch in AssignmentEvaluator
 STRUCTURAL_IDENTITY = "structural_identity"
@@ -34,6 +34,7 @@ NETWORK_DELIMITER = "---"
 NETWORK_NAME_PREFIX_KNOWN = "!"
 NETWORK_NAME_PREFIX_UNKNOWN = "?"
 NETWORK_NAME_SUFFIX = "_"
+NULL_STR = ""
 IDENTITY_PREFIX_STRONG = "+"
 IDENTITY_PREFIX_WEAK = "-"
 NUM_HASH = 'num_hash'
