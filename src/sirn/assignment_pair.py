@@ -1,15 +1,37 @@
 '''Pairs of species and reaction assignments.'''
 
 import sirn.constants as cn  # type: ignore
+import sirn.util as util  # type: ignore
 
 import json
 import numpy as np  # type: ignore
-from typing import List, Tuple
+from typing import List, Optional
 
 class AssignmentPair(object):
     # species and row are equivalent. reaction and column are equivalent.
 
-    def __init__(self, species_assignment=None, reaction_assignment=None, row_assignment=None, column_assignment=None):
+    def __init__(self, species_assignment=None, reaction_assignment=None, row_assignment=None, column_assignment=None,
+          reference_species_names:Optional[List[str]]=None,
+          target_species_names:Optional[List[str]]=None,
+          reference_reaction_names:Optional[List[str]]=None,
+          target_reaction_names:Optional[List[str]]=None):
+        """
+        Assignment of species and reactions to target to describe its permutation into the reference.
+
+        Args:
+            species_assignment (_type_, optional): Assignment of target species (values) to reference (position)
+            reaction_assignment (_type_, optional): Assignment of target reactions (values) to reference (position)
+            row_assignment (_type_, optional): Same as species
+            column_assignment (_type_, optional): Same as reactions
+            reference_species_names (Optional[List[str]], optional)
+            target_species_names (Optional[List[str]], optional)
+            reference_reaction_names (Optional[List[str]], optional)
+            target_reaction_names (Optional[List[str]], optional)
+
+        Raises:
+            RuntimeError: _description_
+            RuntimeError: _description_
+        """
         if (species_assignment is None) and (row_assignment is None):
             raise RuntimeError("Must specify species assignment!")
         if (reaction_assignment is None) and (column_assignment is None):
@@ -18,6 +40,10 @@ class AssignmentPair(object):
         self._reaction_assignment = reaction_assignment
         self._row_assignment = row_assignment
         self._column_assignment = column_assignment
+        self.reference_species_names = reference_species_names
+        self.reference_reaction_names = reference_reaction_names
+        self.target_species_names = target_species_names
+        self.target_reaction_names = target_reaction_names
 
     @property
     def species_assignment(self)->np.ndarray:
@@ -112,3 +138,23 @@ class AssignmentPair(object):
         """
         return AssignmentPair(species_assignment=self.species_assignment[:new_size],
                               reaction_assignment=self.reaction_assignment[:new_size])
+
+    def makeNameDct(self)->dict:
+        """Create a dictionary of names for the assignment of target species and reactions to the reference network.
+
+        Returns:
+            dict:
+              keys: cn.SPECIES_NAMES, cn.REACTION_NAMES
+              values: dict
+                keys: reference name
+                values: target name
+        """
+        if (self.reference_species_names is None) or (self.target_species_names is None):
+            raise ValueError("Must specify species names.")
+        if (self.reference_reaction_names is None) or (self.target_reaction_names is None):
+            raise ValueError("Must specify reaction names.")
+        species_dct = {self.reference_species_names[i]: self.target_species_names[self.species_assignment[i]]
+                       for i in range(len(self.species_assignment))}
+        reaction_dct = {self.reference_reaction_names[i]: self.target_reaction_names[self.reaction_assignment[i]]
+                       for i in range(len(self.reaction_assignment))}
+        return {cn.SPECIES_NAMES: species_dct, cn.REACTION_NAMES: reaction_dct}

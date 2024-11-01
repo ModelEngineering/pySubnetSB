@@ -136,6 +136,11 @@ class Network(NetworkBase):
         Returns:
             StructurallyIdenticalResult
         """
+        if self.num_reaction == 0 or target.num_reaction == 0:
+              return StructurallyIdenticalResult(assignment_pairs=[], 
+                  num_reaction_candidate=0,
+                  num_species_candidate=0,
+                  is_truncated=False)
         # Initialization
         if max_num_assignment < 0:
             log10_max_num_assignment = np.inf

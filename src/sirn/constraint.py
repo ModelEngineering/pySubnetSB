@@ -71,7 +71,7 @@ class ReactionClassification(object):
     @classmethod 
     def makeReactionClassificationMatrix(cls, reaction_names:List[str],
           classifications:List['ReactionClassification'])->NamedMatrix:
-        """Makes a matrix whose rows are reactions and columns are classifications.
+        """Makes a matrix whose rows are reaction names and columns are classifications.
 
         Args:
             reaction_names: List[str]

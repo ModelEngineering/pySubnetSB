@@ -463,8 +463,8 @@ class NetworkBase(object):
             reactant_arr = reactant_arr[keep_idxs, :]
             product_arr = product_arr[keep_idxs, :]
         # Construct the network
-        reaction_names = np.array([f"J{i}" for i in range(reactant_arr.shape[1])])
-        species_names = np.array([f"S{i}" for i in range(reactant_arr.shape[0])])
+        species_names = util.getDefaultSpeciesNames(reactant_arr.shape[0])
+        reaction_names = util.getDefaultReactionNames(reactant_arr.shape[1])
         network = cls(reactant_arr, product_arr, reaction_names=reaction_names, species_names=species_names)
         return network
    

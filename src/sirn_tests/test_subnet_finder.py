@@ -9,8 +9,8 @@ import numpy as np
 import unittest
 
 
-IGNORE_TEST = False
-IS_PLOT = False
+IGNORE_TEST = True
+IS_PLOT = True
 SIZE = 3
 REMOVE_DIRS:list = []
 MODEL_DIR = os.path.join(cn.TEST_DIR, "oscillators")
@@ -112,6 +112,44 @@ class TestSubnetFinder(unittest.TestCase):
         df = SubnetFinder.findFromDirectories(MODEL_DIR, MODEL_DIR, identity=cn.ID_WEAK, is_report=IS_PLOT)
         prune_df, _ = _prune(df)
         self.assertTrue(np.all(prune_df.reference_model == prune_df.target_model))
+
+    def testFindBiomodelsSubnetSimple(self):
+        if IGNORE_TEST:
+            return
+        df = SubnetFinder.findBiomodelsSubnet(max_num_target_model=200, reference_model_size=1,
+              reference_model_names=["BIOMD0000000191"], is_report=IS_PLOT)
+        prune_df, _ = _prune(df)
+        self.assertEqual(len(prune_df), 1)
+
+    def testIsBoundaryNetwork(self):
+        if IGNORE_TEST:
+            return
+        boundary_network = """
+            R1: A -> ; k1*A
+            R2:  -> B; k2
+            k1 = 0.1; k2 = 0.2
+            A = 0; B = 0
+        """
+        network = Network.makeFromAntimonyStr(boundary_network)
+        self.assertTrue(SubnetFinder.isBoundaryNetwork(network))
+        #
+        boundary_network = """
+            R1: A -> ; k1*A
+            R3: A -> C; k1*A
+            R2: B -> A; k2*B
+            k1 = 0.1; k2 = 0.2
+            A = 0; B = 0
+        """
+        network = Network.makeFromAntimonyStr(boundary_network)
+        self.assertFalse(SubnetFinder.isBoundaryNetwork(network))
+
+    def testFindBiomodelsSubnetMultiplebatch(self):
+        if IGNORE_TEST:
+            return
+        df = SubnetFinder.findBiomodelsSubnet(max_num_target_model=20, reference_model_size=8,
+              max_num_reference_model=200, batch_size=2, is_initialize=False, is_report=IS_PLOT)
+        df, processed_list = _prune(df)
+        import pdb; pdb.set_trace()
 
 
 if __name__ == '__main__':

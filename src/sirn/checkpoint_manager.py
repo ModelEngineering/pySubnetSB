@@ -18,11 +18,12 @@ import pandas as pd  # type: ignore
 
 class CheckpointManager(object):
  
-    def __init__(self, path:str, is_report:bool=True)->None:
+    def __init__(self, path:str, is_report:bool=True, is_initialize:bool=False)->None:
         """
         Args:
             path (str): Path to the CSV file
             is_report (bool): If True, reports progress
+            is_initialize(bool): If True, deletes any existing checkpoint file
         """
         self.path = path
         self.is_report = is_report
@@ -30,7 +31,11 @@ class CheckpointManager(object):
         if self.is_report:
             print(f"CheckpointManager: {self.path}")
             if os.path.exists(self.path):
-                self._print(f"Recovering from: {self.path}")
+                if is_initialize:
+                    os.remove(self.path)
+                    self._print(f"Deleted: {self.path}")
+                else:
+                    self._print(f"Recovering from: {self.path}")
             else:
                 self._print(f"Creating: {self.path}")
 

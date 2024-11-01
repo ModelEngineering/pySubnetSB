@@ -338,3 +338,26 @@ def selectRandom(array:np.ndarray, num_select:int)->np.ndarray:
     """
     idxs = np.random.permutation(len(array))[:num_select]
     return array[idxs]
+
+def getDefaultSpeciesNames(num_species:int)->np.ndarray:
+    """Creates default names for species.
+
+    Args:
+        num_species (int)
+
+    Returns:
+        np.ndarray[str]: species names
+    """
+    return np.array([f"J{i}" for i in range(num_species)])
+
+
+def getDefaultReactionNames(num_reaction:int)->np.ndarray:
+    """Creates default names for reaction.
+
+    Args:
+        num_reaction (int)
+
+    Returns:
+        np.ndarray[str]: reaction names
+    """
+    return np.array([f"J{i}" for i in range(num_reaction)])

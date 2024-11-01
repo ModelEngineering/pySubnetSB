@@ -64,12 +64,12 @@ REACTANT_ARRAY_STR = 'reactant_array_str'
 PRODUCT_ARRAY_STR = 'product_array_str'
 NUM_SPECIES = 'num_species'
 NUM_REACTION = 'num_reaction'
-SPECIES_NAMES = 'species_names'
-REACTION_NAMES = 'reaction_names'
 CRITERIA_ARRAY_STR = 'boundary_array_str'
 CRITERIA_ARRAY_LEN = 'boundary_array_len'
 SERIALIZATION_NAMES = [NETWORK_NAME, REACTANT_ARRAY_STR, PRODUCT_ARRAY_STR, SPECIES_NAMES,
                        REACTION_NAMES, NUM_SPECIES, NUM_REACTION] """
+SPECIES_NAMES = 'species_names'
+REACTION_NAMES = 'reaction_names'
 CRITERIA_BOUNDARY_VALUES = [-2, -1, 0, 1, 2]
 # Serialization
 S_ANTIMONY_DIRECTORY = "s_antimony_directory"
