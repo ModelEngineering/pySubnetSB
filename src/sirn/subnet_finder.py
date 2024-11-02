@@ -158,7 +158,7 @@ class SubnetFinder(object):
                 # Construct the serialization file path and file
                 serialization_path = os.path.join(directory, SERIALIZATION_FILE)
             # Get the networks
-                serializer = ModelSerializer(directory, model_parent_dir=None, serialization_path=serialization_path)
+                serializer = ModelSerializer(directory, serialization_path)
                 if os.path.exists(serialization_path):
                     collection = serializer.deserialize()
                 else:
@@ -227,7 +227,7 @@ class SubnetFinder(object):
             max_num_target_model = int(1e9)
         #
         manager = _CheckpointManager(out_path, is_report=is_report, is_initialize=is_initialize)
-        serializer = ModelSerializer(BIOMODELS_DIR, model_parent_dir=None, serialization_path=BIOMODELS_SERIALIZATION_PATH)
+        serializer = ModelSerializer(BIOMODELS_DIR, BIOMODELS_SERIALIZATION_PATH)
         collection = serializer.deserialize()
         all_networks = collection.networks
         if is_no_boundary_network:

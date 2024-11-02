@@ -157,7 +157,7 @@ class NetworkCollection(object):
                 try:
                     roadrunner = te.loadSBMLModel(os.path.join(indir_path, ffile))
                 except:
-                    print(f"Could not process {ffile}")
+                    print(f"Could not process {ffile}. File ignored.")
                     continue
                 clean_antimony_str = roadrunner.getAntimony()
                 network = Network.makeFromAntimonyStr(clean_antimony_str, roadrunner=roadrunner, network_name=network_name)

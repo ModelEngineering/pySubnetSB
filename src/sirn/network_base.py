@@ -329,7 +329,11 @@ class NetworkBase(object):
         if network_name is None:
             filename = os.path.basename(antimony_path)
             network_name = filename.split('.')[0]
-        return cls.makeFromAntimonyStr(antimony_str, network_name=network_name)
+        try:
+            network = cls.makeFromAntimonyStr(antimony_str, network_name=network_name)
+        except:
+            network = None
+        return network
     
     @classmethod
     def makeRandomNetwork(cls, num_species:int=5, num_reaction:int=5)->'NetworkBase':

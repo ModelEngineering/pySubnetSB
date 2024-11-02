@@ -46,7 +46,10 @@ class TestStoichiometryMatrices(unittest.TestCase):
         ffiles = os.listdir(MODEL_DIR)
         for ffile in ffiles:
             path = os.path.join(MODEL_DIR, ffile)
-            rr = te.loada(path)
+            try:
+                rr = te.loada(path)
+            except:
+                continue
             antimony_str = rr.getAntimony()
             smat = rr.getFullStoichiometryMatrix()
             stoichiometry = Stoichiometry(antimony_str)

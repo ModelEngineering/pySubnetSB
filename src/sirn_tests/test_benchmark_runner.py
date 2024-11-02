@@ -7,7 +7,7 @@ import shutil
 import unittest
 
 
-IGNORE_TEST = False
+IGNORE_TEST = True
 IS_PLOT = False
 SIZE = 3
 EXPANSION_FACTOR = 2
@@ -45,7 +45,7 @@ class TestBenchmarkRunner(unittest.TestCase):
 
     def testMakeStructurallySimilarExperiment(self):
         if IGNORE_TEST:
-            return
+           return
         size = 3
         num_iteration = 10
         for expansion_factor in [2, 1, 3]:

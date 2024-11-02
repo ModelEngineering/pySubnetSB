@@ -9,7 +9,7 @@ import pandas as pd # type: ignore
 import argparse
 from typing import Optional
 
-SERIALIZATION_FILENAME = "network_serializers.txt"
+DEFAULT_SERIALIZATION_FILENAME = "network_serializers.txt"
 
 
 BATCHSIZE = 20
@@ -43,18 +43,35 @@ class ModelSerializer(object):
         self.serialization_file = serialization_file
 
     @classmethod
-    def makeOscillatorSerializer(cls, oscillator_directory:str)->'ModelSerializer':
+    def makeDefaultSerializer(cls, model_directory:str)->'ModelSerializer':
+        """
+        Creates a with default serialization file in the model directory.
+
+        Args:
+            oscillator_directory (str): Name of oscillator directory
+            parent_directory (str): 
+
+        Returns:
+            ModelSerializer: _description_
+        """
+        model_directory = os.path.join(parent_directory, oscillator_directory)
+        serialization_file = os.path.join(model_directory, DEFAULT_SERIALIZATION_FILENAME)
+        return cls(model_directory, serialization_file) 
+
+    @classmethod
+    def makeOscillatorSerializer(cls, oscillator_directory:str, parent_directory:str=cn.OSCILLATOR_PROJECT)->'ModelSerializer':
         """
         Creates a serializer for the oscillators.
 
         Args:
             oscillator_directory (str): Name of oscillator directory
+            parent_directory (str): 
 
         Returns:
             ModelSerializer: _description_
         """
-        model_directory = os.path.join(cn.OSCILLATOR_PROJECT, oscillator_directory)
-        serialization_file = os.path.join(model_directory, SERIALIZATION_FILENAME)
+        model_directory = os.path.join(parent_directory, oscillator_directory)
+        serialization_file = os.path.join(model_directory, DEFAULT_SERIALIZATION_FILENAME)
         return cls(model_directory, serialization_file)
 
     def serialize(self, batch_size:int=BATCHSIZE, num_batch:Optional[int]=None,

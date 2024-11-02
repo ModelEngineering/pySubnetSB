@@ -40,7 +40,7 @@ class ResultAccessor(object):
         self.processed_network_collections = self._makeProcessedNetworkCollections()
         datafile_structure = self.parseDirPath()
         self.oscillator_dir = datafile_structure.antimony_dir
-        model_serializer = ModelSerializer(self.oscillator_dir)
+        model_serializer = ModelSerializer.makeOscillatorSerializer(self.oscillator_dir)
         self._network_collection = model_serializer.deserialize()
         self.identity = datafile_structure.identity
         self.max_num_assignment = datafile_structure.max_num_assignment

@@ -10,24 +10,6 @@ from typing import List, Tuple, Union
 IS_TIMEIT = False
 ArrayContext = collections.namedtuple('ArrayContext', "string, num_row, num_column")
 
-#def string2Array(array_str: str)->np.ndarray:
-#    """Converts a string to an array.
-#
-#    Args:
-#        array_str (str): An string constructed by str(np.array).
-#
-#    Returns:
-#        np.array: An array.
-#    """
-#    array_str = array_str.replace('\n', ',')
-#    array_str = array_str.replace(' ', ', ')
-#    array_str = array_str.replace('\n', '')
-#    while True:
-#        if ",," not in array_str:
-#            break
-#        array_str = array_str.replace(",,", ",")
-#    return np.array(eval(array_str))
-
 def isInt(val: str)->bool:
     """Determines if a string is an integer.
 
@@ -348,7 +330,7 @@ def getDefaultSpeciesNames(num_species:int)->np.ndarray:
     Returns:
         np.ndarray[str]: species names
     """
-    return np.array([f"J{i}" for i in range(num_species)])
+    return np.array([f"S{i}" for i in range(num_species)])
 
 
 def getDefaultReactionNames(num_reaction:int)->np.ndarray:
