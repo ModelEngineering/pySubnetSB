@@ -41,7 +41,8 @@ class AssignmentEvaluatorWorker(object):
     def do(cls, reference_arr:np.ndarray, target_arr:np.ndarray, max_batch_size:int,
            row_assignment_arr:np.ndarray, column_assignment_arr:np.ndarray,
     #      process_idx:int, total_process:int, result_dct:dict)->List[AssignmentPair]:
-           process_idx:int, total_process:int, result_dct:dict, is_report:bool=True):
+           process_idx:int, total_process:int, result_dct:dict,
+           is_report:bool=True)->List[AssignmentPair]:
         """
         Evaluates the assignments of rows and columns in the target matrix.
 
@@ -63,6 +64,7 @@ class AssignmentEvaluatorWorker(object):
         assignment_pairs = worker.evaluateAssignmentArrays(process_idx, total_process, row_assignment_arr,
               column_assignment_arr, is_report=is_report)
         result_dct[process_idx] = assignment_pairs
+        return assignment_pairs
 
     def vectorToLinear(self, num_column_assignment:int, row_idx:Union[int, np.ndarray[int]],  # type: ignore
           column_idx:Union[int, np.ndarray[int]])->Union[int, np.ndarray[int]]:  # type: ignore

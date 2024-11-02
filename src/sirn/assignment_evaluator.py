@@ -31,6 +31,7 @@ from sirn.assignment_evaluator_worker import AssignmentEvaluatorWorker # type: i
 from sirn import constants as cn # type: ignore
 from sirn import util # type: ignore
 
+from concurrent.futures import ProcessPoolExecutor
 import numpy as np
 import time
 import multiprocessing as mp
@@ -184,10 +185,12 @@ class AssignmentEvaluator(object):
                 actual_num_process = len(column_assignments)
                 is_row_max = False
             # Initialize for parallel calculations
-            jobs = []
-            manager = mp.Manager()
-            return_dct = manager.dict()  # type: ignore
-            # Start the processes
+#            jobs = []
+#            manager = mp.Manager()
+#            return_dct = manager.dict()  # type: ignore
+            # Construct the arguments
+            args = []
+            return_dct = {}
             for procnum in range(actual_num_process):
                 if is_row_max:
                     process_row_assignment_arr = row_assignments[procnum]
@@ -195,22 +198,33 @@ class AssignmentEvaluator(object):
                 else:
                     process_row_assignment_arr = row_assignments[0]
                     process_column_assignment_arr = column_assignments[procnum]
-                p = mp.Process(target=AssignmentEvaluatorWorker.do,
-                      args=(self.reference_arr, self.target_arr, self.max_batch_size,
-                      #row_assignment_arr, column_assignment_arr, procnum, total_process, return_dct))
+                args.append((self.reference_arr, self.target_arr, self.max_batch_size,
                       process_row_assignment_arr, process_column_assignment_arr,
                       procnum, total_process, return_dct, is_report))
-                jobs.append(p)
-                p.start()
-            # Wait for the processes to finish
-            for proc in jobs:
-                proc.join()
-                proc.terminate()
+            # Run the processes
+            with ProcessPoolExecutor(max_workers=total_process) as executor:
+                process_args = zip(*args)
+                results = executor.map(AssignmentEvaluatorWorker.do, *process_args)
+#                p = mp.Process(target=AssignmentEvaluatorWorker.do,
+#                      args=(self.reference_arr, self.target_arr, self.max_batch_size,
+#                      #row_assignment_arr, column_assignment_arr, procnum, total_process, return_dct))
+#                      process_row_assignment_arr, process_column_assignment_arr,
+#                      procnum, total_process, return_dct, is_report)) 
+#                jobs.append(p)
+#                p.start()
+#            # Wait for the processes to finish
+#            for proc in jobs:
+#                proc.join()
+#                proc.terminate()
             # Merge the results
-            assignment_pairs = []
-            for procnum in range(actual_num_process):
-                assignment_pairs.extend(return_dct[procnum])
+#            assignment_pairs = []
+#            for procnum in range(actual_num_process):
+#            for procnum in range(actual_num_process):
+#                assignment_pairs.extend(return_dct[procnum])
         #
+        assignment_pairs = []
+        for result in results:
+            assignment_pairs.extend(result)
         return assignment_pairs
     
     def _manageEvaluation(self, reference_arr:np.ndarray, target_arr:np.ndarray, max_batch_size:int,
