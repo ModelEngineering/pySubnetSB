@@ -12,7 +12,7 @@ import os
 import numpy as np
 import pandas as pd  # type: ignore
 import matplotlib.pyplot as plt
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 SERIALIZATION_FILE = "collection_serialization.txt"
 BIOMODELS_DIR = "/Users/jlheller/home/Technical/repos/SBMLModels/data"
@@ -197,7 +197,8 @@ class SubnetFinder(object):
           out_path:str=BIOMODELS_OUT_PATH,
           batch_size:int=10,
           is_no_boundary_network:bool=True,
-          is_initialize:bool=True)->pd.DataFrame:
+          is_initialize:bool=True,
+          skip_networks:Optional[List[str]]=None)->pd.DataFrame:
         """
         Finds subnets of SBML/Antmony models in a target directory for SBML/Antimony models in a reference directory.
         The DataFrame returned includes a reference model, target model pair with null strings for found networks
@@ -230,6 +231,8 @@ class SubnetFinder(object):
         serializer = ModelSerializer(BIOMODELS_DIR, BIOMODELS_SERIALIZATION_PATH)
         collection = serializer.deserialize()
         all_networks = collection.networks
+        if skip_networks is not None:
+            all_networks = [n for n in all_networks if n.network_name not in skip_networks]
         if is_no_boundary_network:
             all_networks = [n for n in all_networks if not cls.isBoundaryNetwork(n)]
         if len(reference_model_names) > 0:
@@ -290,7 +293,7 @@ class _CheckpointManager(CheckpointManager):
             pruned_df, processed_list = _prune(full_df)
             # Convert the JSON string to a dictionary
             if len(pruned_df) > 0:
-                pruned_df[NAME_DCT] = pruned_df[NAME_DCT].apply(lambda x: json.loads(x))
+                pruned_df.loc[:, NAME_DCT] = pruned_df[NAME_DCT].apply(lambda x: json.loads(x))
         else:
             full_df = pd.DataFrame()
             pruned_df = pd.DataFrame()
