@@ -197,8 +197,8 @@ class SubnetFinder(object):
           out_path:str=BIOMODELS_OUT_PATH,
           batch_size:int=10,
           is_no_boundary_network:bool=True,
-          is_initialize:bool=True,
-          skip_networks:Optional[List[str]]=None)->pd.DataFrame:
+          skip_networks:Optional[List[str]]=None,
+          is_initialize:bool=True)->pd.DataFrame:
         """
         Finds subnets of SBML/Antmony models in a target directory for SBML/Antimony models in a reference directory.
         The DataFrame returned includes a reference model, target model pair with null strings for found networks
@@ -212,6 +212,7 @@ class SubnetFinder(object):
             is_report (bool): If True, report progress
             out_path (Optional[str]): If not None, write the output to this path for CSV file
             batch_size (int): Number of reference models to process in a batch
+            skip_networks (List[str]): List of reference network to skip
             is_filter_unitnetworks (bool): If True, remove networks that only have reactions with one species
             is_initialize (bool): If True, initialize the checkpoint
 
@@ -256,9 +257,10 @@ class SubnetFinder(object):
             finder = cls(reference_model_batch, target_models, identity=cn.ID_STRONG)
             incremental_df = finder.find(is_report=is_report)
             full_df = pd.concat([full_df, incremental_df], ignore_index=True)
+            num_reference_model = len(set(full_df[REFERENCE_MODEL].values))
             manager.checkpoint(full_df)
             if is_report:
-                print(f"**Processed {len(full_df)} models.")
+                print(f"**Processed {len(full_df)} model comparisons, and {num_reference_model} model.")
         full_df, stripped_df, _ = manager.recover()
         num_comparison = len(full_df) - len(stripped_df)
         print(f"**Done. Processed {num_comparison} model comparisons.")
