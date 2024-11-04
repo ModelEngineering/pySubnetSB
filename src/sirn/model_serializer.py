@@ -7,7 +7,7 @@ from sirn.network_collection import NetworkCollection  # type: ignore
 import os
 import pandas as pd # type: ignore
 import argparse
-from typing import Optional
+from typing import Optional, List
 
 DEFAULT_SERIALIZATION_FILENAME = "network_serializers.txt"
 
@@ -109,6 +109,14 @@ class ModelSerializer(object):
                     processed_network_names.append(network.network_name)
                     f.write(f'{network.serialize()}\n')
         print("Done!")
+    
+    def serializeNetworks(self, networks:List[Network])->None:
+        """
+        Serializes Networks
+        """
+        with open(self.serialization_file, 'a') as f:
+            for network in networks:
+                f.write(f'{network.serialize()}\n')
 
     def deserialize(self)->NetworkCollection:
         """Deserializes the network collection."""

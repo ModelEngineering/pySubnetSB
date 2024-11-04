@@ -1,11 +1,13 @@
-from src.sirn.subnet_finder import SubnetFinder, _CheckpointManager, _prune, REFERENCE_MODEL, REFERENCE_NETWORK, \
-      TARGET_MODEL, INDUCED_NETWORK # type: ignore
-from sirn.network import Network  # type: ignore
 import sirn.constants as cn  # type: ignore
-
 import os
+cn.DATA_DIR = os.path.join(cn.TEST_DIR, "data")  # Use the test directory
+from src.sirn.subnet_finder import SubnetFinder, _CheckpointManager, _prune, REFERENCE_MODEL, REFERENCE_NETWORK, \
+      TARGET_NETWORK, INDUCED_NETWORK, BIOMODELS_DIR # type: ignore
+from sirn.network import Network  # type: ignore
+
 import pandas as pd # type: ignore
-import numpy as np
+import numpy as npa
+import shutil
 import unittest
 
 
@@ -15,6 +17,7 @@ SIZE = 3
 REMOVE_DIRS:list = []
 MODEL_DIR = os.path.join(cn.TEST_DIR, "oscillators")
 CHECKPOINT_PATH = os.path.join(cn.DATA_DIR, "test_subnet_finder_checkpoint.csv")
+BIOMODELS_DIR = os.path.join(cn.TEST_DIR, "xml_files")  # Use the test directory
 
 
 #############################
@@ -25,7 +28,7 @@ def makeDataframe(num_network:int)->pd.DataFrame:
     reference_networks = [Network.makeRandomNetworkByReactionType(3, is_prune_species=True) for _ in range(num_network)]
     target_networks = [Network.makeRandomNetworkByReactionType(3, is_prune_species=True) for _ in range(num_network)]
     dct = {REFERENCE_MODEL: [str(n) for n in range(num_network)],
-           TARGET_MODEL: [str(n) for n in range(num_network, 2*num_network)]}
+           TARGET_NETWORK: [str(n) for n in range(num_network, 2*num_network)]}
     df = pd.DataFrame(dct)
     df[REFERENCE_NETWORK] = [str(n) for n in reference_networks]
     df[INDUCED_NETWORK] = [str(n) for n in target_networks]
@@ -71,9 +74,25 @@ class TestCheckpointManager(unittest.TestCase):
 class TestSubnetFinder(unittest.TestCase):
 
     def setUp(self):
+        self.remove()
         self.reference = Network.makeRandomNetworkByReactionType(SIZE, is_prune_species=True)
         self.target = self.reference.fill(num_fill_reaction=SIZE, num_fill_species=SIZE)
         self.finder = SubnetFinder(reference_models=[self.reference], target_models=[self.target], identity=cn.ID_WEAK)
+
+    def tearDown(self):
+        self.remove()
+
+    def remove(self):
+        if not os.path.isdir(cn.DATA_DIR):
+            os.makedirs(cn.DATA_DIR)
+        else:
+            shutil.rmtree(cn.DATA_DIR)
+            os.makedirs(cn.DATA_DIR)
+        #
+        ffiles = os.listdir(BIOMODELS_DIR)
+        delete_files = [f for f in ffiles if not f.endswith(".xml")]
+        for ffile in delete_files:
+            os.remove(os.path.join(cn.BIOMODELS_DIR, ffile))
         
     def testConstructor(self):
         if IGNORE_TEST:
@@ -116,8 +135,8 @@ class TestSubnetFinder(unittest.TestCase):
     def testFindBiomodelsSubnetSimple(self):
         if IGNORE_TEST:
             return
-        df = SubnetFinder.findBiomodelsSubnet(max_num_target_model=200, reference_model_size=1,
-              reference_model_names=["BIOMD0000000191"], is_report=IS_PLOT)
+        df = SubnetFinder.findBiomodelsSubnet(max_num_target_network=200, reference_network_size=1,
+              reference_network_names=["BIOMD0000000191"], is_report=IS_PLOT)
         prune_df, _ = _prune(df)
         self.assertEqual(len(prune_df), 1)
 
@@ -146,10 +165,22 @@ class TestSubnetFinder(unittest.TestCase):
     def testFindBiomodelsSubnetMultiplebatch(self):
         if IGNORE_TEST:
             return
-        df = SubnetFinder.findBiomodelsSubnet(max_num_target_model=20, reference_model_size=8,
-              max_num_reference_model=200, batch_size=2, is_initialize=False, is_report=IS_PLOT)
+        df = SubnetFinder.findBiomodelsSubnet(max_num_target_network=20, reference_network_size=8,
+              max_num_reference_network=200, batch_size=2, is_initialize=False, is_report=IS_PLOT)
         df, processed_list = _prune(df)
         import pdb; pdb.set_trace()
+
+    def testMakeReferenceTargetSerializations(self):
+        #if IGNORE_TEST:
+        #    return
+        num_network = 10
+        num_task = 3
+        reference_networks = [Network.makeRandomNetworkByReactionType(3, is_prune_species=True) for _ in range(num_network)]
+        target_networks = [Network.makeRandomNetworkByReactionType(3, is_prune_species=True) for _ in range(num_network)]
+        SubnetFinder._makeReferenceTargetSerializations(reference_networks, target_networks, num_task=num_task)
+        ffiles = os.listdir(cn.DATA_DIR)
+        self.assertEqual(len([f for f in ffiles if f.count("reference")>0]), num_task)
+        self.assertEqual(len([f for f in ffiles if f.count("target")>0]), 1)
 
 
 if __name__ == '__main__':

@@ -8,7 +8,8 @@ from sirn.checkpoint_manager import CheckpointManager # type: ignore
 from sirn.assignment_pair import AssignmentPair # type: ignore
 
 import json
-import os 
+import os
+import multiprocessing as mp
 import numpy as np
 import pandas as pd  # type: ignore
 import matplotlib.pyplot as plt
@@ -17,15 +18,18 @@ from typing import List, Tuple, Optional
 SERIALIZATION_FILE = "collection_serialization.txt"
 BIOMODELS_DIR = "/Users/jlheller/home/Technical/repos/SBMLModels/data"
 BIOMODELS_SERIALIZATION_PATH = os.path.join(cn.DATA_DIR, 'biomodels_serialized.txt')
-BIOMODELS_OUT_PATH = os.path.join(cn.DATA_DIR, "biomodels_subnets.csv")
+BIOMODELS_SERIALIZATION_TARGET_PATH = os.path.join(cn.DATA_DIR, 'biomodels_serialized_target.txt')  # Serialized target models
+BIOMODELS_SERIALIZATION_REFERENCE_TASK_PAT = os.path.join(cn.DATA_DIR, 'biomodels_serialized_reference_%d.txt') # Serialized reference models
+BIOMODELS_OUTPATH_PAT = os.path.join(cn.DATA_DIR, 'biomodels_subnets_%d.txt') # Serialized reference models
+BIOMODELS_OUTPATH = os.path.join(cn.DATA_DIR, "biomodels_subnets.csv")
 # Columns
 REFERENCE_MODEL = "reference_model"
-TARGET_MODEL = "target_model"
+TARGET_NETWORK = "target_model"
 REFERENCE_NETWORK = "reference_network"
 INDUCED_NETWORK = "induced_network"
 NAME_DCT = "name_dct"  # Dictionary of mapping of target names to reference names for species and reactions
 NUM_ASSIGNMENT_PAIR = "num_assignment_pair"
-COLUMNS = [REFERENCE_MODEL, TARGET_MODEL, REFERENCE_NETWORK, INDUCED_NETWORK, NAME_DCT, NUM_ASSIGNMENT_PAIR]
+COLUMNS = [REFERENCE_MODEL, TARGET_NETWORK, REFERENCE_NETWORK, INDUCED_NETWORK, NAME_DCT, NUM_ASSIGNMENT_PAIR]
 
 ############################### INTERNAL FUNCTIONS ###############################
 def _prune(df:pd.DataFrame)->Tuple[pd.DataFrame, list]:
@@ -53,14 +57,21 @@ def _prune(df:pd.DataFrame)->Tuple[pd.DataFrame, list]:
 ############################### CLASSES ###############################
 class SubnetFinder(object):
 
-    def __init__(self, reference_models:List[Network], target_models:List[Network], identity:str=cn.ID_WEAK)->None:
+    def __init__(self, reference_models:List[Network], target_models:List[Network], identity:str=cn.ID_WEAK,
+          num_task:int=1, task_idx:int=0)->None:
         """
         Args:
             reference_model_directory (str): Directory that contains the reference model files
             target_model_directory (str): Directory that contains the target model files
             identity (str): Identity type
+            num_task (int): Number of tasks processing tasks
+            task_idx (int): Index of the task for this instance
         """
-        self.reference_models = reference_models
+        self.num_task = num_task
+        self.task_idx = task_idx
+        self.all_reference_models = reference_models
+        self.reference_models = [r for i, r in enumerate(self.all_reference_models) if i % self.num_task == self.task_idx]
+        self.total_process = int(mp.cpu_count() / self.num_task)
         self.target_models = target_models
         self.identity = identity
 
@@ -85,10 +96,10 @@ class SubnetFinder(object):
             if is_report:
                 print(f"Processing reference model: {reference.network_name}")
             for target in self.target_models:
-                result = reference.isStructurallyIdentical(target, identity=self.identity,
+                result = reference.isStructurallyIdentical(target, identity=self.identity, total_process=self.total_process,
                       is_report=is_report)
                 dct[REFERENCE_MODEL].append(reference.network_name)
-                dct[TARGET_MODEL].append(target.network_name)
+                dct[TARGET_NETWORK].append(target.network_name)
                 dct[REFERENCE_NETWORK].append(cn.NULL_STR)
                 dct[INDUCED_NETWORK].append(cn.NULL_STR)
                 dct[NAME_DCT].append(cn.NULL_STR)
@@ -106,7 +117,7 @@ class SubnetFinder(object):
                     if is_report:
                         print(f"Found matching model: {reference.network_name} and {target.network_name}")
                     dct[REFERENCE_MODEL].append(reference.network_name)
-                    dct[TARGET_MODEL].append(target.network_name)
+                    dct[TARGET_NETWORK].append(target.network_name)
                     dct[REFERENCE_NETWORK].append(str(reference))
                     dct[INDUCED_NETWORK].append(str(induced_network))
                     dct[NUM_ASSIGNMENT_PAIR].append(len(result.assignment_pairs))
@@ -188,47 +199,121 @@ class SubnetFinder(object):
         return bool(is_boundary)
 
     @classmethod
-    def findBiomodelsSubnet(cls,
-          reference_model_size:int=15,
-          max_num_reference_model:int=-1,
-          max_num_target_model:int=-1,
-          reference_model_names:List[str]=[],
-          is_report:bool=True,
-          out_path:str=BIOMODELS_OUT_PATH,
-          batch_size:int=10,
-          is_no_boundary_network:bool=True,
-          skip_networks:Optional[List[str]]=None,
-          is_initialize:bool=True)->pd.DataFrame:
+    def _makeReferenceTargetSerializations(cls, reference_networks:List[Network], target_networks:List[Network],
+          num_task:int)->None:
         """
-        Finds subnets of SBML/Antmony models in a target directory for SBML/Antimony models in a reference directory.
-        The DataFrame returned includes a reference model, target model pair with null strings for found networks
-        so that there is a record of all comparisons made.
+        Makes serialization files for the tasks. Each task is provided with a subset of the reference models.
 
         Args:
-            reference_model_size (int): Size of models in BioModels that are used as reference model
-            max_num_reference_model (int): Maximum number of reference models to process. If -1, process all
-            max_num_target_model (int): Maximum number of target models to process. If -1, process all
-            reference_model_names (List[str]): List of reference model names to process
-            is_report (bool): If True, report progress
+            reference_networks (List[Network]): List of reference networks
+            target_networks (List[Network]): List of target networks
             out_path (Optional[str]): If not None, write the output to this path for CSV file
-            batch_size (int): Number of reference models to process in a batch
-            skip_networks (List[str]): List of reference network to skip
-            is_filter_unitnetworks (bool): If True, remove networks that only have reactions with one species
-            is_initialize (bool): If True, initialize the checkpoint
+            num_task (int): Number of tasks to process the reference networks (-1 is all CPUs)
+        """
+        # Serialize the target models
+        serializer = ModelSerializer(None, BIOMODELS_SERIALIZATION_TARGET_PATH)
+        serializer.serializeNetworks(target_networks)
+        # Serialize the reference models by task
+        for task_idx in range(num_task):
+            task_reference_networks = [n for i, n in enumerate(reference_networks) if i % num_task == task_idx]
+            serialization_path = BIOMODELS_SERIALIZATION_REFERENCE_TASK_PAT  % task_idx
+            serializer = ModelSerializer(None, serialization_path)
+            serializer.serializeNetworks(task_reference_networks)
+    
+    @classmethod
+    def _processBiomodelsSlice(cls, task_idx:int, identity:str=cn.ID_STRONG, is_report:bool=True, batch_size:int=10,
+          is_initialize:bool=True)->pd.DataFrame:
+        """
+        Processes the BioModels a slice of the reference models analyzing BioModels.
+        1. Handle restarts
+        2. Process the reference models in batches and checkpoint
 
         Returns:
             pd.DataFrame: Table of matching models
                 reference_model (str): Reference model name
                 target_model (str): Target model name
                 reference_network (str): may be the null string
+                target_network (str): may be the null string
+        """
+        # Get the reference and target models
+        reference_serialization_path = BIOMODELS_SERIALIZATION_REFERENCE_TASK_PAT % task_idx
+        serializer = ModelSerializer(None, reference_serialization_path)
+        reference_collection = serializer.deserialize()
+        target_serialization_path = BIOMODELS_SERIALIZATION_TARGET_PATH
+        serializer = ModelSerializer(None, target_serialization_path)
+        target_collection = serializer.deserialize()
+        # Recover existing results
+        outpath = BIOMODELS_OUTPATH_PAT % task_idx
+        manager = _CheckpointManager(outpath, is_report=is_report, is_initialize=is_initialize)
+        full_df, _, processed_reference_models = manager.recover()
+        unprocessed_reference_models = [n for n in reference_collection.networks
+              if n.network_name not in processed_reference_models]
+        # Process the reference models in batches
+        while len(unprocessed_reference_models) > 0:
+            end_pos = min(len(unprocessed_reference_models), batch_size)
+            reference_model_batch = unprocessed_reference_models[:end_pos]
+            unprocessed_reference_models = unprocessed_reference_models[batch_size:]
+            finder = cls(reference_model_batch, target_collection.networks, identity=identity,
+                  num_task=mp.cpu_count(), task_idx=task_idx)
+            if task_idx > 0:
+                is_report = False  # Only show progress information for the first task
+            incremental_df = finder.find(is_report=is_report)
+            full_df = pd.concat([full_df, incremental_df], ignore_index=True)
+            num_reference_model = len(set(full_df[REFERENCE_MODEL].values))
+            manager.checkpoint(full_df)
+            if is_report:
+                print(f"**Task {task_idx}: Processed {len(full_df)} model comparisons, and {num_reference_model} model.")
+        #
+        return full_df
+
+    @classmethod
+    def findBiomodelsSubnet(cls,
+          reference_network_size:int=15,
+          max_num_reference_network:int=-1,
+          max_num_target_network:int=-1,
+          identity:str=cn.ID_STRONG,
+          reference_network_names:List[str]=[],
+          is_report:bool=True,
+          outpath:str=BIOMODELS_OUTPATH,
+          batch_size:int=10,
+          max_num_task:int=-1,
+          is_no_boundary_network:bool=True,
+          skip_networks:Optional[List[str]]=None,
+          is_initialize:bool=True)->pd.DataFrame:
+        """
+        Finds subnets of SBML/Antmony models in a target directory for SBML/Antimony models in a reference directory.
+        The DataFrame returned includes a reference network, target network pair with null strings for found networks
+        so that there is a record of all comparisons made.
+        1. Create serialization of target models and reference models for each task
+        2. Fork tasks for each reference model
+        3. Merge the results
+
+        Args:
+            reference_network_size (int): Size of networks in Bionetworks that are used as reference network
+            max_num_reference_network (int): Maximum number of reference networks to process. If -1, process all
+            max_num_target_network (int): Maximum number of target networks to process. If -1, process all
+            reference_network_names (List[str]): List of reference network names to process
+            is_report (bool): If True, report progress
+            out_path (Optional[str]): If not None, write the output to this path for CSV file
+            batch_size (int): Number of reference networks to process in a batch
+            max_num_task (int): Number of tasks to process the reference networks (-1 is all CPUs)
+            skip_networks (List[str]): List of reference network to skip
+            is_filter_unitnetworks (bool): If True, remove networks that only have reactions with one species
+            is_initialize (bool): If True, initialize the checkpoint
+
+        Returns:
+            pd.DataFrame: Table of matching networks
+                reference_network (str): Reference network name
+                target_network (str): Target network name
+                reference_network (str): may be the null string
                 target_network (str): may be the null string 
         """
-        if max_num_reference_model == -1:
-            max_num_reference_model = int(1e9)
-        if max_num_target_model == -1:
-            max_num_target_model = int(1e9)
-        #
-        manager = _CheckpointManager(out_path, is_report=is_report, is_initialize=is_initialize)
+        # Select the networks to be analyzed
+        if max_num_reference_network == -1:
+            max_num_reference_network = int(1e9)
+        if max_num_target_network == -1:
+            max_num_target_network = int(1e9)
+        # Construct the reference and target networks
         serializer = ModelSerializer(BIOMODELS_DIR, BIOMODELS_SERIALIZATION_PATH)
         collection = serializer.deserialize()
         all_networks = collection.networks
@@ -236,35 +321,50 @@ class SubnetFinder(object):
             all_networks = [n for n in all_networks if n.network_name not in skip_networks]
         if is_no_boundary_network:
             all_networks = [n for n in all_networks if not cls.isBoundaryNetwork(n)]
-        if len(reference_model_names) > 0:
-            reference_models = [n for n in all_networks if n.network_name in reference_model_names]
-            if len(reference_models) != len(reference_model_names):
-                missing_models = set(reference_model_names) - set([n.network_name for n in reference_models])
-                raise ValueError(f"Could not find reference models {missing_models}.")
+        if len(reference_network_names) > 0:
+            reference_networks = [n for n in all_networks if n.network_name in reference_network_names]
+            if len(reference_networks) != len(reference_network_names):
+                missing_networks = set(reference_network_names) - set([n.network_name for n in reference_networks])
+                raise ValueError(f"Could not find reference networks {missing_networks}.")
         else:
-            reference_models = [n for n in all_networks if n.num_reaction <= reference_model_size]
-            num_reference_model = min(len(reference_models), max_num_reference_model)
-            reference_models = reference_models[:num_reference_model]
-        target_models = [n for n in all_networks if n.num_reaction > reference_model_size]
-        num_target_model = min(len(target_models), max_num_target_model)
-        target_models = target_models[:num_target_model]
-        full_df, _, processed_reference_models = manager.recover()
-        unprocessed_reference_models = [n for n in reference_models if n.network_name not in processed_reference_models]
-        # Process the reference models in batches
-        while len(unprocessed_reference_models) > 0:
-            reference_model_batch = unprocessed_reference_models[:batch_size]
-            unprocessed_reference_models = unprocessed_reference_models[batch_size:]
-            finder = cls(reference_model_batch, target_models, identity=cn.ID_STRONG)
-            incremental_df = finder.find(is_report=is_report)
-            full_df = pd.concat([full_df, incremental_df], ignore_index=True)
-            num_reference_model = len(set(full_df[REFERENCE_MODEL].values))
-            manager.checkpoint(full_df)
-            if is_report:
-                print(f"**Processed {len(full_df)} model comparisons, and {num_reference_model} model.")
-        full_df, stripped_df, _ = manager.recover()
-        num_comparison = len(full_df) - len(stripped_df)
-        print(f"**Done. Processed {num_comparison} model comparisons.")
-        return stripped_df
+            reference_networks = [n for n in all_networks if n.num_reaction <= reference_network_size]
+            num_reference_network = min(len(reference_networks), max_num_reference_network)
+            reference_networks = reference_networks[:num_reference_network]
+        target_networks = [n for n in all_networks if n.num_reaction > reference_network_size]
+        num_target_network = min(len(target_networks), max_num_target_network)
+        target_networks = target_networks[:num_target_network]
+        # Serialize the networks for the tasks
+        num_task = mp.cpu_count() if max_num_task == -1 else max_num_task
+        cls._makeReferenceTargetSerializations(reference_networks, target_networks, num_task)
+        # Start the tasks
+        args = [(task_idx, identity, is_report, batch_size, is_initialize) for task_idx in range(num_task)]
+        with mp.ProcessPoolExecutor(max_workers=num_task) as executor:
+                process_args = zip(*args)
+                results = executor.map(cls._processBionetworksSlice, *process_args)
+        # Merge the results
+        manager = _CheckpointManager(outpath, is_report=is_report, is_initialize=is_initialize)
+        full_df = pd.concat([r for r in results], ignore_index=True)
+        manager.checkpoint(full_df)
+        # Return the results
+        _, pruned_df, processed_reference_networks = manager.recover()
+        if is_report:
+            print(f"**Done. Processed {len(processed_reference_networks)} reference networks in {outpath}.")
+        return pruned_df
+#        unprocessed_reference_models = [n for n in reference_models if n.network_name not in processed_reference_models]
+#        # Process the reference models in batches
+#        while len(unprocessed_reference_models) > 0:
+#            reference_model_batch = unprocessed_reference_models[:batch_size]
+#            unprocessed_reference_models = unprocessed_reference_models[batch_size:]
+#            finder = cls(reference_model_batch, target_models, identity=cn.ID_STRONG)
+#            incremental_df = finder.find(is_report=is_report)
+#            full_df = pd.concat([full_df, incremental_df], ignore_index=True)
+#            num_reference_model = len(set(full_df[REFERENCE_MODEL].values))
+#            manager.checkpoint(full_df)
+#            if is_report:
+#                print(f"**Processed {len(full_df)} model comparisons, and {num_reference_model} model.")
+#        full_df, stripped_df, _ = manager.recover()
+#        num_comparison = len(full_df) - len(stripped_df)
+#        print(f"**Done. Processed {num_comparison} model comparisons.")
 
 
 ##############################################################
@@ -305,6 +405,6 @@ class _CheckpointManager(CheckpointManager):
 
 
 if __name__ == "__main__":
-    df = SubnetFinder.findBiomodelsSubnet(reference_model_size=10, is_report=True)
+    df = SubnetFinder.findBiomodelsSubnet(reference_network_size=10, is_report=True)
     df.to_csv(os.path.join(cn.DATA_DIR, "biomodels_subnet.csv"))
     print("Done")

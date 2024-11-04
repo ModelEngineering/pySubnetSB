@@ -184,10 +184,6 @@ class AssignmentEvaluator(object):
                 column_assignments = util.partitionArray(column_assignment_arr, num_process)
                 actual_num_process = len(column_assignments)
                 is_row_max = False
-            # Initialize for parallel calculations
-#            jobs = []
-#            manager = mp.Manager()
-#            return_dct = manager.dict()  # type: ignore
             # Construct the arguments
             args = []
             return_dct = {}
@@ -205,23 +201,7 @@ class AssignmentEvaluator(object):
             with ProcessPoolExecutor(max_workers=total_process) as executor:
                 process_args = zip(*args)
                 results = executor.map(AssignmentEvaluatorWorker.do, *process_args)
-#                p = mp.Process(target=AssignmentEvaluatorWorker.do,
-#                      args=(self.reference_arr, self.target_arr, self.max_batch_size,
-#                      #row_assignment_arr, column_assignment_arr, procnum, total_process, return_dct))
-#                      process_row_assignment_arr, process_column_assignment_arr,
-#                      procnum, total_process, return_dct, is_report)) 
-#                jobs.append(p)
-#                p.start()
-#            # Wait for the processes to finish
-#            for proc in jobs:
-#                proc.join()
-#                proc.terminate()
-            # Merge the results
-#            assignment_pairs = []
-#            for procnum in range(actual_num_process):
-#            for procnum in range(actual_num_process):
-#                assignment_pairs.extend(return_dct[procnum])
-        #
+        # Combine the results
         assignment_pairs = []
         for result in results:
             assignment_pairs.extend(result)
