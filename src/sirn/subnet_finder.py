@@ -219,14 +219,23 @@ class SubnetFinder(object):
             serialization_path = BIOMODELS_SERIALIZATION_REFERENCE_TASK_PAT  % task_idx
             serializer = ModelSerializer(None, serialization_path)
             serializer.serializeNetworks(task_reference_networks)
-    
+
+    # FIXME: Choose the lowest indexed task fro reporting since task 0 may have completed 
     @classmethod
-    def _processBiomodelsSlice(cls, task_idx:int, identity:str=cn.ID_STRONG, is_report:bool=True, batch_size:int=10,
-          is_initialize:bool=True)->pd.DataFrame:
+    def _processBiomodelsSlice(cls, num_task:int, task_idx:int, identity:str=cn.ID_STRONG, is_report:bool=True,
+          batch_size:int=10, outpath_pat:str=BIOMODELS_OUTPATH_PAT, is_initialize:bool=True)->pd.DataFrame:
         """
-        Processes the BioModels a slice of the reference models analyzing BioModels.
-        1. Handle restarts
-        2. Process the reference models in batches and checkpoint
+        Processes the BioModels a slice of the reference models analyzing BioModels. Task 0 provides reporting
+        if requested.
+
+        Args:
+            num_task (int): Number of tasks
+            task_idx (int): Index of the task
+            identity (str): Identity type
+            is_report (bool): If True, report progress
+            batch_size (int): Number of reference networks to process in a batch
+            outpath_pat (str): Path pattern for the output path
+            is_initialize (bool): If True, initialize the checkpoint
 
         Returns:
             pd.DataFrame: Table of matching models

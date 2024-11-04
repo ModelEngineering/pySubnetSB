@@ -10,8 +10,9 @@ import unittest
 IGNORE_TEST = False
 IS_PLOT = False
 PATH = os.path.join(cn.TEST_DIR, "test_checkpoint.csv")
+PATH_PAT = os.path.join(cn.TEST_DIR, "test_checkpoint_%d.csv")
 IDENTITY_COLUMN = "identity"
-REMOVE_FILES:list = [PATH]
+REMOVE_FILES:list = [PATH, PATH_PAT % 0, PATH_PAT % 1]
 DCT = {IDENTITY_COLUMN: [1, 2, 3], 'a': [1, 2, 3]}
 DCT1 = {IDENTITY_COLUMN: [3, 2, 3, 1], 'a': [0, 1, 2, 3]}
 
@@ -24,7 +25,7 @@ class TestCheckpointManager(unittest.TestCase):
         self.path = PATH
         self.identity_column = IDENTITY_COLUMN
         self.remove()
-        self.checkpoint_manager = CheckpointManager(path=self.path, is_report=True)
+        self.checkpoint_manager = CheckpointManager(path=self.path, is_report=IS_PLOT)
 
     def tearDown(self):
         self.remove()
@@ -64,6 +65,18 @@ class TestCheckpointManager(unittest.TestCase):
         self.checkpoint_manager.checkpoint(df)
         df3 = self.checkpoint_manager.recover()
         self.assertTrue(df.equals(df3))
+
+    def testMergeCheckpoint(self):
+        if IGNORE_TEST:
+            return
+        dfs = [pd.DataFrame(DCT), pd.DataFrame(DCT)]
+        lengths = [len(df) for df in dfs]
+        checkpoint_managers = [CheckpointManager(path=PATH_PAT, is_report=IS_PLOT) for _ in range(len(dfs))]
+        [cm.checkpoint(df) for cm, df in zip(checkpoint_managers, dfs)]
+        #
+        self.checkpoint_manager.mergeCheckpoint(checkpoint_managers)
+        df = self.checkpoint_manager.recover()
+        self.assertEqual(len(df), np.sum(lengths))
 
 
 if __name__ == '__main__':

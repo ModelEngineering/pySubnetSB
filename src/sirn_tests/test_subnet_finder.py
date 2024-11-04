@@ -171,8 +171,8 @@ class TestSubnetFinder(unittest.TestCase):
         import pdb; pdb.set_trace()
 
     def testMakeReferenceTargetSerializations(self):
-        #if IGNORE_TEST:
-        #    return
+        if IGNORE_TEST:
+            return
         num_network = 10
         num_task = 3
         reference_networks = [Network.makeRandomNetworkByReactionType(3, is_prune_species=True) for _ in range(num_network)]

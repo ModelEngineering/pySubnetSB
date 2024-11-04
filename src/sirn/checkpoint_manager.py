@@ -14,6 +14,7 @@
 import numpy as np
 import os  # type: ignore
 import pandas as pd  # type: ignore
+from typing import List
 
 
 class CheckpointManager(object):
@@ -47,9 +48,6 @@ class CheckpointManager(object):
         """
         Checkpoints a DataFrame.
         """
-        if os.path.exists(self.path):
-            # Read the existing file
-            df_existing = pd.read_csv(self.path)
         self._print(f"Checkpointing a dataframe of length {len(df)} to {self.path}")
         df.to_csv(self.path, index=False)
 
@@ -66,3 +64,18 @@ class CheckpointManager(object):
             df = pd.read_csv(self.path)
         self._print(f"Recovering a dataframe of length {len(df)} from {self.path}")
         return df
+    
+    def mergeCheckpoint(self, checkpoint_managers:List['CheckpointManager'])->int:
+        """
+        Merges the checkpoints from the checkpoint managers.
+
+        Args:
+            List (CheckpointManager): List of CheckpointManager objects
+
+        Returns:
+            int: Number of rows in the merged dataframe
+        """
+        dfs = [cm.recover() for cm in checkpoint_managers]
+        df = pd.concat(dfs, ignore_index=False)
+        self.checkpoint(df)
+        return len(df)
