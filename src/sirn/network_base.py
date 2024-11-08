@@ -160,6 +160,21 @@ class NetworkBase(object):
             product_nmat = self.product_nmat.copy()
             product_nmat.values = product_arr
             return reactant_nmat, product_nmat
+        
+    def isBoundaryNetwork(self)->bool:
+        """
+        A boundary network is one where all reactions are either synthesis or degradation of a single species.
+
+        Args:
+            network (Network): Network instance
+
+        Returns:
+            bool: True if the network has only one species
+        """
+        reactant_sum_arr = self.reactant_nmat.values.sum(axis=0)
+        product_sum_arr = self.product_nmat.values.sum(axis=0)
+        is_boundary = np.all((reactant_sum_arr + product_sum_arr) <= 1)
+        return bool(is_boundary)
     
     def isMatrixEqual(self, other, identity:str=cn.ID_WEAK)->bool:
         """

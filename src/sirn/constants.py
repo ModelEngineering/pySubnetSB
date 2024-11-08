@@ -20,12 +20,15 @@ OSCILLATOR_DIRS = [
         "Oscillators_DOE_JUNE_12_B_41373",
         "Oscillators_DOE_JUNE_12_C_27662",
         ]
+# File names
+SERIALIZATION_FILE = "collection_serialization.txt"
 # Oscillator project
 OSCILLATOR_PROJECT = os.path.dirname(os.path.abspath(__file__))
 for _ in range(3):
     OSCILLATOR_PROJECT = os.path.dirname(OSCILLATOR_PROJECT)
 OSCILLATOR_PROJECT = os.path.join(OSCILLATOR_PROJECT, 'OscillatorDatabase')
 # Constants
+QUEUE_DONE = -1  #  Value that indicates the end of a multiprocessing queue
 MAX_NUM_ASSIGNMENT = 1e7  # Maximum number of permutations to search
 MAX_BATCH_SIZE = int(1e7)  # Matrix memory in bytes used in a comparison batch in AssignmentEvaluator
 STRUCTURAL_IDENTITY = "structural_identity"

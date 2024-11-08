@@ -247,5 +247,29 @@ class TestNetwork(unittest.TestCase):
         with self.assertRaises(ValueError):
             network.fill(num_fill_reaction=0, num_fill_species=0)
 
+    @util.timeit
+
+    def testIsBoundaryNetwork(self):
+        if IGNORE_TEST:
+            return
+        boundary_network = """
+            R1: A -> ; k1*A
+            R2:  -> B; k2
+            k1 = 0.1; k2 = 0.2
+            A = 0; B = 0
+        """
+        network = NetworkBase.makeFromAntimonyStr(boundary_network)
+        self.assertTrue(network.isBoundaryNetwork())
+        #
+        boundary_network = """
+            R1: A -> ; k1*A
+            R3: A -> C; k1*A
+            R2: B -> A; k2*B
+            k1 = 0.1; k2 = 0.2
+            A = 0; B = 0
+        """
+        network = NetworkBase.makeFromAntimonyStr(boundary_network)
+        self.assertFalse(network.isBoundaryNetwork())
+
 if __name__ == '__main__':
     unittest.main(failfast=False)

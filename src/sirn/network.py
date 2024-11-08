@@ -118,7 +118,7 @@ class Network(NetworkBase):
         target_graph = target.makePynautyNetwork()
         return pynauty.isomorphic(self_graph, target_graph)
 
-    def isStructurallyIdentical(self, target:'Network', is_subset:bool=False,
+    def isStructurallyIdentical(self, target:'Network', is_subset:bool=False, num_process:int=-1,
             max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT,
             max_batch_size:int=cn.MAX_BATCH_SIZE, identity:str=cn.ID_WEAK,
             is_report:bool=True)->StructurallyIdenticalResult:
@@ -127,6 +127,7 @@ class Network(NetworkBase):
 
         Args:
             target (Network): Network to search for structurally identity
+            num_process (int, optional): Number of processes (default: -1 is all)
             is_subsets (bool, optional): Consider subsets
             max_num_assignment (int, optional): Maximum number of assignments to search (no limit if negative)
             max_batch_size (int, optional): Maximum batch size
@@ -193,7 +194,7 @@ class Network(NetworkBase):
         evaluator = AssignmentEvaluator(reference_reactant_nmat.values.astype(np.int8),
               target_reactant_nmat.values.astype(np.int8), max_batch_size=max_batch_size)
         reactant_assignment_pairs = evaluator.parallelEvaluate(species_assignment_arr, reaction_assignment_arr,
-                total_process=-1, is_report=is_report)
+                total_process=num_process, is_report=is_report)
         #   Check assignment pairs on single bytes
         evaluator = AssignmentEvaluator(reference_reactant_nmat.values,
               target_reactant_nmat.values, max_batch_size=max_batch_size)

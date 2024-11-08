@@ -1,5 +1,10 @@
 FSIRN - finding structural subnets (pySubnetSB)
+0. Fix merge. Should be done in parent only.
+0.1 Implement "terminate on truncate" option.
 1. max_num_assignments is broken, likely because of batching
+1.1 Implement twoprong strategy for SubnetFinder
+  a. Parallel tasks with max_num_assignment = 1e8
+  b. Cull the truncated and do single task with parallel comparisons
 2. Search for cyclic subnets
    a. Serialize BioModels
    b. Look for oscillator file
