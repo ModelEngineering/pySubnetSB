@@ -42,6 +42,21 @@ class ModelSerializer(object):
         self.model_directory = model_directory
         self.serialization_file = serialization_file
 
+    
+    @classmethod
+    def serializerFromNetworks(cls, networks:List[Network], serialization_file:str,
+          is_initialize:bool=False)->None:
+        """
+        Creates a serializer from a list of networks.
+
+        Args:
+            networks (List[Network]): List of networks
+            serialization_file (str): Path to serialization file
+            is_initialize (bool): If True, initializes the serialization file
+        """
+        serializer = cls(None, serialization_file)
+        serializer.serializeNetworks(networks, is_initialize=is_initialize)
+
     @classmethod
     def makeDefaultSerializer(cls, model_directory:str)->'ModelSerializer':
         """
@@ -110,11 +125,15 @@ class ModelSerializer(object):
                     f.write(f'{network.serialize()}\n')
         print("Done!")
     
-    def serializeNetworks(self, networks:List[Network])->None:
+    def serializeNetworks(self, networks:List[Network], is_initialize:bool=False)->None:
         """
         Serializes Networks
         """
-        with open(self.serialization_file, 'a') as f:
+        if is_initialize:
+            mode = 'w'
+        else:
+            mode = 'a'
+        with open(self.serialization_file, mode) as f:
             for network in networks:
                 f.write(f'{network.serialize()}\n')
 

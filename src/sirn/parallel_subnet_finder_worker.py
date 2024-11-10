@@ -15,7 +15,7 @@ import pandas as pd  # type: ignore
 from typing import List, Tuple, Optional
 
 MergedCheckpointResult = collections.namedtuple("MergedCheckpointResult",
-      ["num_merged_network", "manager", "dataframe", "task_checkpoint_managers"])
+      ["num_reference_network", "merged_checkpoint_manager", "dataframe", "task_checkpoint_managers"])
 
 
 def executeTask(task_idx:int, queue, total_task:int, outpath_base:str,
@@ -28,7 +28,7 @@ def executeTask(task_idx:int, queue, total_task:int, outpath_base:str,
 
     Args:
         task_idx (int): Index of the task
-        queue (Queue): Queue of reference networks to process
+        queue (Queue): Queue of Workunit
         total_task (int): Total number of tasks (including this task)
         outpath_base (str): Output path for the consoldated checkpoint files
         reference_serialization_path (str): Path to the serialized reference networks
@@ -66,7 +66,7 @@ def executeTask(task_idx:int, queue, total_task:int, outpath_base:str,
     target_networks = getNetworks(target_serialization_path)
     # Set up the checkpoint manager for this task
     is_report_task = is_report if task_idx == 0 else False
-    outpath_task = _CheckpointManager.makeCheckpointPath(outpath_base, task_idx)
+    outpath_task = _CheckpointManager.makeTaskPath(outpath_base, task_idx)
     task_checkpoint_manager = _CheckpointManager(outpath_task, is_report=is_report_task,
           is_initialize=is_initialize)
     # Get the processed reference networks
@@ -74,17 +74,35 @@ def executeTask(task_idx:int, queue, total_task:int, outpath_base:str,
     # Process the unprocessed reference models in batches
     msg = f"**Task start {task_idx} with"
     msg += " {len(reference_networks) - len(processed_reference_networks)} networks."
-    print(msg)
+    if is_report_task:
+        print(msg)
     prior_merged_checkpoint_result = None
     while True:
-        reference_idx = queue.get()
-        if reference_idx == cn.QUEUE_DONE:
+        workunit = queue.get()
+        if workunit.is_done:
             queue.task_done()
             break
-        reference_network = reference_networks[reference_idx]
-        print(f"**Task {task_idx} processing {reference_network.network_name}.")
-        finder = SubnetFinder(reference_network, target_networks, identity=identity,
-                num_process=num_process, task_idx=task_idx)
+        # Extract the networks for this batch
+        if workunit.reference_idx < 0:
+            batch_reference_networks = reference_networks
+        else:
+            batch_reference_networks = [reference_networks[workunit.reference_idx]]
+        if workunit.target_idx < 0:
+            batch_target_networks = target_networks
+        else:
+            batch_target_networks = [target_networks[workunit.target_idx]]
+        # Construct the notification
+        if len(batch_reference_networks) == 1:
+            msg = f"**Task {task_idx} processing reference network {batch_reference_networks[0].network_name}."
+        elif len(batch_target_networks) == 1:
+            msg = f"**Task {task_idx} processing target network {batch_target_networks[0].network_name}."
+        else:
+            msg = f"**Task {task_idx} processing {len(batch_reference_networks)} reference networks."
+        if is_report_task:
+            print(msg)
+        # Finding the Subnets
+        finder = SubnetFinder(batch_reference_networks, batch_target_networks, identity=identity,
+                num_process=num_process)
         incremental_df = finder.find(is_report=is_report_task)
         full_df = pd.concat([full_df, incremental_df], ignore_index=True)
         task_checkpoint_manager.checkpoint(full_df)
@@ -92,9 +110,11 @@ def executeTask(task_idx:int, queue, total_task:int, outpath_base:str,
         merged_checkpoint_result = _mergeCheckpoints(outpath_base, total_task,
               merged_checkpoint_result=prior_merged_checkpoint_result, is_report=is_report_task)
         prior_merged_checkpoint_result = merged_checkpoint_result
-        print(f"**Processed {merged_checkpoint_result.num_merged_network} network comparisons.")
+        if is_report_task:
+            print(f"**Processed {merged_checkpoint_result.num_reference_network} work units.")
     #
-    print(f"**Task done {task_idx}.")
+    if is_report_task:
+        print(f"**Task {task_idx} done.")
     return full_df
 
 
@@ -116,12 +136,15 @@ def _mergeCheckpoints(outpath_base:str, num_task:int,
         CheckpointManager: Checkpoint manager for merged checkpoint
         pd.DataFrame
     """
-    if merged_checkpoint_result is not None:
+    if merged_checkpoint_result is None:
         merged_checkpoint_manager = CheckpointManager(outpath_base, is_report=is_report)
         task_checkpoint_managers = [CheckpointManager(
                 _CheckpointManager.makeTaskPath(outpath_base, i),
                 is_report=is_report, is_initialize=False)
                 for i in range(num_task)]
+    else:
+        merged_checkpoint_manager = merged_checkpoint_result.merged_checkpoint_manager
+        task_checkpoint_managers = merged_checkpoint_result.task_checkpoint_managers
     full_df = pd.concat([m.recover() for m in task_checkpoint_managers], ignore_index=True)
     merged_checkpoint_manager.checkpoint(full_df)
     #
@@ -129,11 +152,12 @@ def _mergeCheckpoints(outpath_base:str, num_task:int,
         num_reference_network = len(set(full_df[REFERENCE_NETWORK].values))
     else:
         num_reference_network = 0
-    return MergedCheckpointResult(
+    result = MergedCheckpointResult(
             num_reference_network=num_reference_network,
             merged_checkpoint_manager=merged_checkpoint_manager,
             task_checkpoint_managers=task_checkpoint_managers,
             dataframe=full_df)           
+    return result
 
 
 ##############################################################
@@ -209,3 +233,39 @@ class _CheckpointManager(CheckpointManager):
         splits = outpath_base.split(".")
         outpath_pat = splits[0] + "_%d." + splits[1]
         return outpath_pat % task_idx
+    
+#############################################################
+class Workunit(object):
+    def __init__(self, reference_idx:int=-1, target_idx:int=-1, is_done:bool=False):
+        """
+        Args:
+            reference_idx (int, optional): index of reference network. Defaults to -1 means all.
+            target_idx (int, optional): index of target network. Defaults to -1 means all.
+            is_done (bool, optional): No more work.
+        """
+        self.reference_idx = reference_idx
+        self.target_idx = target_idx
+        self.is_done = is_done
+
+    def __repr__(self):
+        return f"Workunit(ref={self.reference_idx}, tgt={self.target_idx}, is_done={self.is_done})"
+    
+    @classmethod
+    def addMultipleWorkunits(cls, queue, reference_idxs:Optional[List[int]]=None,
+          target_idxs:Optional[List[int]]=None)->None:
+        """
+        Adds a list of integer workunits to the queue that is the cross product
+        of the reference and target indexes.
+
+        Args:
+            queue (Queue): Queue to add the workunits
+            reference_idxs (Optional[List[int]]): List of reference indexes
+            target_idxs (Optional[List[int]]): List of target indexes
+        """
+        if reference_idxs is None:
+            reference_idxs = [-1]
+        if target_idxs is None:
+            target_idxs = [-1]
+        workunits = [cls(reference_idx=ref_idx, target_idx=tgt_idx)
+              for ref_idx in reference_idxs for tgt_idx in target_idxs]
+        [queue.put(w) for w in workunits]

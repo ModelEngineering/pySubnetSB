@@ -15,6 +15,7 @@ from sirn.subnet_finder import SubnetFinder, NAME_DCT, REFERENCE_NETWORK # type:
 from sirn.model_serializer import ModelSerializer # type: ignore
 from sirn.network import Network  # type: ignore
 from sirn.parallel_subnet_finder_worker import executeTask
+from sirn.mock_queue import MockQueue
 
 import collections
 import json
@@ -123,7 +124,7 @@ class ParallelSubnetFinder(object):
         serializer = ModelSerializer(cls.DATA_DIR, cls.BIOMODELS_SERIALIZATION_REFERENCE_PATH)
         serializer.serializeNetworks(reference_networks)
     
-    
+    # FIXME: (a) Use generic worker (b) Don't need to construct separate serialization files 
     @classmethod
     def findBiomodelsSubnet(cls,
           reference_network_size:int=15,
@@ -189,7 +190,7 @@ class ParallelSubnetFinder(object):
         # Serialize the networks for the tasks
         num_task = mp.cpu_count() if max_num_task == -1 else max_num_task
         reference_networks = np.random.permutation(reference_networks)
-        cls._makeReferenceTargetSerializations(reference_networks, target_networks, num_task)
+        # FIXME: Create paths and serialize reference and target networks
         # FIXME
         # Set up the task work queue
         if num_task == 1:
@@ -222,34 +223,6 @@ class ParallelSubnetFinder(object):
             msg += " reference networks in {outpath}."
             print(msg)
         return df
-
-
-############################################################## 
-class MockQueue(object):
-    # Mocks Multiprocessing Queue
-    def __init__(self):
-        self.queue = []
-
-    def put(self, item):
-        self.queue.append(item)
-
-    def get(self):
-        return self.queue.pop()
-    
-    def empty(self):
-        return len(self.queue) == 0
-    
-    def qsize(self):
-        return len(self.queue)
-    
-    def close(self):
-        pass
-
-    def task_done(self):
-        pass
-
-    def join(self):
-        pass
 
 
 if __name__ == "__main__":

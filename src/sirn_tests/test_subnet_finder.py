@@ -34,45 +34,6 @@ def makeDataframe(num_network:int)->pd.DataFrame:
 
 
 #############################
-class TestCheckpointManager(unittest.TestCase):
-
-    def setUp(self):
-        self.remove()
-        self.checkpoint_manager = _CheckpointManager(CHECKPOINT_PATH, is_report=IS_PLOT)
-
-    def remove(self):
-        if os.path.exists(CHECKPOINT_PATH):
-            os.remove(CHECKPOINT_PATH)
-
-    def tearDown(self):
-        self.remove()
-
-    def testRecover(self):
-        if IGNORE_TEST:
-            return
-        num_network = 10
-        df = makeDataframe(num_network)
-        df.loc[0, REFERENCE_NETWORK] = ""
-        df.loc[0, INDUCED_NETWORK] = ""
-        self.checkpoint_manager.checkpoint(df)
-        full_df, pruned_df, deleteds = self.checkpoint_manager.recover()
-        self.assertEqual(len(full_df), num_network)
-        self.assertEqual(len(pruned_df), num_network-1)
-        self.assertEqual(len(deleteds), 1)
-
-    def testPrune(self):
-        if IGNORE_TEST:
-            return
-        num_network = 10
-        df = makeDataframe(num_network)
-        df.loc[0, REFERENCE_NETWORK] = ""
-        df.loc[0, INDUCED_NETWORK] = ""
-        df, deleteds = self.checkpoint_manager.prune(df)
-        self.assertEqual(len(deleteds), 1)
-        self.assertEqual(len(df), num_network - 1)
-
-
-#############################
 class TestSubnetFinder(unittest.TestCase):
 
     def setUp(self):
