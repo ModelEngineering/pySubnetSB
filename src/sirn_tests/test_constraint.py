@@ -305,5 +305,6 @@ class TestConstraint(unittest.TestCase):
             #print(np.log10(arr.shape[0]), compatibility_collection.log10_num_permutation)
 
 
+
 if __name__ == '__main__':
     unittest.main(failfast=True)

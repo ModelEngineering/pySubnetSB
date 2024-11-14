@@ -1,7 +1,7 @@
 '''Worker for running SubnetFinder in parallel.'''
 
 import sirn.constants as cn # type: ignore
-from sirn.subnet_finder import SubnetFinder, NAME_DCT, REFERENCE_NETWORK # type: ignore
+from sirn.subnet_finder import SubnetFinder # type: ignore
 from sirn.model_serializer import ModelSerializer # type: ignore
 from sirn.network import Network  # type: ignore
 from sirn.checkpoint_manager import CheckpointManager # type: ignore
@@ -70,7 +70,7 @@ def executeTask(task_idx:int, queue, total_task:int, outpath_base:str,
     task_checkpoint_manager = _CheckpointManager(outpath_task, is_report=is_report_task,
           is_initialize=is_initialize)
     # Get the processed reference networks
-    full_df, _, _ = task_checkpoint_manager.recover()
+    full_task_df, _, _ = task_checkpoint_manager.recover()
     # Process the unprocessed reference models in batches
     msg = f"**Task start {task_idx} with"
     msg += " {len(reference_networks) - len(processed_reference_networks)} networks."
@@ -104,8 +104,8 @@ def executeTask(task_idx:int, queue, total_task:int, outpath_base:str,
         finder = SubnetFinder(batch_reference_networks, batch_target_networks, identity=identity,
                 num_process=num_process)
         incremental_df = finder.find(is_report=is_report_task)
-        full_df = pd.concat([full_df, incremental_df], ignore_index=True)
-        task_checkpoint_manager.checkpoint(full_df)
+        full_task_df = pd.concat([full_task_df, incremental_df], ignore_index=True)
+        task_checkpoint_manager.checkpoint(full_task_df)
         # Update the processed networks
         merged_checkpoint_result = _mergeCheckpoints(outpath_base, total_task,
               merged_checkpoint_result=prior_merged_checkpoint_result, is_report=is_report_task)
@@ -115,7 +115,7 @@ def executeTask(task_idx:int, queue, total_task:int, outpath_base:str,
     #
     if is_report_task:
         print(f"**Task {task_idx} done.")
-    return full_df
+    return full_task_df
 
 
 ############################### INTERNAL FUNCTIONS ###############################
@@ -149,7 +149,7 @@ def _mergeCheckpoints(outpath_base:str, num_task:int,
     merged_checkpoint_manager.checkpoint(full_df)
     #
     if len(full_df) > 0:
-        num_reference_network = len(set(full_df[REFERENCE_NETWORK].values))
+        num_reference_network = len(set(full_df[cn.FINDER_REFERENCE_NETWORK].values))
     else:
         num_reference_network = 0
     result = MergedCheckpointResult(
@@ -188,7 +188,7 @@ class _CheckpointManager(CheckpointManager):
             pruned_df, processed_list = _CheckpointManager.prune(full_df)
             # Convert the JSON string to a dictionary
             if len(pruned_df) > 0:
-                pruned_df.loc[:, NAME_DCT] = pruned_df[NAME_DCT].apply(lambda x: json.loads(x))
+                pruned_df.loc[:, cn.FINDER_NAME_DCT] = pruned_df[cn.FINDER_NAME_DCT].apply(lambda x: json.loads(x))
         else:
             full_df = pd.DataFrame()
             pruned_df = pd.DataFrame()
@@ -212,10 +212,10 @@ class _CheckpointManager(CheckpointManager):
             pd.DataFrame: Pruned DataFrame
             list: List of reference networks that were pruned
         """
-        is_null = df[REFERENCE_NETWORK].isnull()
-        is_null_str = df[REFERENCE_NETWORK] == cn.NULL_STR
+        is_null = df[cn.FINDER_REFERENCE_NETWORK].isnull()
+        is_null_str = df[cn.FINDER_REFERENCE_NETWORK] == cn.NULL_STR
         not_sel = is_null | is_null_str
-        reference_networks = list(set(df[not_sel][REFERENCE_NETWORK].values))
+        reference_networks = list(set(df[not_sel][cn.FINDER_REFERENCE_NETWORK].values))
         return df[~not_sel], reference_networks
 
     @staticmethod

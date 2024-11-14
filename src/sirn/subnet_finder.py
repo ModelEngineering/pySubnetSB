@@ -12,17 +12,6 @@ import numpy as np
 import pandas as pd  # type: ignore
 from typing import List, Tuple, Optional
 
-# Columns
-REFERENCE_NAME = "reference_name"
-TARGET_NAME = "target_name"
-REFERENCE_NETWORK = "reference_network"
-INDUCED_NETWORK = "induced_network"
-NAME_DCT = "name_dct"  # Dictionary of mapping of target names to reference names for species and reactions
-NUM_ASSIGNMENT_PAIR = "num_assignment_pair"
-IS_TRUNCATED = "is_truncated"
-COLUMNS = [REFERENCE_NAME, TARGET_NAME, REFERENCE_NETWORK, INDUCED_NETWORK, NAME_DCT,
-      NUM_ASSIGNMENT_PAIR, IS_TRUNCATED]
-
 
 ############################### CLASSES ###############################
 class SubnetFinder(object):
@@ -58,46 +47,46 @@ class SubnetFinder(object):
                                  as a JSON string.
                 is_trucated (bool): True if the search is truncated
         """
-        dct:dict = {k: [] for k in COLUMNS}
+        dct:dict = {k: [] for k in cn.FINDER_COLUMNS}
         for reference_network in self.reference_networks:
             if is_report:
                 print(f"Processing reference model: {reference_network.network_name}")
-            for target in self.target_networks:
-                result = reference_network.isStructurallyIdentical(target, identity=self.identity,
-                      num_process=self.num_process, is_report=is_report)
-                dct[REFERENCE_NAME].append(reference_network.network_name)
-                dct[TARGET_NAME].append(target.network_name)
+            for target_network in self.target_networks:
+                result = reference_network.isStructurallyIdentical(target_network, identity=self.identity,
+                      num_process=self.num_process, is_report=is_report, is_subset=True)
+                dct[cn.FINDER_REFERENCE_NAME].append(reference_network.network_name)
+                dct[cn.FINDER_TARGET_NAME].append(target_network.network_name)
                 if not result:
-                    dct[REFERENCE_NETWORK].append(cn.NULL_STR)
-                    dct[INDUCED_NETWORK].append(cn.NULL_STR)
-                    dct[NUM_ASSIGNMENT_PAIR].append(cn.NULL_STR)
-                    dct[NAME_DCT].append(cn.NULL_STR)
-                    dct[IS_TRUNCATED].append(cn.NULL_STR)
+                    dct[cn.FINDER_REFERENCE_NETWORK].append(cn.NULL_STR)
+                    dct[cn.FINDER_INDUCED_NETWORK].append(cn.NULL_STR)
+                    dct[cn.FINDER_NUM_ASSIGNMENT_PAIR].append(cn.NULL_STR)
+                    dct[cn.FINDER_NAME_DCT].append(cn.NULL_STR)
+                    dct[cn.FINDER_IS_TRUNCATED].append(cn.NULL_STR)
                 else:
                     # Construct the induced subnet
                     species_assignment_arr = result.assignment_pairs[0].species_assignment
                     reaction_assignment_arr = result.assignment_pairs[0].reaction_assignment
-                    species_names = target.species_names[species_assignment_arr]
-                    reaction_names = target.reaction_names[reaction_assignment_arr]
-                    network_name = f"{reference_network.network_name}_{target.network_name}"
+                    species_names = target_network.species_names[species_assignment_arr]
+                    reaction_names = target_network.reaction_names[reaction_assignment_arr]
+                    network_name = f"{reference_network.network_name}_{target_network.network_name}"
                     induced_network = Network(reference_network.reactant_nmat.values, reference_network.product_nmat.values,
                           reaction_names=reaction_names, species_names=species_names,
                           network_name=network_name)
                     if is_report:
-                        print(f"Found matching model: {reference_network.network_name} and {target.network_name}")
-                    dct[REFERENCE_NETWORK].append(str(reference_network))
-                    dct[INDUCED_NETWORK].append(str(induced_network))
-                    dct[NUM_ASSIGNMENT_PAIR].append(len(result.assignment_pairs))
+                        print(f"Found matching model: {reference_network.network_name} and {target_network.network_name}")
+                    dct[cn.FINDER_REFERENCE_NETWORK].append(str(reference_network))
+                    dct[cn.FINDER_INDUCED_NETWORK].append(str(induced_network))
+                    dct[cn.FINDER_NUM_ASSIGNMENT_PAIR].append(len(result.assignment_pairs))
                     # Create a more complete assignment pair
                     assignment_pair = AssignmentPair(species_assignment=species_assignment_arr,
                             reaction_assignment=reaction_assignment_arr,
                             reference_reaction_names=reference_network.reaction_names,
                             reference_species_names=reference_network.species_names,
-                            target_reaction_names=target.reaction_names,
-                            target_species_names=target.species_names)
+                            target_reaction_names=target_network.reaction_names,
+                            target_species_names=target_network.species_names)
                     dct_str = json.dumps(assignment_pair.makeNameDct())
-                    dct[NAME_DCT].append(dct_str)
-                    dct[IS_TRUNCATED].append(result.is_truncated)
+                    dct[cn.FINDER_NAME_DCT].append(dct_str)
+                    dct[cn.FINDER_IS_TRUNCATED].append(result.is_truncated)
         df = pd.DataFrame(dct)
         return df
     

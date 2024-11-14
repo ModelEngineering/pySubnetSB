@@ -39,12 +39,13 @@ StudyResult = collections.namedtuple('StudyResult', ['is_categorical_id', 'study
 
 
 class ConstraintBenchmark(object):
-    def __init__(self, reference_size:int, fill_size:int=0, num_iteration:int=1000):
+    def __init__(self, reference_size:int, fill_size:int=0, num_iteration:int=1000,
+          is_contains_reference:bool=True)->None:
         """
         Args:
             reference_size (int): size of the reference network (species, reaction)
             filler_size (int): size of the filler network (species, reaction) used in subsets
-            is_subset (bool, optional): _description_. Defaults to False.
+            is_contains_reference (bool, optional): target network contains reference network. Defaults to True.
         """
         self.num_reaction = reference_size
         self.num_species = reference_size
@@ -56,8 +57,13 @@ class ConstraintBenchmark(object):
         if fill_size > 0:
             self.target_networks = [n.fill(num_fill_reaction=self.num_reaction,
               num_fill_species=self.num_species) for n in self.reference_networks]
-        self.target_networks = [n.fill(num_fill_reaction=self.fill_size,
-              num_fill_species=self.fill_size) for n in self.reference_networks]
+        if is_contains_reference:
+            self.target_networks = [n.fill(num_fill_reaction=self.fill_size,
+                num_fill_species=self.fill_size) for n in self.reference_networks]
+        else:
+            target_size = reference_size + self.fill_size
+            self.reference_networks = [Network.makeRandomNetworkByReactionType(target_size, target_size)
+                for _ in range(num_iteration)]
         self.benchmark_result_df = NULL_DF  # Updated with result of run
 
     @staticmethod 
@@ -163,7 +169,7 @@ class ConstraintBenchmark(object):
             plt.show()
 
     def plotHeatmap(self, num_references:List[int], num_targets:List[int], percentile:int=50,
-                    num_iteration:int=20, is_plot:bool=True)->pd.DataFrame:
+                    num_iteration:int=20, is_contains_reference=True, is_plot:bool=True)->pd.DataFrame:
         """Plot a heatmap of the log10 of number of permutations.
 
         Args:
@@ -186,7 +192,8 @@ class ConstraintBenchmark(object):
                     result = np.nan
                 else:
                     fill_size = max(1, fill_size)
-                    benchmark = ConstraintBenchmark(reference_size, fill_size=fill_size, num_iteration=num_iteration)
+                    benchmark = ConstraintBenchmark(reference_size, fill_size=fill_size,
+                          is_contains_reference=is_contains_reference, num_iteration=num_iteration)
                     df_species = benchmark.run(is_species=True, is_subset=is_subset)
                     df_reaction = benchmark.run(is_species=False, is_subset=is_subset)
                     df = df_species + df_reaction
@@ -199,7 +206,7 @@ class ConstraintBenchmark(object):
         pivot_df = df.pivot(columns='Reference', index='Target', values=C_LOG10_NUM_PERMUTATION)
         pivot_df = pivot_df.sort_index(ascending=False)
         # Plot
-        ax = sns.heatmap(pivot_df, annot=True, fmt="g", cmap='Reds', vmin=0, vmax=10,
+        ax = sns.heatmap(pivot_df, annot=True, fmt="g", cmap='Reds', vmin=0, vmax=25,
                           cbar_kws={'label': 'log10 number of permutations'})
         ax.set_title(f'percentile: {percentile}')
         if is_plot:
@@ -212,5 +219,5 @@ if __name__ == '__main__':
     size = 6
     #ConstraintBenchmark.plotConstraintStudy(size, 9*size, num_iteration=50, is_plot=True)
     benchmark = ConstraintBenchmark(6, 6, 20)
-    _ = benchmark.plotHeatmap(list(range(4, 22, 2)), list(range(10, 105, 5)), percentile=50,
-                                        num_iteration=300)
+    _ = benchmark.plotHeatmap(list(range(4, 22, 2)), list(range(10, 105, 5)), percentile=95,
+          is_contains_reference=True, num_iteration=500)

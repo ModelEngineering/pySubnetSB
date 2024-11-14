@@ -11,7 +11,7 @@ Tasks receive work from a Queue. The special case of 1 task is run in a single p
 
 
 import sirn.constants as cn # type: ignore
-from sirn.subnet_finder import SubnetFinder, NAME_DCT, REFERENCE_NETWORK # type: ignore
+from sirn.subnet_finder import SubnetFinder # type: ignore
 from sirn.model_serializer import ModelSerializer # type: ignore
 from sirn.network import Network  # type: ignore
 from sirn.parallel_subnet_finder_worker import executeTask

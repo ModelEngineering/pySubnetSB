@@ -142,6 +142,33 @@ class TestReactionConstraint(unittest.TestCase):
                 target_names = [name_arr[i] for i in arr]
                 self.assertTrue(reference_name in target_names)
 
+    def testBugReactionConstraint(self):
+        #if IGNORE_TEST:
+        #    return
+        reference_model = """
+            A -> B; 1
+            B -> C; 1
+            A = 0
+            B = 0
+            """
+        reference_network = Network.makeFromAntimonyStr(reference_model)
+        reference_constraint = ReactionConstraint(reference_network.reactant_nmat, reference_network.product_nmat,
+                is_subset=True)
+        target_model = """
+            S1 -> S2; 2
+            S2 -> S3; 2
+            S3 -> S4; 2
+            A = 0
+            B = 0
+            C = 0
+            """
+        target_network = Network.makeFromAntimonyStr(target_model)
+        target_constraint = ReactionConstraint(target_network.reactant_nmat, target_network.product_nmat,
+                is_subset=True)
+        compatibility_collection = reference_constraint.makeCompatibilityCollection(target_constraint)
+        trues = [len(v) > 0 for v in compatibility_collection.compatibilities]
+        self.assertTrue(all(trues))
+
 
 if __name__ == '__main__':
     unittest.main()

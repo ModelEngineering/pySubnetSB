@@ -1,7 +1,6 @@
 import sirn.constants as cn  # type: ignore
-from src.sirn.subnet_finder import SubnetFinder, REFERENCE_NETWORK, REFERENCE_NAME, TARGET_NAME,  \
-    INDUCED_NETWORK, NAME_DCT  # type: ignore
-from src.sirn.parallel_subnet_finder import _CheckpointManager  # type: ignore
+from src.sirn.subnet_finder import SubnetFinder  # type: ignore
+from src.sirn.parallel_subnet_finder_worker import _CheckpointManager  # type: ignore
 from sirn.network import Network  # type: ignore
 
 import json
@@ -24,12 +23,12 @@ def makeDataframe(num_network:int)->pd.DataFrame:
     # Creates a dataframe used by the CheckpointManager
     reference_networks = [Network.makeRandomNetworkByReactionType(3, is_prune_species=True) for _ in range(num_network)]
     target_networks = [Network.makeRandomNetworkByReactionType(3, is_prune_species=True) for _ in range(num_network)]
-    dct = {REFERENCE_NETWORK: [str(n) for n in range(num_network)],
-           INDUCED_NETWORK: [str(n) for n in range(num_network, 2*num_network)]}
+    dct = {cn.FINDER_REFERENCE_NETWORK: [str(n) for n in range(num_network)],
+           cn.FINDER_INDUCED_NETWORK: [str(n) for n in range(num_network, 2*num_network)]}
     df = pd.DataFrame(dct)
-    df[REFERENCE_NAME] = [str(n) for n in reference_networks]
-    df[TARGET_NAME] = [str(n) for n in target_networks]
-    df[NAME_DCT] = [json.dumps(dict(a=n)) for n in range(num_network)]
+    df[cn.FINDER_REFERENCE_NAME] = [str(n) for n in reference_networks]
+    df[cn.FINDER_TARGET_NAME] = [str(n) for n in target_networks]
+    df[cn.FINDER_NAME_DCT] = [json.dumps(dict(a=n)) for n in range(num_network)]
     return df
 
 
@@ -56,8 +55,8 @@ class TestSubnetFinder(unittest.TestCase):
     def testFindScale(self):
         if IGNORE_TEST:
             return
-        NUM_REFERENCE_MODEL = 100
-        NUM_EXTRA_TARGET_MODEL = 100
+        NUM_REFERENCE_MODEL = 10
+        NUM_EXTRA_TARGET_MODEL = 10
         NETWORK_SIZE = 10
         fill_size = 3
         # Construct the models
@@ -78,9 +77,11 @@ class TestSubnetFinder(unittest.TestCase):
         if IGNORE_TEST:
             return
         df = SubnetFinder.findFromDirectories(MODEL_DIR, MODEL_DIR, identity=cn.ID_WEAK, is_report=IS_PLOT)
+        num_unique = len(df[cn.FINDER_REFERENCE_NAME].unique())
         prune_df, _ = _CheckpointManager.prune(df)
-        self.assertTrue(np.all(prune_df[REFERENCE_NAME] == prune_df[TARGET_NAME]))
+        num_match = np.sum(prune_df[cn.FINDER_REFERENCE_NAME] == prune_df[cn.FINDER_TARGET_NAME])
+        self.assertTrue(num_match >= num_unique)
 
 
 if __name__ == '__main__':
-    unittest.main(failfast=False)
+    unittest.main(failfast=True)

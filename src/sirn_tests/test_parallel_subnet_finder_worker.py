@@ -1,6 +1,6 @@
 import sirn.constants as cn  # type: ignore
 import sirn.parallel_subnet_finder_worker as psfw  # type: ignore
-from sirn.subnet_finder import REFERENCE_NETWORK, REFERENCE_NAME, TARGET_NAME,  \
+from sirn.subnet_finder import cn.FINDER_REFERENCE_NETWORK, cn.FINDER_REFERENCE_NAME, TARGET_NAME,  \
     INDUCED_NETWORK, NAME_DCT  # type: ignore
 from sirn.network import Network  # type: ignore
 from sirn.mock_queue import MockQueue  # type: ignore
@@ -36,10 +36,10 @@ def makeDataframe(num_network:int)->pd.DataFrame:
     # Creates a dataframe used by the CheckpointManager
     reference_networks = [Network.makeRandomNetworkByReactionType(3, is_prune_species=True) for _ in range(num_network)]
     target_networks = [Network.makeRandomNetworkByReactionType(3, is_prune_species=True) for _ in range(num_network)]
-    dct = {REFERENCE_NETWORK: [str(n) for n in range(num_network)],
+    dct = {cn.FINDER_REFERENCE_NETWORK: [str(n) for n in range(num_network)],
            INDUCED_NETWORK: [str(n) for n in range(num_network, 2*num_network)]}
     df = pd.DataFrame(dct)
-    df[REFERENCE_NAME] = [str(n) for n in reference_networks]
+    df[cn.FINDER_REFERENCE_NAME] = [str(n) for n in reference_networks]
     df[TARGET_NAME] = [str(n) for n in target_networks]
     df[NAME_DCT] = [json.dumps(dict(a=n)) for n in range(num_network)]
     return df
@@ -65,7 +65,7 @@ class TestCheckpointManager(unittest.TestCase):
             return
         num_network = 10
         df = makeDataframe(num_network)
-        df.loc[0, REFERENCE_NETWORK] = ""
+        df.loc[0, cn.FINDER_REFERENCE_NETWORK] = ""
         df.loc[0, INDUCED_NETWORK] = ""
         self.checkpoint_manager.checkpoint(df)
         full_df, pruned_df, deleteds = self.checkpoint_manager.recover()
@@ -78,7 +78,7 @@ class TestCheckpointManager(unittest.TestCase):
             return
         num_network = 10
         df = makeDataframe(num_network)
-        df.loc[0, REFERENCE_NETWORK] = ""
+        df.loc[0, cn.FINDER_REFERENCE_NETWORK] = ""
         df.loc[0, INDUCED_NETWORK] = ""
         df, deleteds = self.checkpoint_manager.prune(df)
         self.assertEqual(len(deleteds), 1)

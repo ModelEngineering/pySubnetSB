@@ -111,3 +111,13 @@ S_SPECIES_ASSIGNMENT_LST = "s_species_assignment_lst"
 S_SPECIES_NAMES = "s_species_names"
 S_TARGET = "s_target"
 S_VALUES = "s_values"
+# Finder dataframe columns
+FINDER_REFERENCE_NAME = "reference_name"
+FINDER_TARGET_NAME = "target_name"
+FINDER_REFERENCE_NETWORK = "reference_network"
+FINDER_INDUCED_NETWORK = "induced_network"
+FINDER_NAME_DCT = "name_dct"  # Dictionary of mapping of target names to reference names for species and reactions
+FINDER_NUM_ASSIGNMENT_PAIR = "num_assignment_pair"
+FINDER_IS_TRUNCATED = "is_truncated"
+FINDER_COLUMNS = [FINDER_REFERENCE_NAME,  FINDER_TARGET_NAME,  FINDER_REFERENCE_NETWORK,
+      FINDER_INDUCED_NETWORK,  FINDER_NAME_DCT, FINDER_NUM_ASSIGNMENT_PAIR, FINDER_IS_TRUNCATED]
