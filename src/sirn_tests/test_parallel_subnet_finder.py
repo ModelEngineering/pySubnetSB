@@ -5,8 +5,8 @@
 '''
 
 import sirn.constants as cn  # type: ignore
-from src.sirn.parallel_subnet_finder import ParallelSubnetFinder, _CheckpointManager, _prune, REFERENCE_NETWORK, REFERENCE_NAME, TARGET_NAME, \
-      INDUCED_NETWORK, NAME_DCT  # type: ignore
+from sirn.parallel_subnet_finder_worker import _CheckpointManager
+from src.sirn.parallel_subnet_finder import ParallelSubnetFinder # type: ignore
 from sirn.network import Network  # type: ignore
 
 import json
@@ -16,11 +16,12 @@ import numpy as np
 import shutil
 import unittest
 
-IGNORE_TEST = True
+IGNORE_TEST = False
 IS_PLOT =  False
 SIZE = 3
 MODEL_DIR = os.path.join(cn.TEST_DIR, "oscillators")
 CHECKPOINT_PATH = os.path.join(cn.DATA_DIR, "test_subnet_finder_checkpoint.csv")
+REMOVE_FILES = [CHECKPOINT_PATH]
 
 
 #############################
@@ -30,28 +31,18 @@ def makeDataframe(num_network:int)->pd.DataFrame:
     # Creates a dataframe used by the CheckpointManager
     reference_networks = [Network.makeRandomNetworkByReactionType(3, is_prune_species=True) for _ in range(num_network)]
     target_networks = [Network.makeRandomNetworkByReactionType(3, is_prune_species=True) for _ in range(num_network)]
-    dct = {REFERENCE_NETWORK: [str(n) for n in range(num_network)],
-           INDUCED_NETWORK: [str(n) for n in range(num_network, 2*num_network)]}
+    dct = {cn.FINDER_REFERENCE_NETWORK: [str(n) for n in range(num_network)],
+           cn.FINDER_INDUCED_NETWORK: [str(n) for n in range(num_network, 2*num_network)]}
     df = pd.DataFrame(dct)
-    df[REFERENCE_NAME] = [str(n) for n in reference_networks]
-    df[TARGET_NAME] = [str(n) for n in target_networks]
-    df[NAME_DCT] = [json.dumps(dict(a=n)) for n in range(num_network)]
+    df[cn.FINDER_REFERENCE_NAME] = [str(n) for n in reference_networks]
+    df[cn.FINDER_TARGET_NAME] = [str(n) for n in target_networks]
+    df[cn.FINDER_NAME_DCT] = [json.dumps(dict(a=n)) for n in range(num_network)]
     return df
 
 
 #############################
 class TestFunctions(unittest.TestCase):
 
-    def testPrune(self):
-        if IGNORE_TEST:
-            return
-        num_network = 10
-        df = makeDataframe(num_network)
-        df.loc[0, REFERENCE_NETWORK] = ""
-        df.loc[0, INDUCED_NETWORK] = ""
-        df, deleteds = _prune(df)
-        self.assertEqual(len(deleteds), 1)
-        self.assertEqual(len(df), num_network - 1)
 
 
 #############################
@@ -60,28 +51,47 @@ class TestCheckpointManager(unittest.TestCase):
     def setUp(self):
         self.checkpoint_manager = _CheckpointManager(CHECKPOINT_PATH, is_report=IS_PLOT)
 
+    def tearDown(self):
+        self.remove()
+
+    def remove(self):
+        for ffile in REMOVE_FILES:
+            if os.path.exists(ffile):
+                os.remove(ffile)
+
     def testRecover(self):
         if IGNORE_TEST:
             return
         num_network = 10
         df = makeDataframe(num_network)
-        df.loc[0, REFERENCE_NETWORK] = ""
-        df.loc[0, INDUCED_NETWORK] = ""
+        df.loc[0, cn.FINDER_REFERENCE_NETWORK] = ""
+        df.loc[0, cn.FINDER_INDUCED_NETWORK] = ""
         self.checkpoint_manager.checkpoint(df)
         full_df, pruned_df, deleteds = self.checkpoint_manager.recover()
         self.assertEqual(len(full_df), num_network)
         self.assertEqual(len(pruned_df), num_network-1)
         self.assertEqual(len(deleteds), 1)
 
+    def testPrune(self):
+        if IGNORE_TEST:
+            return
+        num_network = 10
+        df = makeDataframe(num_network)
+        df.loc[0, cn.FINDER_REFERENCE_NETWORK] = ""
+        df.loc[0, cn.FINDER_INDUCED_NETWORK] = ""
+        df, deleteds = self.checkpoint_manager.prune(df)
+        self.assertEqual(len(deleteds), 1)
+        self.assertEqual(len(df), num_network - 1)
+
 
 #############################
-class TestSubnetFinder(unittest.TestCase):
+class TestParallelSubnetFinder(unittest.TestCase):
 
     def setUp(self):
         self.remove()
         self.reference = Network.makeRandomNetworkByReactionType(SIZE, is_prune_species=True)
         self.target = self.reference.fill(num_fill_reaction=SIZE, num_fill_species=SIZE)
-        self.finder = SubnetFinder(reference_networks=[self.reference], target_networks=[self.target],
+        self.finder = ParallelSubnetFinder(reference_networks=[self.reference], target_networks=[self.target],
               data_dir=cn.TEST_DIR, identity=cn.ID_WEAK)
 
     def tearDown(self):
@@ -118,7 +128,7 @@ class TestSubnetFinder(unittest.TestCase):
         target_models += [Network.makeRandomNetworkByReactionType(NETWORK_SIZE, is_prune_species=True)
               for _ in range(NUM_EXTRA_TARGET_MODEL)]
         # Do the search
-        finder = SubnetFinder(reference_networks=reference_models, target_networks=target_models, identity=cn.ID_STRONG,
+        finder = ParallelSubnetFinder(reference_networks=reference_models, target_networks=target_models, identity=cn.ID_STRONG,
               data_dir=cn.DATA_DIR)
         df = finder.find(is_report=IS_PLOT)
         prune_df, _ = _prune(df)
@@ -184,7 +194,7 @@ class TestSubnetFinder(unittest.TestCase):
         df = self.finder._executeTask(task_idx, num_task, is_report=IS_PLOT, identity=cn.ID_STRONG,
           batch_size=1, is_initialize=True)
         self.assertEqual(len(df), 1/2*num_network**2)
-        num_reference_network = len(df[REFERENCE_NAME].unique())
+        num_reference_network = len(df[cn.FINDER_REFERENCE_NAME].unique())
         self.assertEqual(num_reference_network, num_network/num_task)
         # Check for case that there are matches
         self.serializeReferenceTargetNetworksOverlap(num_task=num_task, num_network=num_network)

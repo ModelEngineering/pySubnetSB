@@ -1,6 +1,5 @@
 FSIRN - finding structural subnets (pySubnetSB)
-0.01 Have a separate class for work units? Specify reference and
-     target. Is subnet_finder needed?
+0.01 Checkpoint parallel assignments
 0.1 Implement "terminate on truncate" option.
 1. max_num_assignments is broken, likely because of batching
 1.1 Implement twoprong strategy for SubnetFinder
