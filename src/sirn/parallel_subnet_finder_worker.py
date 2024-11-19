@@ -14,11 +14,8 @@ import numpy as np
 import pandas as pd  # type: ignore
 from typing import List, Tuple, Optional
 
-MergedCheckpointResult = collections.namedtuple("MergedCheckpointResult",
-      ["num_reference_network", "merged_checkpoint_manager", "dataframe", "task_checkpoint_managers"])
 
-
-def executeTask(task_idx:int, queue, total_task:int, outpath_base:str,
+def executeTask(task_idx:int, queue, total_task:int, checkpoint_path:str,
         reference_serialization_path:str, target_serialization_path:str,
         identity:str=cn.ID_STRONG, is_report:bool=True,
         is_initialize:bool=True)->pd.DataFrame:
@@ -30,7 +27,7 @@ def executeTask(task_idx:int, queue, total_task:int, outpath_base:str,
         task_idx (int): Index of the task
         queue (Queue): Queue of Workunit
         total_task (int): Total number of tasks (including this task)
-        outpath_base (str): Output path for the consoldated checkpoint files
+        checkpoint_path (str): Output path for the consoldated checkpoint files
         reference_serialization_path (str): Path to the serialized reference networks
         target_serialization_path (str): Path to the serialized target networks
         identity (str): Identity type
@@ -66,11 +63,11 @@ def executeTask(task_idx:int, queue, total_task:int, outpath_base:str,
     target_networks = getNetworks(target_serialization_path)
     # Set up the checkpoint manager for this task
     is_report_task = is_report if task_idx == 0 else False
-    outpath_task = _CheckpointManager.makeTaskPath(outpath_base, task_idx)
-    task_checkpoint_manager = _CheckpointManager(outpath_task, is_report=is_report_task,
+    task_checkpoint_path = WorkerCheckpointManager.makeTaskPath(checkpoint_path, task_idx)
+    task_checkpoint_manager = WorkerCheckpointManager(task_checkpoint_path, is_report=is_report_task,
           is_initialize=is_initialize)
     # Get the processed reference networks
-    full_task_df, _, _ = task_checkpoint_manager.recover()
+    full_task_df = task_checkpoint_manager.recover().full_df
     # Process the unprocessed reference models in batches
     msg = f"**Task start {task_idx} with"
     msg += " {len(reference_networks) - len(processed_reference_networks)} networks."
@@ -82,7 +79,7 @@ def executeTask(task_idx:int, queue, total_task:int, outpath_base:str,
         if workunit.is_done:
             queue.task_done()
             break
-        # Extract the networks for this batch
+        # Extract the networks for this batch as specified by -1 being a wildcard
         if workunit.reference_idx < 0:
             batch_reference_networks = reference_networks
         else:
@@ -107,7 +104,7 @@ def executeTask(task_idx:int, queue, total_task:int, outpath_base:str,
         full_task_df = pd.concat([full_task_df, incremental_df], ignore_index=True)
         task_checkpoint_manager.checkpoint(full_task_df)
         # Update the processed networks
-        merged_checkpoint_result = _mergeCheckpoints(outpath_base, total_task,
+        merged_checkpoint_result = WorkerCheckpointManager.merge(checkpoint_path, total_task,
               merged_checkpoint_result=prior_merged_checkpoint_result, is_report=is_report_task)
         prior_merged_checkpoint_result = merged_checkpoint_result
         if is_report_task:
@@ -117,52 +114,14 @@ def executeTask(task_idx:int, queue, total_task:int, outpath_base:str,
         print(f"**Task {task_idx} done.")
     return full_task_df
 
-
-############################### INTERNAL FUNCTIONS ###############################
-def _mergeCheckpoints(outpath_base:str, num_task:int,
-      merged_checkpoint_result:Optional[MergedCheckpointResult]=None,
-      is_report:bool=True)->MergedCheckpointResult:
-    """
-    Merges the checkpoints from the checkpoint managers.
-
-    Args:
-        outpath_base (str): Base path for the checkpoint files
-        num_task (int): Number of tasks
-        merged_checkpoint_result (Optional[MergedCheckpointResult]): Previous Merged checkpoint result
-        is_report (bool): If True, reports progress
-
-    Returns: MergedCheckpointResult
-        int: Number of merged entries
-        CheckpointManager: Checkpoint manager for merged checkpoint
-        pd.DataFrame
-    """
-    if merged_checkpoint_result is None:
-        merged_checkpoint_manager = CheckpointManager(outpath_base, is_report=is_report)
-        task_checkpoint_managers = [CheckpointManager(
-                _CheckpointManager.makeTaskPath(outpath_base, i),
-                is_report=is_report, is_initialize=False)
-                for i in range(num_task)]
-    else:
-        merged_checkpoint_manager = merged_checkpoint_result.merged_checkpoint_manager
-        task_checkpoint_managers = merged_checkpoint_result.task_checkpoint_managers
-    full_df = pd.concat([m.recover() for m in task_checkpoint_managers], ignore_index=True)
-    merged_checkpoint_manager.checkpoint(full_df)
-    #
-    if len(full_df) > 0:
-        num_reference_network = len(set(full_df[cn.FINDER_REFERENCE_NETWORK].values))
-    else:
-        num_reference_network = 0
-    result = MergedCheckpointResult(
-            num_reference_network=num_reference_network,
-            merged_checkpoint_manager=merged_checkpoint_manager,
-            task_checkpoint_managers=task_checkpoint_managers,
-            dataframe=full_df)           
-    return result
-
-
+# FIXME: Separate module for WorkerCheckpointManager. Tests for merge.
 ##############################################################
-class _CheckpointManager(CheckpointManager):
-    # Specialization of CheckpointManager for executeTask
+class WorkerCheckpointManager(CheckpointManager):
+    RecoverResult = collections.namedtuple("RecoverResult", ["full_df", "pruned_df", "processeds"])
+    MergedCheckpointResult = collections.namedtuple("MergedCheckpointResult",
+           ["num_reference_network", "merged_checkpoint_manager", "dataframe", "task_checkpoint_managers"])
+
+    # Specialization of CheckpointManager for executeTask to checkpoint Task results
 
     def __init__(self, path:str, is_report:bool=True, is_initialize:bool=False)->None:
         """
@@ -173,7 +132,7 @@ class _CheckpointManager(CheckpointManager):
         """
         super().__init__(path, is_report=is_report, is_initialize=is_initialize)
 
-    def recover(self)->Tuple[pd.DataFrame, pd.DataFrame, list]:
+    def recover(self)->RecoverResult:
         """
         Recovers a previously saved DataFrame. The recovered dataframe deletes entries with model strings that are null.
 
@@ -185,16 +144,16 @@ class _CheckpointManager(CheckpointManager):
         df = super().recover()
         if len(df) > 0:
             full_df = pd.read_csv(self.path)
-            pruned_df, processed_list = _CheckpointManager.prune(full_df)
+            pruned_df, processeds = WorkerCheckpointManager.prune(full_df)
             # Convert the JSON string to a dictionary
             if len(pruned_df) > 0:
                 pruned_df.loc[:, cn.FINDER_NAME_DCT] = pruned_df[cn.FINDER_NAME_DCT].apply(lambda x: json.loads(x))
         else:
             full_df = pd.DataFrame()
             pruned_df = pd.DataFrame()
-            processed_list = []
-        self._print(f"Recovering {len(processed_list)} processed models from {self.path}")
-        return full_df, pruned_df, processed_list
+            processeds = []
+        self._print(f"Recovering {len(processeds)} processed models from {self.path}")
+        return self.RecoverResult(full_df=full_df, pruned_df=pruned_df, processeds=processeds)
 
     @staticmethod 
     def prune(df:pd.DataFrame)->Tuple[pd.DataFrame, list]:
@@ -234,6 +193,48 @@ class _CheckpointManager(CheckpointManager):
         outpath_pat = splits[0] + "_%d." + splits[1]
         return outpath_pat % task_idx
     
+    @classmethod
+    def merge(cls, base_checkpoint_path:str, num_task:int,
+        merged_checkpoint_result:Optional[MergedCheckpointResult]=None,
+        is_report:bool=True)->MergedCheckpointResult:
+        """
+        Merges the checkpoints from checkpoint managers. Assumes that task checkpoint files are named
+        with the pattern base_checkpoint_path_%d.csv.
+
+        Args:
+            outpath_base (str): Base path for the checkpoint files
+            num_task (int): Number of tasks
+            merged_checkpoint_result (Optional[MergedCheckpointResult]): Previous Merged checkpoint result
+            is_report (bool): If True, reports progress
+
+        Returns: MergedCheckpointResult
+            int: Number of merged entries
+            CheckpointManager: Checkpoint manager for merged checkpoint
+            pd.DataFrame
+        """
+        if merged_checkpoint_result is None:
+            merged_checkpoint_manager = WorkerCheckpointManager(base_checkpoint_path, is_report=is_report)
+            task_checkpoint_managers = [WorkerCheckpointManager(
+                    WorkerCheckpointManager.makeTaskPath(base_checkpoint_path, i),
+                    is_report=is_report, is_initialize=False)
+                    for i in range(num_task)]
+        else:
+            merged_checkpoint_manager = merged_checkpoint_result.merged_checkpoint_manager
+            task_checkpoint_managers = merged_checkpoint_result.task_checkpoint_managers
+        full_df = pd.concat([m.recover().full_df for m in task_checkpoint_managers], ignore_index=True)
+        merged_checkpoint_manager.checkpoint(full_df)
+        #
+        if len(full_df) > 0:
+            num_reference_network = len(set(full_df[cn.FINDER_REFERENCE_NETWORK].values))
+        else:
+            num_reference_network = 0
+        result = cls.MergedCheckpointResult(
+                num_reference_network=num_reference_network,
+                merged_checkpoint_manager=merged_checkpoint_manager,
+                task_checkpoint_managers=task_checkpoint_managers,
+                dataframe=full_df)           
+        return result
+    
 #############################################################
 class Workunit(object):
     def __init__(self, reference_idx:int=-1, target_idx:int=-1, is_done:bool=False):
@@ -249,6 +250,9 @@ class Workunit(object):
 
     def __repr__(self):
         return f"Workunit(ref={self.reference_idx}, tgt={self.target_idx}, is_done={self.is_done})"
+    
+    def __eq__(self, other):
+        return (self.reference_idx == other.reference_idx) and (self.target_idx == other.target_idx)
     
     @classmethod
     def addMultipleWorkunits(cls, queue, reference_idxs:Optional[List[int]]=None,

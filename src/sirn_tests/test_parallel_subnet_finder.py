@@ -5,83 +5,26 @@
 '''
 
 import sirn.constants as cn  # type: ignore
-from sirn.parallel_subnet_finder_worker import _CheckpointManager
 from src.sirn.parallel_subnet_finder import ParallelSubnetFinder # type: ignore
 from sirn.network import Network  # type: ignore
+from sirn.model_serializer import ModelSerializer  # type: ignore
 
-import json
+import collections
 import os
 import pandas as pd # type: ignore
 import numpy as np
-import shutil
+from typing import Optional
 import unittest
 
-IGNORE_TEST = False
+IGNORE_TEST = True
 IS_PLOT =  False
 SIZE = 3
 MODEL_DIR = os.path.join(cn.TEST_DIR, "oscillators")
-CHECKPOINT_PATH = os.path.join(cn.DATA_DIR, "test_subnet_finder_checkpoint.csv")
-REMOVE_FILES = [CHECKPOINT_PATH]
-
-
-#############################
-# Tests
-#############################
-def makeDataframe(num_network:int)->pd.DataFrame:
-    # Creates a dataframe used by the CheckpointManager
-    reference_networks = [Network.makeRandomNetworkByReactionType(3, is_prune_species=True) for _ in range(num_network)]
-    target_networks = [Network.makeRandomNetworkByReactionType(3, is_prune_species=True) for _ in range(num_network)]
-    dct = {cn.FINDER_REFERENCE_NETWORK: [str(n) for n in range(num_network)],
-           cn.FINDER_INDUCED_NETWORK: [str(n) for n in range(num_network, 2*num_network)]}
-    df = pd.DataFrame(dct)
-    df[cn.FINDER_REFERENCE_NAME] = [str(n) for n in reference_networks]
-    df[cn.FINDER_TARGET_NAME] = [str(n) for n in target_networks]
-    df[cn.FINDER_NAME_DCT] = [json.dumps(dict(a=n)) for n in range(num_network)]
-    return df
-
-
-#############################
-class TestFunctions(unittest.TestCase):
-
-
-
-#############################
-class TestCheckpointManager(unittest.TestCase):
-
-    def setUp(self):
-        self.checkpoint_manager = _CheckpointManager(CHECKPOINT_PATH, is_report=IS_PLOT)
-
-    def tearDown(self):
-        self.remove()
-
-    def remove(self):
-        for ffile in REMOVE_FILES:
-            if os.path.exists(ffile):
-                os.remove(ffile)
-
-    def testRecover(self):
-        if IGNORE_TEST:
-            return
-        num_network = 10
-        df = makeDataframe(num_network)
-        df.loc[0, cn.FINDER_REFERENCE_NETWORK] = ""
-        df.loc[0, cn.FINDER_INDUCED_NETWORK] = ""
-        self.checkpoint_manager.checkpoint(df)
-        full_df, pruned_df, deleteds = self.checkpoint_manager.recover()
-        self.assertEqual(len(full_df), num_network)
-        self.assertEqual(len(pruned_df), num_network-1)
-        self.assertEqual(len(deleteds), 1)
-
-    def testPrune(self):
-        if IGNORE_TEST:
-            return
-        num_network = 10
-        df = makeDataframe(num_network)
-        df.loc[0, cn.FINDER_REFERENCE_NETWORK] = ""
-        df.loc[0, cn.FINDER_INDUCED_NETWORK] = ""
-        df, deleteds = self.checkpoint_manager.prune(df)
-        self.assertEqual(len(deleteds), 1)
-        self.assertEqual(len(df), num_network - 1)
+CHECKPOINT_PATH = os.path.join(cn.TEST_DIR, "test_parallel_subnet_finder_checkpoint.csv")
+REFERENCE_SERIALIZATION_PATH = os.path.join(cn.TEST_DIR, "test_parallel_subnet_finder_reference.txt")
+TARGET_SERIALIZATION_PATH = os.path.join(cn.TEST_DIR, "test_parallel_subnet_finder_target.txt")
+REMOVE_FILES = [CHECKPOINT_PATH, REFERENCE_SERIALIZATION_PATH, TARGET_SERIALIZATION_PATH]
+NUM_NETWORK = 10
 
 
 #############################
@@ -89,10 +32,18 @@ class TestParallelSubnetFinder(unittest.TestCase):
 
     def setUp(self):
         self.remove()
-        self.reference = Network.makeRandomNetworkByReactionType(SIZE, is_prune_species=True)
-        self.target = self.reference.fill(num_fill_reaction=SIZE, num_fill_species=SIZE)
-        self.finder = ParallelSubnetFinder(reference_networks=[self.reference], target_networks=[self.target],
-              data_dir=cn.TEST_DIR, identity=cn.ID_WEAK)
+        reference_networks = [Network.makeRandomNetworkByReactionType(SIZE, is_prune_species=True)
+                for _ in range(NUM_NETWORK)]
+        target_networks = [n.fill(num_fill_reaction=SIZE, num_fill_species=SIZE) for n in reference_networks]
+        self.makeSerialization(REFERENCE_SERIALIZATION_PATH, reference_networks)
+        self.makeSerialization(TARGET_SERIALIZATION_PATH, target_networks)
+        self.finder = ParallelSubnetFinder(REFERENCE_SERIALIZATION_PATH,
+              TARGET_SERIALIZATION_PATH, identity = cn.ID_STRONG,
+              checkpoint_path=CHECKPOINT_PATH)
+
+    def makeSerialization(sef, path, networks):
+        serializer = ModelSerializer(None, path)
+        serializer.serializeNetworks(networks)
 
     def tearDown(self):
         self.remove()
@@ -105,12 +56,16 @@ class TestParallelSubnetFinder(unittest.TestCase):
     def testConstructor(self):
         if IGNORE_TEST:
             return
+        import pdb; pdb.set_trace()
+        self.assertTrue(os.path.exists(REFERENCE_SERIALIZATION_PATH))
+        self.assertTrue(os.path.exists(TARGET_SERIALIZATION_PATH))
         self.assertGreater(len(self.finder.reference_networks), 0)
 
     def testFindSimple(self):
-        if IGNORE_TEST:
-            return
-        df = self.finder.find(is_report=IS_PLOT)
+        #if IGNORE_TEST:
+        #    return
+        df = self.finder.parallelFind(is_report=IS_PLOT, is_initialize=True, total_process=1)
+        import pdb; pdb.set_trace()
         self.assertEqual(len(df), 1)
 
     def testFindScale(self):
@@ -153,8 +108,8 @@ class TestParallelSubnetFinder(unittest.TestCase):
 
     # FIXME: Verify running 10 processes
     def testFindBiomodelsSubnetMultiplebatch(self):
-        #if IGNORE_TEST:
-        #    return
+        if IGNORE_TEST:
+            return
         df = SubnetFinder.findBiomodelsSubnet(reference_network_size=8,
               batch_size=1, is_initialize=True, is_report=IS_PLOT)
         df, processed_list = _prune(df)

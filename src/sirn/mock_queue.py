@@ -6,6 +6,12 @@ class MockQueue(object):
     def __init__(self):
         self.queue = []
 
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        pass
+
     def put(self, item):
         self.queue.append(item)
 
