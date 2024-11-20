@@ -30,12 +30,13 @@ class SubnetFinder(object):
         self.identity = identity
         self.num_process = num_process
 
-    def find(self, is_report:bool=True)->pd.DataFrame:
+    def find(self, is_report:bool=True, max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT)->pd.DataFrame:
         """
         Finds subnets of SBML/Antmony models in a target directory for SBML/Antimony models in a reference directory.
 
         Args:
             is_report (bool): If True, report progress
+            max_num_assignment (int): Maximum number of assignment pairs
 
         Returns
             pd.DataFrame: Table of matching networks
@@ -53,7 +54,8 @@ class SubnetFinder(object):
                 print(f"Processing reference model: {reference_network.network_name}")
             for target_network in self.target_networks:
                 result = reference_network.isStructurallyIdentical(target_network, identity=self.identity,
-                      num_process=self.num_process, is_report=is_report, is_subset=True)
+                      num_process=self.num_process, is_report=is_report, is_subset=True,
+                      max_num_assignment=max_num_assignment)
                 dct[cn.FINDER_REFERENCE_NAME].append(reference_network.network_name)
                 dct[cn.FINDER_TARGET_NAME].append(target_network.network_name)
                 if not result:

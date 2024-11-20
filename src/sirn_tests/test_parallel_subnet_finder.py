@@ -8,8 +8,8 @@ import sirn.constants as cn  # type: ignore
 from src.sirn.parallel_subnet_finder import ParallelSubnetFinder # type: ignore
 from sirn.network import Network  # type: ignore
 from sirn.model_serializer import ModelSerializer  # type: ignore
+from sirn.parallel_subnet_finder_worker import WorkerCheckpointManager
 
-import collections
 import os
 import pandas as pd # type: ignore
 import numpy as np
@@ -18,13 +18,15 @@ import unittest
 
 IGNORE_TEST = True
 IS_PLOT =  False
-SIZE = 3
+SIZE = 10
 MODEL_DIR = os.path.join(cn.TEST_DIR, "oscillators")
 CHECKPOINT_PATH = os.path.join(cn.TEST_DIR, "test_parallel_subnet_finder_checkpoint.csv")
 REFERENCE_SERIALIZATION_PATH = os.path.join(cn.TEST_DIR, "test_parallel_subnet_finder_reference.txt")
 TARGET_SERIALIZATION_PATH = os.path.join(cn.TEST_DIR, "test_parallel_subnet_finder_target.txt")
 REMOVE_FILES = [CHECKPOINT_PATH, REFERENCE_SERIALIZATION_PATH, TARGET_SERIALIZATION_PATH]
-NUM_NETWORK = 10
+REMOVE_FILES.extend([os.path.join(cn.TEST_DIR, "test_parallel_subnet_finder_checkpoint_%d.csv" % n)
+      for n in range(10)])
+NUM_NETWORK = 100
 
 
 #############################
@@ -61,20 +63,36 @@ class TestParallelSubnetFinder(unittest.TestCase):
         self.assertTrue(os.path.exists(TARGET_SERIALIZATION_PATH))
         self.assertGreater(len(self.finder.reference_networks), 0)
 
-    def testFindSimple(self):
+    def testFindOneProcess(self):
+        if IGNORE_TEST:
+            return
+        df = self.finder.parallelFind(is_report=IS_PLOT, is_initialize=True, total_process=1)
+        self.assertEqual(len(df), NUM_NETWORK**2)
+        prune_df = WorkerCheckpointManager.prune(df)[0]
+        self.assertGreaterEqual(len(prune_df), NUM_NETWORK)
+    
+    def testFindManyProcess(self):
         #if IGNORE_TEST:
         #    return
-        df = self.finder.parallelFind(is_report=IS_PLOT, is_initialize=True, total_process=1)
-        import pdb; pdb.set_trace()
-        self.assertEqual(len(df), 1)
+        df = self.finder.parallelFind(is_report=IS_PLOT, is_initialize=True, total_process=-1,
+              max_num_assignment=1e9)
+        self.assertEqual(len(df), NUM_NETWORK**2)
+        prune_df = WorkerCheckpointManager.prune(df)[0]
+        self.assertEqual(len(prune_df), NUM_NETWORK)
+        #
+        df = self.finder.parallelFind(is_report=IS_PLOT, is_initialize=True, total_process=-1,
+              max_num_assignment=1e1)
+        self.assertEqual(len(df), NUM_NETWORK**2)
+        prune2_df = WorkerCheckpointManager.prune(df)[0]
+        self.assertLessEqual(len(prune2_df), len(prune_df))
 
     def testFindScale(self):
         if IGNORE_TEST:
             return
-        NUM_REFERENCE_MODEL = 100
-        NUM_EXTRA_TARGET_MODEL = 100
+        NUM_REFERENCE_MODEL = 1000
+        NUM_EXTRA_TARGET_MODEL = 1000
         NETWORK_SIZE = 10
-        fill_size = 3
+        fill_size = 10
         # Construct the models
         reference_models = [Network.makeRandomNetworkByReactionType(NETWORK_SIZE, is_prune_species=True)
               for _ in range(NUM_REFERENCE_MODEL)]
@@ -86,7 +104,7 @@ class TestParallelSubnetFinder(unittest.TestCase):
         finder = ParallelSubnetFinder(reference_networks=reference_models, target_networks=target_models, identity=cn.ID_STRONG,
               data_dir=cn.DATA_DIR)
         df = finder.find(is_report=IS_PLOT)
-        prune_df, _ = _prune(df)
+        prune_df = WorkerCheckpointManager.prune(df)
         self.assertEqual(len(prune_df), NUM_REFERENCE_MODEL)
     
     def testFindFromDirectories(self):
@@ -114,51 +132,6 @@ class TestParallelSubnetFinder(unittest.TestCase):
               batch_size=1, is_initialize=True, is_report=IS_PLOT)
         df, processed_list = _prune(df)
         import pdb; pdb.set_trace()
-
-    def serializeReferenceTargetNetworksOverlap(self, num_network:int=10, reference_size:int=5,
-            target_fill_size:int=3, num_task:int=3):
-        # Overlapping networks
-        reference_networks = [Network.makeRandomNetworkByReactionType(reference_size,
-              is_prune_species=True) for _ in range(num_network)]
-        target_networks = [n.fill(num_fill_reaction=target_fill_size, num_fill_species=target_fill_size)
-                for n in reference_networks]
-        SubnetFinder._makeReferenceTargetSerializations(reference_networks, target_networks, num_task=num_task)
-
-    def serializeReferenceTargetNetworksDisjoint(self, num_network:int=10, num_task:int=3):
-        # Disjoint reference and target networks
-        reference_networks = [Network.makeRandomNetworkByReactionType(5, is_prune_species=True) for _ in range(num_network)]
-        target_networks = [Network.makeRandomNetworkByReactionType(5, is_prune_species=True) for _ in range(num_network)]
-        SubnetFinder._makeReferenceTargetSerializations(reference_networks, target_networks, num_task=num_task)
-
-    def testMakeReferenceTargetSerializations(self):
-        if IGNORE_TEST:
-            return
-        num_task = 3
-        self.serializeReferenceTargetNetworksDisjoint(num_task=num_task)
-        ffiles = os.listdir(cn.DATA_DIR)
-        self.assertEqual(len([f for f in ffiles if f.count("reference")>0]), num_task)
-        self.assertEqual(len([f for f in ffiles if f.count("target")>0]), 1)
-
-    def testExecuteTask(self):
-        if IGNORE_TEST:
-            return
-        task_idx = 0
-        num_task = 2
-        num_network = 10
-        self.serializeReferenceTargetNetworksDisjoint(num_task=num_task, num_network=num_network)
-        df = self.finder._executeTask(task_idx, num_task, is_report=IS_PLOT, identity=cn.ID_STRONG,
-          batch_size=1, is_initialize=True)
-        self.assertEqual(len(df), 1/2*num_network**2)
-        num_reference_network = len(df[cn.FINDER_REFERENCE_NAME].unique())
-        self.assertEqual(num_reference_network, num_network/num_task)
-        # Check for case that there are matches
-        self.serializeReferenceTargetNetworksOverlap(num_task=num_task, num_network=num_network)
-        df = self.finder._executeTask(task_idx, num_task, is_report=IS_PLOT, identity=cn.ID_STRONG,
-          batch_size=1, is_initialize=True)
-        expected_num_match = num_network/num_task
-        actual_num_match = np.sum(df['is_truncated'] == False)
-        self.assertEqual(actual_num_match, expected_num_match)
-
 
 
 if __name__ == '__main__':

@@ -19,7 +19,7 @@ from sirn.checkpoint_manager import CheckpointManager
 from sirn.mock_queue import MockQueue
 from sirn.network import Network
 
-import collections
+import itertools
 import os
 import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor
@@ -157,13 +157,15 @@ class ParallelSubnetFinder(object):
           identity=identity, num_task=num_task, checkpoint_path=checkpoint_path)
         return finder.parallelFind(is_report=is_report, is_initialize=is_initialize)
     
-    def parallelFind(self, total_process:int=1, is_report:bool=True, is_initialize:bool=True)->pd.DataFrame:
+    def parallelFind(self, total_process:int=1, is_report:bool=True, is_initialize:bool=True,
+          max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT)->pd.DataFrame:
         """
         Finds reference networks that are subnets of the target networks using parallel processing.
 
         Args:
             is_report (bool): If True, report progress
             is_initialize (bool): If True, initialize the checkpoint
+            max_num_assignment (int): Maximum number of assignments to process
 
         Returns:
             pd.DataFrame: (See find)
@@ -178,42 +180,46 @@ class ParallelSubnetFinder(object):
                   for ref_name, tar_name in zip(df[cn.FINDER_REFERENCE_NETWORK], df[cn.FINDER_TARGET_NETWORK])]
         else:
             completed_workunits = []
-        workunits = [Workunit(ref_idx, tgt_idx) for ref_idx, tgt_idx
-                in zip(range(len(self.reference_networks)), range(len(self.target_networks)))]
+        pair_iterator = itertools.product(range(len(self.reference_networks)), range(len(self.target_networks)))
+        workunits = [Workunit(i, j) for i, j in pair_iterator]
         workunits = [w for w in workunits if w not in completed_workunits]
         # Set up the task work queue
+        if total_process < 0:
+            total_process = mp.cpu_count()
         if total_process == 1:
             queueClass = MockQueue
         else:
-            queueClass = mp.Manager().Queue
-        with queueClass() as queue:
+            queueClass = mp.Manager
+        with queueClass() as manager:
+            if total_process == 1:
+                queue = manager
+            else:
+                queue = manager.Queue()
             # Populate the queue
-            for _ in range(total_process):
-                queue.put(Workunit(is_done=True))
             for workunit in workunits:
                 queue.put(workunit)
+            for _ in range(total_process):
+                queue.put(Workunit(is_done=True))
             # Start the processes
             if is_report:
                 print(f"**Starting {total_process} processes.")
-            # FIXME: Correct arguments for tasks
             args = [(task_idx, queue, total_process, self.checkpoint_path,
                 self.reference_serialization_path, self.target_serialization_path,
-                     self.identity, is_report, is_initialize)
+                     self.identity, is_report, is_initialize, max_num_assignment)
                for task_idx in range(total_process)]
+            process_args = zip(*args)
             if queueClass == MockQueue:
                 executeTask(*args[0])
             else:
                 with ProcessPoolExecutor(max_workers=total_process) as executor:
-                    process_args = zip(*args)
-                    executor.map(executeTask, process_args)
-            queue.join()
+                    result = executor.map(executeTask, *process_args)
             if is_report:
                 print(f"**{total_process} processes completed.")
         # Merge the results
         merged_checkpoint_result = WorkerCheckpointManager.merge(
               self.checkpoint_path, total_process, is_report=is_report)
         # Return the results
-        df = merged_checkpoint_result.merged_checkpoint_manager.recover()
+        df = merged_checkpoint_result.merged_checkpoint_manager.recover().full_df
         if is_report:
             msg = f"**Done. Processed {merged_checkpoint_result.num_merged_network}"
             msg += " reference networks in {outpath}."

@@ -121,7 +121,7 @@ class Network(NetworkBase):
     def isStructurallyIdentical(self, target:'Network', is_subset:bool=False, num_process:int=-1,
             max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT,
             max_batch_size:int=cn.MAX_BATCH_SIZE, identity:str=cn.ID_WEAK,
-            is_report:bool=True)->StructurallyIdenticalResult:
+            is_report:bool=True, is_return_if_truncated:bool=True)->StructurallyIdenticalResult:
         """
         Determines if the network is structurally identical to another network or subnet of another network.
 
@@ -133,6 +133,7 @@ class Network(NetworkBase):
             max_batch_size (int, optional): Maximum batch size
             identity (str, optional): cn.ID_WEAK or cn.ID_STRONG
             is_report (bool, optional): Print report
+            is_return_if_truncated (bool, optional): Return if truncation is required
 
         Returns:
             StructurallyIdenticalResult
@@ -177,11 +178,18 @@ class Network(NetworkBase):
         num_species_assignment = species_assignment_arr.shape[0]
         num_reaction_assignment = reaction_assignment_arr.shape[0]
         if num_species_assignment*num_reaction_assignment > max_num_assignment:
-            species_frac = num_species_assignment/max_num_assignment
-            reaction_frac = num_reaction_assignment/max_num_assignment
-            species_assignment_arr = util.selectRandom(species_assignment_arr, int(species_frac*max_num_assignment))
-            reaction_assignment_arr = util.selectRandom(reaction_assignment_arr, int(reaction_frac*max_num_assignment))
             is_truncated = True
+            if is_return_if_truncated:
+                return StructurallyIdenticalResult(assignment_pairs=[], 
+                  num_reaction_candidate=num_reaction_assignment,
+                  num_species_candidate=num_species_assignment,
+                  is_truncated=is_truncated)
+            else:
+                # Truncate the assignment arrays
+                species_frac = num_species_assignment/max_num_assignment
+                reaction_frac = num_reaction_assignment/max_num_assignment
+                species_assignment_arr = util.selectRandom(species_assignment_arr, int(species_frac*max_num_assignment))
+                reaction_assignment_arr = util.selectRandom(reaction_assignment_arr, int(reaction_frac*max_num_assignment))
         # Handle null assignment
         is_null = is_species_null or is_reaction_null
         if len(species_assignment_arr) == 0 or len(reaction_assignment_arr) == 0 or is_null:

@@ -44,46 +44,6 @@ def makeDataframe(num_network:int)->pd.DataFrame:
 
 
 #############################
-class TestWorkerCheckpointManager(unittest.TestCase):
-
-    def setUp(self):
-        self.remove()
-        self.checkpoint_manager = psfw.WorkerCheckpointManager(BASE_CHECKPOINT_PATH, is_report=IS_PLOT)
-
-    def remove(self):
-        for ffile in REMOVE_FILES:
-            if os.path.exists(ffile):
-                os.remove(ffile)
-
-    def tearDown(self):
-        self.remove()
-
-    def testRecover(self):
-        if IGNORE_TEST:
-            return
-        num_network = 10
-        df = makeDataframe(num_network)
-        df.loc[0, cn.FINDER_REFERENCE_NETWORK] = ""
-        df.loc[0, cn.FINDER_INDUCED_NETWORK] = ""
-        self.checkpoint_manager.checkpoint(df)
-        result = self.checkpoint_manager.recover()
-        self.assertEqual(len(result.full_df), num_network)
-        self.assertEqual(len(result.pruned_df), num_network-1)
-        self.assertEqual(len(result.processeds), 1)
-
-    def testPrune(self):
-        if IGNORE_TEST:
-            return
-        num_network = 10
-        df = makeDataframe(num_network)
-        df.loc[0, cn.FINDER_REFERENCE_NETWORK] = ""
-        df.loc[0, cn.FINDER_INDUCED_NETWORK] = ""
-        df, deleteds = self.checkpoint_manager.prune(df)
-        self.assertEqual(len(deleteds), 1)
-        self.assertEqual(len(df), num_network - 1)
-
-
-#############################
 class TestParallelSubnetFinderWorker(unittest.TestCase):
 
     def setUp(self):

@@ -13,7 +13,7 @@ class MockQueue(object):
         pass
 
     def put(self, item):
-        self.queue.append(item)
+        self.queue.insert(0, item)
 
     def get(self):
         return self.queue.pop()
