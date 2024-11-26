@@ -40,7 +40,8 @@ class TestModelSerializer(unittest.TestCase):
         model_serializer = ModelSerializer.makeOscillatorSerializer(MODEL_DIRECTORY, parent_directory=cn.TEST_DIR)
         network_collection = model_serializer.deserialize()
         self.assertTrue(isinstance(network_collection, NetworkCollection))
-        ffiles = os.listdir(os.path.join(cn.TEST_DIR, MODEL_DIRECTORY))
+        ffiles = [f for f in os.listdir(os.path.join(cn.TEST_DIR, MODEL_DIRECTORY))
+              if not f.endswith('txt')]
         self.assertTrue(len(ffiles) - len(network_collection) <= 1)
 
         

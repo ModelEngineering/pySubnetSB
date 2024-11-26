@@ -12,9 +12,9 @@ IS_PLOT =  False
 SIZE = 10
 NUM_NETWORK = 10    
 BASE_CHECKPOINT_PATH = os.path.join(cn.TEST_DIR, "test_subnet_finder_checkpoint.csv")
-TASK0_CHECKPOINT_PATH = psfw.WorkerCheckpointManager.makeTaskPath(BASE_CHECKPOINT_PATH, 0)
-TASK1_CHECKPOINT_PATH = psfw.WorkerCheckpointManager.makeTaskPath(BASE_CHECKPOINT_PATH, 1)
-REMOVE_FILES:list = [BASE_CHECKPOINT_PATH, TASK0_CHECKPOINT_PATH, TASK1_CHECKPOINT_PATH]
+WORKER0_CHECKPOINT_PATH = psfw.WorkerCheckpointManager.makeWorkerCheckpointPath(BASE_CHECKPOINT_PATH, 0)
+WORKER1_CHECKPOINT_PATH = psfw.WorkerCheckpointManager.makeWorkerCheckpointPath(BASE_CHECKPOINT_PATH, 1)
+REMOVE_FILES:list = [BASE_CHECKPOINT_PATH, WORKER0_CHECKPOINT_PATH, WORKER1_CHECKPOINT_PATH]
 
 
 #############################
@@ -43,6 +43,7 @@ class TestWorkerCheckpointManager(unittest.TestCase):
         df[cn.FINDER_REFERENCE_NAME] = [str(n) for n in reference_networks]
         df[cn.FINDER_TARGET_NAME] = [str(n) for n in target_networks]
         df[cn.FINDER_NAME_DCT] = [json.dumps(dict(a=n)) for n in range(num_network)]
+        df[cn.FINDER_IS_TRUNCATED] = [False for _ in range(num_network)]
         return df
 
     def testRecover(self):
@@ -58,6 +59,7 @@ class TestWorkerCheckpointManager(unittest.TestCase):
         self.assertEqual(len(result.pruned_df), num_network-1)
         self.assertEqual(len(result.processeds), 1)
 
+    # FIXME: test all fields of prune_result
     def testPrune(self):
         if IGNORE_TEST:
             return
@@ -65,9 +67,9 @@ class TestWorkerCheckpointManager(unittest.TestCase):
         df = self.makeDataframe(num_network)
         df.loc[0, cn.FINDER_REFERENCE_NETWORK] = ""
         df.loc[0, cn.FINDER_INDUCED_NETWORK] = ""
-        df, deleteds = self.checkpoint_manager.prune(df)
-        self.assertEqual(len(deleteds), 1)
-        self.assertEqual(len(df), num_network - 1)
+        prune_result = self.checkpoint_manager.prune(df)
+        self.assertEqual(len(prune_result.reference_names), 1)
+        self.assertEqual(len(prune_result.pruned_df), num_network - 1)
 
 
 if __name__ == '__main__':

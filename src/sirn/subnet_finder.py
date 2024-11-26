@@ -58,12 +58,12 @@ class SubnetFinder(object):
                       max_num_assignment=max_num_assignment)
                 dct[cn.FINDER_REFERENCE_NAME].append(reference_network.network_name)
                 dct[cn.FINDER_TARGET_NAME].append(target_network.network_name)
+                dct[cn.FINDER_IS_TRUNCATED].append(result.is_truncated)
                 if not result:
                     dct[cn.FINDER_REFERENCE_NETWORK].append(cn.NULL_STR)
                     dct[cn.FINDER_INDUCED_NETWORK].append(cn.NULL_STR)
                     dct[cn.FINDER_NUM_ASSIGNMENT_PAIR].append(cn.NULL_STR)
                     dct[cn.FINDER_NAME_DCT].append(cn.NULL_STR)
-                    dct[cn.FINDER_IS_TRUNCATED].append(cn.NULL_STR)
                 else:
                     # Construct the induced subnet
                     species_assignment_arr = result.assignment_pairs[0].species_assignment
@@ -88,7 +88,6 @@ class SubnetFinder(object):
                             target_species_names=target_network.species_names)
                     dct_str = json.dumps(assignment_pair.makeNameDct())
                     dct[cn.FINDER_NAME_DCT].append(dct_str)
-                    dct[cn.FINDER_IS_TRUNCATED].append(result.is_truncated)
         df = pd.DataFrame(dct)
         return df
     

@@ -112,8 +112,11 @@ S_SPECIES_NAMES = "s_species_names"
 S_TARGET = "s_target"
 S_VALUES = "s_values"
 # Finder dataframe columns
+FINDER_WORKER_IDX = "worker_idx"
 FINDER_REFERENCE_NAME = "reference_name"
+FINDER_REFERENCE_IDX = "reference_idx"
 FINDER_TARGET_NAME = "target_name"
+FINDER_TARGET_IDX = "target_idx"
 FINDER_REFERENCE_NETWORK = "reference_network"
 FINDER_INDUCED_NETWORK = "induced_network"
 FINDER_NAME_DCT = "name_dct"  # Dictionary of mapping of target names to reference names for species and reactions

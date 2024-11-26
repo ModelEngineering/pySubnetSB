@@ -16,33 +16,32 @@ BATCHSIZE = 20
 
 class ModelSerializer(object):
 
-#    def __init__(self, model_directory:str, model_parent_dir:str=cn.OSCILLATOR_PROJECT,
-#                 serialization_path:Optional[str]=None)->None:
-#        """
-#        Args:
-#            model_directory (str): Directory that contains the model files
-#            model_directory_parent (Optional[str], optional): Path to the model_directory. If None,
-#                the model_directory is a complete path.
-#            serialization_file (Optional[str], optional): Path for file where serialization results are stored
-#        """
-#        if (model_parent_dir is not None) and ("/" in model_directory):
-#            raise ValueError("model_directory should not contain a path.")
-#        self.model_directory = model_directory
-#        self.model_parent_dir = model_parent_dir
-#        if serialization_path is None:
-#            serialization_path = os.path.join(cn.DATA_DIR, f'{self.model_directory}_serializers.txt')
-#        self.serialization_file = serialization_path
-
-    def __init__(self, model_directory:str, serialization_file:str)->None:
+    def __init__(self, model_directory:Optional[str]=None,
+          serialization_file:str=DEFAULT_SERIALIZATION_FILENAME)->None:
         """
+        The constructor has two forms:
+        1. A model directory is given and optionally a name is given for the serialization file.
+        2. A serialization path is given and the model directory is None.
         Args:
             model_directory (str): Path to directory that contains the model files
             serialization_file (str): Path for file where serialization results are stored
         """
         self.model_directory = model_directory
         self.serialization_file = serialization_file
+        # self.serialization_path is the path to the serialization file
+        if model_directory is None:
+            if serialization_file.endswith("txt"):
+                self.serialization_path = serialization_file
+            else:
+                raise ValueError("model_directory should be set if serialization_file is not a txt file.")
+        else:
+            self.serialization_path = os.path.join(model_directory, serialization_file)
 
-    
+    def remove(self)->None:
+        """Removes the serialization file."""
+        if os.path.exists(self.serialization_path):
+            os.remove(self.serialization_path)
+
     @classmethod
     def serializerFromNetworks(cls, networks:List[Network], serialization_file:str,
           is_initialize:bool=False)->None:
@@ -58,23 +57,8 @@ class ModelSerializer(object):
         serializer.serializeNetworks(networks, is_initialize=is_initialize)
 
     @classmethod
-    def makeDefaultSerializer(cls, model_directory:str)->'ModelSerializer':
-        """
-        Creates a with default serialization file in the model directory.
-
-        Args:
-            oscillator_directory (str): Name of oscillator directory
-            parent_directory (str): 
-
-        Returns:
-            ModelSerializer: _description_
-        """
-        model_directory = os.path.join(parent_directory, oscillator_directory)
-        serialization_file = os.path.join(model_directory, DEFAULT_SERIALIZATION_FILENAME)
-        return cls(model_directory, serialization_file) 
-
-    @classmethod
-    def makeOscillatorSerializer(cls, oscillator_directory:str, parent_directory:str=cn.OSCILLATOR_PROJECT)->'ModelSerializer':
+    def makeOscillatorSerializer(cls, oscillator_directory:str,
+          parent_directory:str=cn.OSCILLATOR_PROJECT)->'ModelSerializer':
         """
         Creates a serializer for the oscillators.
 
@@ -86,8 +70,7 @@ class ModelSerializer(object):
             ModelSerializer: _description_
         """
         model_directory = os.path.join(parent_directory, oscillator_directory)
-        serialization_file = os.path.join(model_directory, DEFAULT_SERIALIZATION_FILENAME)
-        return cls(model_directory, serialization_file)
+        return cls(model_directory, DEFAULT_SERIALIZATION_FILENAME)
 
     def serialize(self, batch_size:int=BATCHSIZE, num_batch:Optional[int]=None,
                            report_interval:Optional[int]=10)->None:
@@ -101,8 +84,8 @@ class ModelSerializer(object):
         """
         # Check if there is an existing output file
         processed_network_names:list = []
-        if os.path.exists(self.serialization_file):
-            with open(self.serialization_file, 'r') as f:
+        if os.path.exists(self.serialization_path):
+            with open(self.serialization_path, 'r') as f:
                 serialization_strs = f.readlines()
             processed_network_names = []
             for serialization_str in serialization_strs:
@@ -119,7 +102,7 @@ class ModelSerializer(object):
                 processed_network_names=processed_network_names, report_interval=report_interval)
             if len(network_collection) == 0:    
                 break
-            with open(self.serialization_file, 'a') as f:
+            with open(self.serialization_path, 'a') as f:
                 for network in network_collection.networks:
                     processed_network_names.append(network.network_name)
                     f.write(f'{network.serialize()}\n')
@@ -133,13 +116,13 @@ class ModelSerializer(object):
             mode = 'w'
         else:
             mode = 'a'
-        with open(self.serialization_file, mode) as f:
+        with open(self.serialization_path, mode) as f:
             for network in networks:
                 f.write(f'{network.serialize()}\n')
 
     def deserialize(self)->NetworkCollection:
         """Deserializes the network collection."""
-        with open(self.serialization_file, 'r') as f:
+        with open(self.serialization_path, 'r') as f:
             serialization_strs = f.readlines()
         networks = []
         for serialization_str in serialization_strs:

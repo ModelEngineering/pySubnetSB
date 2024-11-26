@@ -60,7 +60,10 @@ class CheckpointManager(object):
         if not os.path.exists(self.path):
             df = pd.DataFrame()
         else:
-            df = pd.read_csv(self.path)
+            try:
+                df = pd.read_csv(self.path)
+            except:
+                df = pd.DataFrame()
         self._print(f"Recovering a dataframe of length {len(df)} from {self.path}")
         return df
     
@@ -78,3 +81,9 @@ class CheckpointManager(object):
         df = pd.concat(dfs, ignore_index=False)
         self.checkpoint(df)
         return len(df)
+    
+    def delete(self):
+        """Remove the checkpoint file."""
+        if os.path.exists(self.path):
+            os.remove(self.path)
+            self._print(f"Deleted: {self.path}")
