@@ -126,10 +126,9 @@ class SubnetFinder(object):
                 serialization_path = os.path.join(directory, cn.SERIALIZATION_FILE)
             # Get the networks
                 serializer = ModelSerializer(directory, serialization_path)
-                if os.path.exists(serialization_path):
-                    collection = serializer.deserialize()
-                else:
-                    collection = serializer.serialize()
+                if not os.path.exists(serialization_path):
+                    serializer.serialize()
+                collection = serializer.deserialize()
             return collection.networks
         #####
         reference_networks = getNetworks(reference_directory)
