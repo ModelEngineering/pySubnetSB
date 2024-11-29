@@ -9,8 +9,9 @@ import sirn.constants as cn # type: ignore
 from sirn.subnet_finder import SubnetFinder # type: ignore
 from sirn.model_serializer import ModelSerializer # type: ignore
 from sirn.network import Network  # type: ignore
-from sirn.parallel_subnet_finder_worker import executeWorker, WorkerCheckpointManager, Workunit # type: ignore
+from sirn.parallel_subnet_finder_worker import executeWorker, Workunit # type: ignore
 from sirn.checkpoint_manager import CheckpointManager # type: ignore
+from sirn.worker_checkpoint_manager import WorkerCheckpointManager # type: ignore
 from sirn.network import Network # type: ignore
 from sirn.subnet_finder_workunit_manager import SubnetFinderWorkunitManager  # type: ignore
 
@@ -44,7 +45,8 @@ global_dct = {LAST_TIME: time.time()}
 #####
 def printPerformanceInformation(msg:str, initialize:bool=False):
     # Print performance information
-    if True and not initialize:
+    #if True and not initialize:
+    if False:
         last_time = global_dct["last_time"]
         now_time = time.time()
         duration = now_time - last_time
@@ -88,7 +90,7 @@ class ParallelSubnetFinder(object):
           is_report:bool=True,
           serialization_dir:str=cn.DATA_DIR,
           is_initialize:bool=False,
-          total_process:int=-1,
+          num_worker:int=-1,
           reference_serialization_filename:str=REFERENCE_SERIALIZATION_FILENAME,
           target_serialization_filename:str=TARGET_SERIALIZATION_FILENAME,
           checkpoint_path:str=CHECKPOINT_PATH)->pd.DataFrame:
@@ -102,13 +104,13 @@ class ParallelSubnetFinder(object):
             serialization_dir (str): Directory for serialization files for reference and target
             is_report (bool): If True, report progress
             is_initialize (bool): If True, initialize the checkpoint
-            total_process (int): Number of processes to run (<0 is all CPUs)
+            num_worker (int): Number of workers/CPUs to run (<0 is all CPUs)
             reference_serialization_filename (str): Filename for the reference serialization file
             target_serialization_filename (str): Filename for the target serialization file
             checkpoint_path (str): Path to the output serialization file that checkpoints results
 
         Returns:
-            pd.DataFrame: (See find)
+            pd.DataFrame: (See parallelFind)
         """
         #####
         def serializeNetworks(networks, filename:str)->str:
@@ -123,9 +125,8 @@ class ParallelSubnetFinder(object):
                 str: Serialization path
             """
             serialization_path = os.path.join(serialization_dir, filename)
-            if not os.path.exists(serialization_path):
-                serializer = ModelSerializer(serialization_dir, serialization_path)
-                serializer.serializeNetworks(networks)
+            serializer = ModelSerializer(serialization_dir, serialization_path)
+            serializer.serializeNetworks(networks)
             return serialization_path
         #####
         target_serialization_path = serializeNetworks(target_networks, target_serialization_filename)
@@ -135,11 +136,11 @@ class ParallelSubnetFinder(object):
         finder = cls(reference_serialization_path, target_serialization_path,
           identity=identity, checkpoint_path=checkpoint_path)
         return finder.parallelFind(is_report=is_report, is_initialize=is_initialize,
-              total_process=total_process)
+              num_worker=num_worker)
     
     @classmethod
-    def findFromDirectories(cls, reference_directory, target_directory, identity:str=cn.ID_WEAK,
-          checkpoint_path:str=CHECKPOINT_PATH, total_process:int=-1, is_initialize:bool=False,
+    def directoryFind(cls, reference_directory, target_directory, identity:str=cn.ID_WEAK,
+          checkpoint_path:str=CHECKPOINT_PATH, num_worker:int=-1, is_initialize:bool=False,
           max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT,
           is_report:bool=True)->pd.DataFrame:
         """ 
@@ -149,7 +150,7 @@ class ParallelSubnetFinder(object):
             reference_directory (str): Directory that contains the reference model files (or serialization path)
             target_directory (str): Directory that contains the target model files or a serialization file (".txt")
             identity (str): Identity type
-            total_process (int): Number of tasks processing tasks
+            num_worker (int): Number of workers
             checkpoint_path (str): Path to the output serialization file that checkpoints results
             is_initialize (bool): If True, initialize the checkpoint
             is_report (bool): If True, report progress
@@ -184,9 +185,9 @@ class ParallelSubnetFinder(object):
         finder = cls(reference_serialization_path, target_serialization_path,
           identity=identity, checkpoint_path=checkpoint_path)
         return finder.parallelFind(is_report=is_report, is_initialize=is_initialize,
-              total_process=total_process, max_num_assignment=max_num_assignment)
+              num_worker=num_worker, max_num_assignment=max_num_assignment)
     
-    def parallelFind(self, total_process:int=-1, is_report:bool=True, is_initialize:bool=True,
+    def parallelFind(self, num_worker:int=-1, is_report:bool=True, is_initialize:bool=True,
           max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT)->pd.DataFrame:
         """
         Finds reference networks that are subnets of the target networks using parallel processing.
@@ -197,22 +198,26 @@ class ParallelSubnetFinder(object):
             max_num_assignment (int): Maximum number of assignments to process
 
         Returns:
-            pd.DataFrame: (See find)
+            pd.DataFrame: (See cn.FINDER_DATAFRAME_COLUMNS)
         """
         #####
         def _print(msg:str):
             if is_report:
                 print(msg)
         #####        
-        def getArgs(process_idx:int, is_terminate:bool=True)->tuple:
-            return process_idx, self.workunit_csv_path, total_process, self.checkpoint_path, \
+        def getArgs(worker_idx:int, is_terminate:bool=True)->tuple:
+            return worker_idx, self.workunit_csv_path, num_worker, self.checkpoint_path, \
                           self.reference_serialization_path, self.target_serialization_path, \
                           self.identity, is_report, is_initialize, max_num_assignment, \
                           CHECKPOINT_INTERVAL, is_terminate
         #####
         printPerformanceInformation("parallelFind/time0", initialize=True)
+        # Initializations
+        if num_worker < 0:
+            num_worker = mp.cpu_count()
         # Recover checkpoint results
-        manager = CheckpointManager(self.checkpoint_path, is_initialize=is_initialize, is_report=is_report)
+        manager = CheckpointManager(self.checkpoint_path, is_initialize=is_initialize,
+              is_report=is_report)
         df = manager.recover()
         reference_dct = {n.network_name: idx for idx, n in enumerate(self.reference_networks)}
         target_dct = {n.network_name: idx for idx, n in enumerate(self.target_networks)}
@@ -226,17 +231,17 @@ class ParallelSubnetFinder(object):
         workunits = [w for w in workunits if w not in completed_workunits]
         printPerformanceInformation(f"parallelFind/time1: {len(workunits)} workunits.")
         # Create the workunits
-        workunit_manager = SubnetFinderWorkunitManager(self.workunit_csv_path, num_worker=total_process,
+        workunit_manager = SubnetFinderWorkunitManager(self.workunit_csv_path, num_worker=num_worker,
                 reference_networks=self.reference_networks, target_networks=self.target_networks)
         workunit_manager.makeWorkunitFile()
-        if total_process == 1:
+        if num_worker == 1:
             # Handle single process
             args = list(getArgs(0, is_terminate=False))
             executeWorker(*args)
         else:
             # Parallel processing
             processes = []
-            for process_idx in range(total_process):
+            for process_idx in range(num_worker):
                 proc = mp.Process(target=executeWorker, args=(getArgs(process_idx)))
                 processes.append(proc)
                 proc.start()
@@ -244,17 +249,17 @@ class ParallelSubnetFinder(object):
             for process_idx, proc in enumerate(processes):
                 proc.join()
                 printPerformanceInformation(f"parallelFind/time3a, process {process_idx}")
-        _print(f"**{total_process} processes completed.")
+        _print(f"**{num_worker} processes completed.")
         printPerformanceInformation("parallelFind/time4")
         # Merge the results
         merged_checkpoint_result = WorkerCheckpointManager.merge(
-              self.checkpoint_path, total_process, is_report=is_report)
+              self.checkpoint_path, num_worker, is_report=is_report)
         # Return the results
         printPerformanceInformation(f"parallelFind/time5")
         df = merged_checkpoint_result.merged_checkpoint_manager.recover().full_df
         if is_report:
-            msg = f"**Done. Processed {merged_checkpoint_result.num_merged_network}"
-            msg += " reference networks in {outpath}."
+            msg = f"**Done. Processed {merged_checkpoint_result.num_reference_network}"
+            msg += f" reference networks in {self.checkpoint_path}."
             print(msg)
         return df
     
@@ -266,13 +271,16 @@ class ParallelSubnetFinder(object):
           identity:str=cn.ID_STRONG,
           reference_network_names:List[str]=[],
           is_report:bool=True,
+          serialization_dir:str=cn.DATA_DIR,
+          reference_serialization_filename:str=REFERENCE_SERIALIZATION_FILENAME,
+          target_serialization_filename:str=TARGET_SERIALIZATION_FILENAME,
           checkpoint_path:Optional[str]=None,
-          total_process:int=-1,
+          num_worker:int=-1,
           is_no_boundary_network:bool=True,
           skip_networks:Optional[List[str]]=None,
           is_initialize:bool=True)->pd.DataFrame:
         """
-        Finds subnets of SBML/Antmony models in a target directory for SBML/Antimony models in a reference directory.
+        Finds subnets of BioModels models for reference models specified by a maximum size.
         The DataFrame returned includes a reference network, target network pair with null strings for found networks
         so that there is a record of all comparisons made.
 
@@ -282,8 +290,9 @@ class ParallelSubnetFinder(object):
             max_num_target_network (int): Maximum number of target networks to process. If -1, process all
             reference_network_names (List[str]): List of reference network names to process
             is_report (bool): If True, report progress
+            serialization_dir (str): Directory for serialization files
             checkpoint_path (Optional[str]): Path for the checkpoint file
-            total_process (int): Number of tasks to process the reference networks (-1 is all CPUs)
+            num_worker (int): Number of workers to process the reference networks (-1 is all CPUs)
             skip_networks (List[str]): List of reference network to skip
             is_filter_unitnetworks (bool): If True, remove networks that only have reactions with one species
             is_initialize (bool): If True, initialize the checkpoint
@@ -324,8 +333,12 @@ class ParallelSubnetFinder(object):
           target_networks,
           identity=identity,
           is_report=is_report,
+          serialization_dir=serialization_dir,
+          reference_serialization_filename=reference_serialization_filename,
+          target_serialization_filename=target_serialization_filename,
           is_initialize=is_initialize,
-          total_process=total_process, checkpoint_path=checkpoint_path)
+          num_worker=num_worker,
+          checkpoint_path=checkpoint_path)
 
 
 if __name__ == "__main__":

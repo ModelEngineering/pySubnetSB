@@ -1,7 +1,7 @@
 import sirn.constants as cn  # type: ignore
 from src.sirn.subnet_finder import SubnetFinder  # type: ignore
-from src.sirn.parallel_subnet_finder_worker import _CheckpointManager  # type: ignore
 from sirn.network import Network  # type: ignore
+from sirn.worker_checkpoint_manager import WorkerCheckpointManager # type: ignore
 
 import json
 import os
@@ -70,7 +70,7 @@ class TestSubnetFinder(unittest.TestCase):
         finder = SubnetFinder(reference_networks=reference_models, target_networks=target_models,
               identity=cn.ID_STRONG)
         df = finder.find(is_report=IS_PLOT)
-        prune_df, _ = _CheckpointManager.prune(df)
+        prune_df = WorkerCheckpointManager.prune(df).pruned_df
         self.assertEqual(len(prune_df), NUM_REFERENCE_MODEL)
     
     def testFindFromDirectories(self):
@@ -78,10 +78,10 @@ class TestSubnetFinder(unittest.TestCase):
             return
         df = SubnetFinder.findFromDirectories(MODEL_DIR, MODEL_DIR, identity=cn.ID_WEAK, is_report=IS_PLOT)
         num_unique = len(df[cn.FINDER_REFERENCE_NAME].unique())
-        prune_df, _ = _CheckpointManager.prune(df)
+        prune_df = WorkerCheckpointManager.prune(df).pruned_df
         num_match = np.sum(prune_df[cn.FINDER_REFERENCE_NAME] == prune_df[cn.FINDER_TARGET_NAME])
         self.assertTrue(num_match >= num_unique)
 
 
 if __name__ == '__main__':
-    unittest.main(failfast=True)
+    unittest.main(failfast=False)

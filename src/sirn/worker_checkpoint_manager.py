@@ -132,12 +132,16 @@ class WorkerCheckpointManager(CheckpointManager):
         else:
             merged_checkpoint_manager = merged_checkpoint_result.merged_checkpoint_manager
             worker_checkpoint_managers = merged_checkpoint_result.worker_checkpoint_managers
-        full_df = pd.concat([m.recover().full_df for m in worker_checkpoint_managers], ignore_index=True)
-        merged_checkpoint_manager.checkpoint(full_df)
-        #
-        if len(full_df) > 0:
-            num_reference_network = len(set(full_df[cn.FINDER_REFERENCE_NETWORK].values))
-        else:
+        recovers = [m.recover().full_df for m in worker_checkpoint_managers]
+        is_initialized = False
+        if len(recovers) > 0:
+            full_df = pd.concat(recovers, ignore_index=True)
+            if len(full_df) > 0:
+                merged_checkpoint_manager.checkpoint(full_df)
+                num_reference_network = len(full_df[cn.FINDER_REFERENCE_NAME].unique())
+                is_initialized = True
+        if not is_initialized:
+            full_df = pd.DataFrame()
             num_reference_network = 0
         result = cls.MergedCheckpointResult(
                 num_reference_network=num_reference_network,
@@ -158,4 +162,4 @@ class WorkerCheckpointManager(CheckpointManager):
         worker_checkpoint_managers = [cls(cls.makeWorkerCheckpointPath(base_checkpoint_path, i),
               is_report=is_report)
               for i in range(num_worker)]
-        [m.delete() for m in worker_checkpoint_managers]
+        [m.remove() for m in worker_checkpoint_managers]

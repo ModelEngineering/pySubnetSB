@@ -12,6 +12,8 @@ import sys
 import time
 from typing import List, Optional
 
+REPORT_INTERVAL = 1000
+
 
 def executeWorker(worker_idx:int, workunit_path, num_worker:int, checkpoint_path:str,
         reference_serialization_path:str, target_serialization_path:str,
@@ -23,14 +25,8 @@ def executeWorker(worker_idx:int, workunit_path, num_worker:int, checkpoint_path
     """
     Processes pairs of reference and target networks. Networks are processed
     based on the index provided in the queue. A worker creates checkpoint file that is a
-    serialization of the DataFrame structured as:
-            reference_model (str): Reference model name
-            target_model (str): Target model name
-            reference_network (str): Antimony model (be the null string)
-            induced_network (str): Antimony model (may be the null string)
-            name_dct (json serialization of dict): Dictionary of names for the assignment
-            num_assignment_pair (int): Number of assignment pairs
-            is_truncated (bool): If True, the number of assignment pairs exceeds the maximum
+    serialization of the DataFrame structured as described in SubnetFinder
+    (cn.FINDER_DATAFRAME_COLUMNS).
     The checkpoint file is used to recover the state of the worker, including its completion.
 
     Args:
@@ -53,7 +49,7 @@ def executeWorker(worker_idx:int, workunit_path, num_worker:int, checkpoint_path
     #####
     def printPerformanceInformation(msg:str):
         # Print performance information
-        if True:
+        if False:
             last_time = global_dct[LAST_TIME]
             now_time = time.time()
             duration = now_time - last_time
@@ -109,12 +105,13 @@ def executeWorker(worker_idx:int, workunit_path, num_worker:int, checkpoint_path
     printPerformanceInformation(f"**Worker {worker_idx} start.")
     workunit_idx = 0
     last_checkpoint_time = time.process_time()
-    for workunit in workunits:
+    for idx, workunit in enumerate(workunits):
+        is_report_loop = is_report_worker and workunit_idx % REPORT_INTERVAL == 0
         finder = SubnetFinder([reference_networks[workunit.reference_idx]],
               [target_networks[workunit.target_idx]],
               identity=identity,
               num_process=1)
-        incremental_df = finder.find(is_report=is_report_worker, max_num_assignment=max_num_assignment)
+        incremental_df = finder.find(is_report=is_report_loop, max_num_assignment=max_num_assignment)
         full_worker_df = pd.concat([full_worker_df, incremental_df], ignore_index=True)
         if time.process_time() - last_checkpoint_time > CHECKPOINT_TIME:
             worker_checkpoint_manager.checkpoint(full_worker_df)
@@ -124,8 +121,8 @@ def executeWorker(worker_idx:int, workunit_path, num_worker:int, checkpoint_path
             merged_checkpoint_result = WorkerCheckpointManager.merge(checkpoint_path, num_worker,
                 merged_checkpoint_result=prior_merged_checkpoint_result, is_report=is_report_worker)
             prior_merged_checkpoint_result = merged_checkpoint_result
-        if is_report_worker:
-            print(f"**Processed {merged_checkpoint_result.num_reference_network} work units.", flush=True)
+        if is_report_loop:
+            print(f"**Processed {idx} work units.", flush=True)
         workunit_idx += 1
     # Do final checkpoint for worker
     worker_checkpoint_manager.checkpoint(full_worker_df)

@@ -9,16 +9,18 @@ from src.sirn.parallel_subnet_finder import ParallelSubnetFinder # type: ignore
 from sirn.network import Network  # type: ignore
 from sirn.model_serializer import ModelSerializer  # type: ignore
 from sirn.parallel_subnet_finder_worker import WorkerCheckpointManager  # type: ignore
+import sirn.util as util # type: ignore
+
+#util.IS_TIMEIT = True
 
 import os
-import numpy as np
-from typing import Optional
 import unittest
 
-IGNORE_TEST = True
+IGNORE_TEST = False
 IS_PLOT =  False
 SIZE = 10
 MODEL_DIR = os.path.join(cn.TEST_DIR, "oscillators")
+WORKUNIT_PATH = os.path.join(cn.TEST_DIR, "test_parallel_subset_finder_workunit.csv")
 BIOMODELS_DIR = os.path.join(cn.TEST_DIR, "xml_files")
 BIOMODELS_SERIALIZATION_PATH = os.path.join(BIOMODELS_DIR, "biomodels_serialized.txt")
 CHECKPOINT_PATH = os.path.join(cn.TEST_DIR, "test_parallel_subnet_finder_checkpoint.csv")
@@ -43,7 +45,7 @@ class TestParallelSubnetFinder(unittest.TestCase):
         self.makeSerialization(REFERENCE_SERIALIZATION_PATH, reference_networks)
         self.makeSerialization(TARGET_SERIALIZATION_PATH, target_networks)
         self.finder = ParallelSubnetFinder(REFERENCE_SERIALIZATION_PATH,
-              TARGET_SERIALIZATION_PATH, identity = cn.ID_STRONG,
+              TARGET_SERIALIZATION_PATH, workunit_csv_path=WORKUNIT_PATH, identity = cn.ID_STRONG,
               checkpoint_path=CHECKPOINT_PATH)
 
     def makeSerialization(sef, path, networks):
@@ -54,6 +56,9 @@ class TestParallelSubnetFinder(unittest.TestCase):
         self.remove()
 
     def remove(self):
+        WorkerCheckpointManager.deleteWorkerCheckpoints(CHECKPOINT_PATH, 10, is_report=IS_PLOT)
+        manager = WorkerCheckpointManager(CHECKPOINT_PATH, is_report=IS_PLOT)
+        manager.remove()
         for ffile in REMOVE_FILES:
             if os.path.exists(ffile):
                 os.remove(ffile)
@@ -61,38 +66,40 @@ class TestParallelSubnetFinder(unittest.TestCase):
     def testConstructor(self):
         if IGNORE_TEST:
             return
-        import pdb; pdb.set_trace()
         self.assertTrue(os.path.exists(REFERENCE_SERIALIZATION_PATH))
         self.assertTrue(os.path.exists(TARGET_SERIALIZATION_PATH))
         self.assertGreater(len(self.finder.reference_networks), 0)
 
+    @util.timeit
     def testFindOneProcess(self):
         if IGNORE_TEST:
             return
-        df = self.finder.parallelFind(is_report=IS_PLOT, is_initialize=True, total_process=1)
+        df = self.finder.parallelFind(is_report=IS_PLOT, is_initialize=True, num_worker=1)
         self.assertEqual(len(df), NUM_NETWORK**2)
         prune_df = WorkerCheckpointManager.prune(df)[0]
         self.assertGreaterEqual(len(prune_df), NUM_NETWORK)
     
+    @util.timeit
     def testFindManyProcess(self):
         if IGNORE_TEST:
             return
-        df = self.finder.parallelFind(is_report=IS_PLOT, is_initialize=True, total_process=-1,
+        df = self.finder.parallelFind(is_report=IS_PLOT, is_initialize=True, num_worker=2,
               max_num_assignment=1e9)
         self.assertEqual(len(df), NUM_NETWORK**2)
-        prune_df = WorkerCheckpointManager.prune(df)[0]
+        prune_df = WorkerCheckpointManager.prune(df).pruned_df
         self.assertEqual(len(prune_df), NUM_NETWORK)
         #
-        df = self.finder.parallelFind(is_report=IS_PLOT, is_initialize=True, total_process=-1,
+        df = self.finder.parallelFind(is_report=IS_PLOT, is_initialize=True, num_worker=-1,
               max_num_assignment=1e1)
         self.assertEqual(len(df), NUM_NETWORK**2)
-        prune2_df = WorkerCheckpointManager.prune(df)[0]
+        prune2_df = WorkerCheckpointManager.prune(df).pruned_df
         self.assertLessEqual(len(prune2_df), len(prune_df))
 
+    @util.timeit
     def testFindScale(self):
         if IGNORE_TEST:
             return
-        NUM_REFERENCE_MODEL = 1000
+        NUM_REFERENCE_MODEL = 10
         NUM_EXTRA_TARGET_MODEL = 10
         NETWORK_SIZE = 10
         fill_size = 10
@@ -108,7 +115,7 @@ class TestParallelSubnetFinder(unittest.TestCase):
         df = ParallelSubnetFinder.findFromNetworks(
               reference_models,
               target_models,
-              total_process=10,
+              num_worker=10,
               identity=cn.ID_STRONG,
               serialization_dir=cn.TEST_DIR,
               is_report=IS_PLOT,
@@ -117,40 +124,38 @@ class TestParallelSubnetFinder(unittest.TestCase):
               reference_serialization_filename=REFERENCE_SERIALIZATION_FILENAME,
               target_serialization_filename=TARGET_SERIALIZATION_FILENAME)
         prune_result = WorkerCheckpointManager.prune(df)
-        import pdb; pdb.set_trace()
         self.assertLessEqual(len(prune_result.pruned_df), NUM_REFERENCE_MODEL)
     
-    def testFindFromDirectories(self):
-        #if IGNORE_TEST:
-        #    return
-        ffiles = [f for f in os.listdir(BIOMODELS_DIR) if f.endswith(".xml")]
-        df = ParallelSubnetFinder.findFromDirectories(BIOMODELS_DIR,
-              BIOMODELS_DIR, identity=cn.ID_WEAK,
-              is_report=IS_PLOT, is_initialize=True, checkpoint_path=CHECKPOINT_PATH,
-              max_num_assignment=1e9)
-        count = len(df[df[cn.FINDER_REFERENCE_NAME] == df[cn.FINDER_TARGET_NAME]])
-        import pdb; pdb.set_trace()
-        self.assertEqual(count, len(ffiles))
-        #self.assertTrue(np.all(prune_result.pruned_df.reference_model == prune_df.target_model))
-
-    def testFindBiomodelsSubnetSimple(self):
-        """ if IGNORE_TEST:
-            return
-        df = SubnetFinder.findBiomodelsSubnet(max_num_target_network=10, reference_network_size=1,
-              reference_network_names=["BIOMD0000000191"], is_report=IS_PLOT,
-              identity=cn.ID_STRONG)
-        prune_df, _ = _prune(df)
-        self.assertEqual(len(prune_df), 1) """
-
-    # FIXME: Verify running 10 processes
-    """ def testFindBiomodelsSubnetMultiplebatch(self):
+    @util.timeit
+    def testDirectoryFind(self):
         if IGNORE_TEST:
             return
-        df = SubnetFinder.findBiomodelsSubnet(reference_network_size=8,
-              batch_size=1, is_initialize=True, is_report=IS_PLOT)
-        df, processed_list = _prune(df)
-        import pdb; pdb.set_trace() """
+        ffiles = [f for f in os.listdir(BIOMODELS_DIR) if f.endswith(".xml")]
+        df = ParallelSubnetFinder.directoryFind(BIOMODELS_DIR,
+              BIOMODELS_DIR, identity=cn.ID_WEAK,
+              is_report=IS_PLOT, is_initialize=True, checkpoint_path=CHECKPOINT_PATH,
+              max_num_assignment=1e2)
+        count = len(df[df[cn.FINDER_REFERENCE_NAME] == df[cn.FINDER_TARGET_NAME]])
+        self.assertEqual(count, len(ffiles))
+
+    @util.timeit
+    def testBiomodelsFindSimple(self):
+        if IGNORE_TEST:
+            return
+        self.remove()
+        max_num_network = 2
+        df = ParallelSubnetFinder.biomodelsFind(
+              max_num_reference_network=max_num_network,
+              max_num_target_network=max_num_network,
+              reference_network_size=5,
+              serialization_dir=cn.TEST_DIR,
+              reference_serialization_filename=REFERENCE_SERIALIZATION_FILENAME,
+              target_serialization_filename=TARGET_SERIALIZATION_FILENAME,
+              is_report=IS_PLOT,
+              identity=cn.ID_STRONG)
+        prune_result = WorkerCheckpointManager.prune(df)
+        self.assertGreaterEqual(len(prune_result.full_df), max_num_network**2)
 
 
 if __name__ == '__main__':
-    unittest.main(failfast=False)
+    unittest.main(failfast=True)

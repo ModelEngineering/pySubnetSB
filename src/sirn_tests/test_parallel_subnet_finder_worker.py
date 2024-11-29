@@ -86,8 +86,8 @@ class TestParallelSubnetFinderWorker(unittest.TestCase):
         self.manager.makeWorkunitFile()
 
     def testExecuteTask(self):
-        if IGNORE_TEST:
-            return
+        #if IGNORE_TEST:
+        #    return
         #####
         def test(task_idx:int=0, is_initialize:bool=True, total_worker:int=2)->Tuple[pd.DataFrame, pd.DataFrame]:
             # Creates reference and target networks to assess processing by tasks.

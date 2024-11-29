@@ -39,16 +39,18 @@ class SubnetFinder(object):
             max_num_assignment (int): Maximum number of assignment pairs
 
         Returns
-            pd.DataFrame: Table of matching networks
-                reference_model (str): Reference model name
-                target_model (str): Target model name
+            pd.DataFrame: Table of matching networks (cn.FINDER_DATAFRAME_COLUMNS)
+                reference_name (str): Reference model name
+                target_name (str): Target model name
                 reference_network (str): string representation of the reference network
                 induced_network (str): string representation of the induced network in the target
                 name_dct (dict): Dictionary of mapping of target names to reference names for species and reactions
                                  as a JSON string.
+                num_assignment_pair (int): Number of assignment pairs returned
+                                            for matching target to subnet
                 is_trucated (bool): True if the search is truncated
         """
-        dct:dict = {k: [] for k in cn.FINDER_COLUMNS}
+        dct:dict = {k: [] for k in cn.FINDER_DATAFRAME_COLUMNS}
         for reference_network in self.reference_networks:
             if is_report:
                 print(f"Processing reference model: {reference_network.network_name}")

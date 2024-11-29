@@ -82,7 +82,7 @@ class CheckpointManager(object):
         self.checkpoint(df)
         return len(df)
     
-    def delete(self):
+    def remove(self):
         """Remove the checkpoint file."""
         if os.path.exists(self.path):
             os.remove(self.path)
