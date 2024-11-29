@@ -38,13 +38,13 @@ class TestSubnetFinder(unittest.TestCase):
     def setUp(self):
         self.reference = Network.makeRandomNetworkByReactionType(SIZE, is_prune_species=True)
         self.target = self.reference.fill(num_fill_reaction=SIZE, num_fill_species=SIZE)
-        self.finder = SubnetFinder(reference_networks=[self.reference], target_networks=[self.target],
+        self.finder = SubnetFinder.makeFromCombinations(reference_networks=[self.reference], target_networks=[self.target],
               identity=cn.ID_WEAK)
         
     def testConstructor(self):
         if IGNORE_TEST:
             return
-        self.assertGreater(len(self.finder.reference_networks), 0)
+        self.assertGreater(len(self.finder.network_pairs), 0)
 
     def testFindSimple(self):
         if IGNORE_TEST:
@@ -67,7 +67,7 @@ class TestSubnetFinder(unittest.TestCase):
         target_models += [Network.makeRandomNetworkByReactionType(NETWORK_SIZE, is_prune_species=True)
               for _ in range(NUM_EXTRA_TARGET_MODEL)]
         # Do the search
-        finder = SubnetFinder(reference_networks=reference_models, target_networks=target_models,
+        finder = SubnetFinder.makeFromCombinations(reference_networks=reference_models, target_networks=target_models,
               identity=cn.ID_STRONG)
         df = finder.find(is_report=IS_PLOT)
         prune_df = WorkerCheckpointManager.prune(df).pruned_df
@@ -84,4 +84,4 @@ class TestSubnetFinder(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main(failfast=False)
+    unittest.main(failfast=True)

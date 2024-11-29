@@ -107,7 +107,7 @@ def executeWorker(worker_idx:int, workunit_path, num_worker:int, checkpoint_path
     last_checkpoint_time = time.process_time()
     for idx, workunit in enumerate(workunits):
         is_report_loop = is_report_worker and workunit_idx % REPORT_INTERVAL == 0
-        finder = SubnetFinder([reference_networks[workunit.reference_idx]],
+        finder = SubnetFinder.makeFromCombinations([reference_networks[workunit.reference_idx]],
               [target_networks[workunit.target_idx]],
               identity=identity,
               num_process=1)

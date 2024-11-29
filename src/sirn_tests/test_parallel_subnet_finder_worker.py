@@ -3,7 +3,6 @@ import sirn.parallel_subnet_finder_worker as psfw  # type: ignore
 from sirn.network import Network  # type: ignore
 from sirn.mock_queue import MockQueue  # type: ignore
 from sirn.model_serializer import ModelSerializer  # type: ignore
-from sirn.subnet_finder import SubnetFinder  # type: ignore
 from sirn.parallel_subnet_finder_worker import SubnetFinderWorkunitManager  # type: ignore
 from sirn.worker_checkpoint_manager import WorkerCheckpointManager  # type: ignore
 

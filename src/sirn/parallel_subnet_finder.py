@@ -6,7 +6,6 @@ Parallelism is achived by running workers in parallel.
 
 
 import sirn.constants as cn # type: ignore
-from sirn.subnet_finder import SubnetFinder # type: ignore
 from sirn.model_serializer import ModelSerializer # type: ignore
 from sirn.network import Network  # type: ignore
 from sirn.parallel_subnet_finder_worker import executeWorker, Workunit # type: ignore
@@ -91,6 +90,7 @@ class ParallelSubnetFinder(object):
           serialization_dir:str=cn.DATA_DIR,
           is_initialize:bool=False,
           num_worker:int=-1,
+          max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT,
           reference_serialization_filename:str=REFERENCE_SERIALIZATION_FILENAME,
           target_serialization_filename:str=TARGET_SERIALIZATION_FILENAME,
           checkpoint_path:str=CHECKPOINT_PATH)->pd.DataFrame:
@@ -105,6 +105,7 @@ class ParallelSubnetFinder(object):
             is_report (bool): If True, report progress
             is_initialize (bool): If True, initialize the checkpoint
             num_worker (int): Number of workers/CPUs to run (<0 is all CPUs)
+            max_num_assignment (int): Maximum number of assignment pairs
             reference_serialization_filename (str): Filename for the reference serialization file
             target_serialization_filename (str): Filename for the target serialization file
             checkpoint_path (str): Path to the output serialization file that checkpoints results
@@ -136,7 +137,7 @@ class ParallelSubnetFinder(object):
         finder = cls(reference_serialization_path, target_serialization_path,
           identity=identity, checkpoint_path=checkpoint_path)
         return finder.parallelFind(is_report=is_report, is_initialize=is_initialize,
-              num_worker=num_worker)
+              max_num_assignment=max_num_assignment, num_worker=num_worker)
     
     @classmethod
     def directoryFind(cls, reference_directory, target_directory, identity:str=cn.ID_WEAK,
@@ -269,6 +270,7 @@ class ParallelSubnetFinder(object):
           max_num_reference_network:int=-1,
           max_num_target_network:int=-1,
           identity:str=cn.ID_STRONG,
+          max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT,
           reference_network_names:List[str]=[],
           is_report:bool=True,
           serialization_dir:str=cn.DATA_DIR,
@@ -338,10 +340,12 @@ class ParallelSubnetFinder(object):
           target_serialization_filename=target_serialization_filename,
           is_initialize=is_initialize,
           num_worker=num_worker,
+          max_num_assignment=max_num_assignment,
           checkpoint_path=checkpoint_path)
 
 
 if __name__ == "__main__":
-    df = SubnetFinder.findBiomodelsSubnet(reference_network_size=10, is_report=True)
+    df = ParallelSubnetFinder.biomodelsFind(reference_network_size=10, is_report=True,
+          skip_networks=[], num_worker=-1, is_initialize=False)
     df.to_csv(os.path.join(cn.DATA_DIR, "biomodels_subnet.csv"))
     print("Done")
