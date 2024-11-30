@@ -18,7 +18,7 @@ ATTRS = ["reactant_nmat", "product_nmat", "reaction_names", "species_names", "ne
 MAX_PREFIX_LEN = 3   # Maximum length of a prefix in the assignment to do a pairwise analysis
 
 
-class StructurallyIdenticalResult(object):
+class StructuralAnalysisResult(object):
     # Auxiliary object returned by isStructurallyIdentical
 
     def __init__(self,
@@ -121,7 +121,7 @@ class Network(NetworkBase):
     def isStructurallyIdentical(self, target:'Network', is_subset:bool=False, num_process:int=-1,
             max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT,
             max_batch_size:int=cn.MAX_BATCH_SIZE, identity:str=cn.ID_WEAK,
-            is_report:bool=True, is_return_if_truncated:bool=True)->StructurallyIdenticalResult:
+            is_report:bool=True, is_return_if_truncated:bool=True)->StructuralAnalysisResult:
         """
         Determines if the network is structurally identical to another network or subnet of another network.
 
@@ -139,7 +139,7 @@ class Network(NetworkBase):
             StructurallyIdenticalResult
         """
         if self.num_reaction == 0 or target.num_reaction == 0:
-              return StructurallyIdenticalResult(assignment_pairs=[], 
+              return StructuralAnalysisResult(assignment_pairs=[], 
                   num_reaction_candidate=0,
                   num_species_candidate=0,
                   is_truncated=False)
@@ -180,7 +180,7 @@ class Network(NetworkBase):
         if num_species_assignment*num_reaction_assignment > max_num_assignment:
             is_truncated = True
             if is_return_if_truncated:
-                return StructurallyIdenticalResult(assignment_pairs=[], 
+                return StructuralAnalysisResult(assignment_pairs=[], 
                   num_reaction_candidate=num_reaction_assignment,
                   num_species_candidate=num_species_assignment,
                   is_truncated=is_truncated)
@@ -193,7 +193,7 @@ class Network(NetworkBase):
         # Handle null assignment
         is_null = is_species_null or is_reaction_null
         if len(species_assignment_arr) == 0 or len(reaction_assignment_arr) == 0 or is_null:
-            return StructurallyIdenticalResult(assignment_pairs=[], 
+            return StructuralAnalysisResult(assignment_pairs=[], 
                   num_reaction_candidate=reaction_assignment_arr.shape[0],
                   num_species_candidate=species_assignment_arr.shape[0],
                   is_truncated=is_truncated)
@@ -212,6 +212,6 @@ class Network(NetworkBase):
             max_batch_size=max_batch_size)
         assignment_pairs = evaluator.evaluateAssignmentPairs(reactant_assignment_pairs)
         # Return result
-        return StructurallyIdenticalResult(assignment_pairs=assignment_pairs,
+        return StructuralAnalysisResult(assignment_pairs=assignment_pairs,
               num_reaction_candidate=reaction_assignment_arr.shape[0], num_species_candidate=species_assignment_arr.shape[0],
               is_truncated=is_truncated)

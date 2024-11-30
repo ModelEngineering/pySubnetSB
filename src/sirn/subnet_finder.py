@@ -20,22 +20,6 @@ NetworkPair = collections.namedtuple("NetworkPair", "reference_network target_ne
 ############################### CLASSES ###############################
 class SubnetFinder(object):
 
-    # TODO: Refactor to have find operate on pairs specified in constructor.
-    # One class method does findForCombinations
-#    def __init__(self, reference_networks:List[Network], target_networks:List[Network],
-#                 identity:str=cn.ID_WEAK, num_process:int=-1)->None:
-#        """
-#        Args:
-#            reference_model_directory (str): Directory that contains the reference model files
-#            target_model_directory (str): Directory that contains the target model files
-#            identity (str): Identity type
-#            num_process (int): Number of processes to use. If -1, use all available processors.
-#        """
-#        self.reference_networks = reference_networks
-#        self.target_networks = target_networks
-#        self.identity = identity
-#        self.num_process = num_process
-
     def __init__(self, network_pairs:List[NetworkPair], identity:str=cn.ID_WEAK,
           num_process:int=-1)->None:
         """
