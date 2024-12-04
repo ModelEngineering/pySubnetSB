@@ -1,13 +1,9 @@
-FSIRN - finding structural subnets (pySubnetSB)
-0.01 Checkpoint parallel assignments
-2. Search for cyclic subnets
+2. Search for subnets
    a. Serialize BioModels
    b. Look for oscillator file
-3. Select random subnetwork from an SBML model
+2.1 Create samples for command line programs
 5.1 Evaluation of the effectiveness of constraints
 Analysis
-  1. Plot indeterminant vs. max_num_perm; do for naive algorith as well
-  2. Provide statistics on structurally identicaly by type and dataset
   3. Detailed analysis of
      a. Characterize weak structural identical
      b. Are strong structural identical multitone?
@@ -16,5 +12,3 @@ Analysis
      sirn is cluster superset of naive
   5. Statistics for clusters: cluster_size, clustereq1, clustergt1_size
   6. Examine strong clusters to see differences. Simulate.
-Subset detection
-1. Is there a fast way to determine if one array is a subset of another?
