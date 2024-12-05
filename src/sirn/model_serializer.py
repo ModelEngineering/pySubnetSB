@@ -106,7 +106,8 @@ class ModelSerializer(object):
                 for network in network_collection.networks:
                     processed_network_names.append(network.network_name)
                     f.write(f'{network.serialize()}\n')
-        print("Done!")
+        if report_interval is not None:
+            print("Done!")
     
     def serializeNetworks(self, networks:List[Network], is_initialize:bool=False)->None:
         """

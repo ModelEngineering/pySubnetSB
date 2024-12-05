@@ -19,11 +19,12 @@ DEFAULT_SPECIFICATION_TYPE = "antstr"
 
 
 #############################
-def _getNetworkCollection(directory:str)->Tuple[NetworkCollection, Optional[str]]:
+def _getNetworkCollection(directory:str, is_report:bool=True)->Tuple[NetworkCollection, Optional[str]]:
     """Returns the NetworkCollection from the directory.
 
     Args:
         directory (str): Path to a directory or a serialization file
+        is_report (bool): If True, report progress
 
     Returns:
         NetworkCollection: contains a list of networks
@@ -39,7 +40,11 @@ def _getNetworkCollection(directory:str)->Tuple[NetworkCollection, Optional[str]
         filename = fp.name
         fp.close()
         serializer = ModelSerializer(directory, filename)
-        serializer.serialize()
+        if is_report:
+            report_interval = 10
+        else:
+            report_interval = None
+        serializer.serialize(report_interval=report_interval)
     return serializer.deserialize(), filename
 
 
@@ -152,7 +157,7 @@ def clusterStructurallyIdenticalModelsInDirectory(
         is_indeterminate: Indeterminante because too many possible assignments
         assignment_collection: List of networks in the collection
     """
-    network_collection, _ = _getNetworkCollection(model_dir)
+    network_collection, _ = _getNetworkCollection(model_dir, is_report=is_report)
     builder = ClusterBuilder(network_collection,
                identity=identity,
                max_num_assignment=max_num_assignment,
@@ -197,9 +202,10 @@ def findReferencesInTargets(
         pd.DataFrame: DataFrame with the subnets
     """
     # Process the request
+    reference_tempfile, target_tempfile = None, None
     try: 
-        reference_collection, reference_tempfile = _getNetworkCollection(reference_dir)
-        target_collection, target_tempfile = _getNetworkCollection(target_dir)
+        reference_collection, reference_tempfile = _getNetworkCollection(reference_dir, is_report=is_report)
+        target_collection, target_tempfile = _getNetworkCollection(target_dir, is_report=is_report)
         finder = SubnetFinder.makeFromCombinations(
               reference_collection.networks,
               target_collection.networks,

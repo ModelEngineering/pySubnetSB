@@ -126,7 +126,7 @@ class NetworkCollection(object):
             batch_size (int): Number of files to process. Default is 5. -1 is all.
             max_file (int): Maximum number of files to process
             processed_network_names (List[str]): Names of models already processed
-            report_interval (int): Report interval
+            report_interval (int): Report interval. Default is None (no report)
 
         Returns:
             NetworkCollection
@@ -166,8 +166,9 @@ class NetworkCollection(object):
                 network = Network.makeFromAntimonyFile(path, network_name=network_name)
             else:
                 continue
-            if network is None:
+            if (network is None) and (report_interval is not None):
                 print(f"Could not process {ffile}")
+            if (network is None):
                 continue
             networks.append(network)
             num_processed += 1
