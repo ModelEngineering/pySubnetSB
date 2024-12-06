@@ -271,5 +271,12 @@ class TestNetwork(unittest.TestCase):
         network = NetworkBase.makeFromAntimonyStr(boundary_network)
         self.assertFalse(network.isBoundaryNetwork())
 
+    def testMakeFromAntimonyStrRoadrunner(self):
+        if IGNORE_TEST:
+            return
+        roadrunner = te.loada(BIG_NETWORK)
+        network = NetworkBase.makeFromAntimonyStr(None, roadrunner=roadrunner)
+        self.assertGreater(network.num_species, 0)
+
 if __name__ == '__main__':
     unittest.main(failfast=False)

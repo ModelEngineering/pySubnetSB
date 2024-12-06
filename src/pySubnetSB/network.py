@@ -155,6 +155,7 @@ class Network(NetworkBase):
             reference_constraint = cls(reference_reactant_nmat, reference_product_nmat, is_subset=is_subset)
             target_constraint = cls(target_reactant_nmat, target_product_nmat, is_subset=is_subset)
             compatibility_collection = reference_constraint.makeCompatibilityCollection(target_constraint)
+            import pdb; pdb.set_trace()
             compatibility_collection, prune_is_truncated = compatibility_collection.prune(log10_max_num_assignment)
             is_null = compatibility_collection.log10_num_assignment == -np.inf
             if is_null:

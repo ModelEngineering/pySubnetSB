@@ -14,7 +14,7 @@ import tempfile # type: ignore
 from typing import Union, Tuple, Optional
 
 # Ways in which a model can be specified
-SPECIFICATION_TYPES = ["antstr", "antfile", "sbmlstr", "sbmlfile", "sbmlurl"]
+SPECIFICATION_TYPES = ["antstr", "antfile", "sbmlstr", "sbmlfile", "sbmlurl", "roadrunner"]
 DEFAULT_SPECIFICATION_TYPE = "antstr"
 
 
@@ -61,6 +61,7 @@ class ModelSpecification(object):
                 "sbmlstr": SBML model string
                 "sbmlfile": SBML model file
                 "sbmlurl": SBML model URL
+                "roadrunner": RoadRunner model
         """
         self.model = model
         self.specification_type = specification_type
@@ -78,7 +79,8 @@ class ModelSpecification(object):
             specification = model
         else:
             specification = cls(model, specification_type=specification_type)
-        return specification.getNetwork()
+        network = specification.getNetwork()
+        return network
     
     def getNetwork(self)->Network:
         """Returns the Antimony model."""
@@ -87,6 +89,9 @@ class ModelSpecification(object):
         elif self.specification_type == "antfile":
             with open(self.model, "r") as fd:
                 antimony_str = fd.read()
+        elif self.specification_type == "roadrunner":
+            network = Network.makeFromAntimonyStr(None, roadrunner=self.model)
+            return network
         else:
             rr = te.loadSBMLModel(self.model)
             antimony_str = rr.getAntimony()
