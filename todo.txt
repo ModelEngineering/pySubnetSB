@@ -1,7 +1,7 @@
-2. Search for subnets
-   a. Serialize BioModels
-   b. Look for oscillator file
-2.1 Create samples for command line programs
+1. Rename to pySubnetSB and change imports.
+1.1 Better repo
+2.1 Create jupyter example
+3. Create samples for command line
 5.1 Evaluation of the effectiveness of constraints
 Analysis
   3. Detailed analysis of

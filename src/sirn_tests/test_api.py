@@ -83,6 +83,7 @@ class TestFunctions(unittest.TestCase):
         if excludes is None:
             excludes = []
         dct = {}
+        dcts = []
         for is_subset in [True, False]:
             if not 'is_subset' in excludes:
                 dct['is_subset'] = is_subset
@@ -95,7 +96,19 @@ class TestFunctions(unittest.TestCase):
                     for identity in [cn.ID_STRONG, cn.ID_WEAK]:
                         if not 'identity' in excludes:
                             dct['identity'] = identity
-                        yield dct
+                        is_duplicate = False
+                        for dct1 in dcts:
+                            if dct1 == dct:
+                                is_duplicate = True
+                                break
+                        if not is_duplicate:
+                            yield dct
+
+    def testOptionIter(self):
+        if IGNORE_TEST:
+            return
+        for dct in self.optionIter(["is_subset", "num_process"]):
+            self.assertFalse("num_process" in dct)
 
     def testFindReferenceInTarget(self):
         if IGNORE_TEST:

@@ -10,6 +10,7 @@ __pycache__/
 *.swp
 *.zip
 src_archives
+data/glasgow/
 
 
 irn/
