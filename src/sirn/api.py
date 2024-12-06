@@ -139,7 +139,7 @@ def findReferenceInTarget(
 #############################
 def clusterStructurallyIdenticalModelsInDirectory(
       model_dir:str,
-      identity:str,
+      identity:str=cn.ID_STRONG,
       max_num_assignment:int=int(1e12),
       is_report:bool=True)->pd.DataFrame:
     """
@@ -179,7 +179,7 @@ def clusterStructurallyIdenticalModelsInDirectory(
 def findReferencesInTargets(
       reference_dir:str,
       target_dir:str,
-      identity:str,
+      identity:str=cn.ID_STRONG,
       num_process:int=-1,
       max_num_assignment:int=int(1e12),
       is_report:bool=True)->pd.DataFrame:

@@ -20,6 +20,7 @@ B = 0
 MODEL_RR = te.loada(MODEL)
 SBML_PATH = os.path.join(cn.TEST_DIR, "test_api.sbml")
 ANT_PATH = os.path.join(cn.TEST_DIR, "test_api.ant")
+SERIALIZATION_PATH = os.path.join(cn.TEST_DIR, "test_api.txt")
 REMOVE_FILES = [SBML_PATH, ANT_PATH]
 
 #############################
@@ -77,32 +78,65 @@ class TestModelSpecification(unittest.TestCase):
 
 class TestFunctions(unittest.TestCase):
 
+    @staticmethod
+    def optionIter(excludes=None):
+        if excludes is None:
+            excludes = []
+        dct = {}
+        for is_subset in [True, False]:
+            if not 'is_subset' in excludes:
+                dct['is_subset'] = is_subset
+            for num_process in [1, -1]:
+                if not 'num_process' in excludes:
+                    dct['num_process'] = num_process
+                for max_num_assignment in [1e10, 1]:
+                    if not 'max_num_assignment' in excludes:
+                        dct['max_num_assignment'] = max_num_assignment
+                    for identity in [cn.ID_STRONG, cn.ID_WEAK]:
+                        if not 'identity' in excludes:
+                            dct['identity'] = identity
+                        yield dct
+
     def testFindReferenceInTarget(self):
         if IGNORE_TEST:
             return
-        result = api.findReferenceInTarget(MODEL, MODEL, is_report=IS_PLOT)
-        self.assertTrue(len(result.assignment_pairs) == 1)
-        self.assertTrue(np.all(result.assignment_pairs[0].species_assignment == [0, 1]))
-        self.assertTrue(np.all(result.assignment_pairs[0].reaction_assignment == [0]))
-        self.assertTrue(result.is_truncated == False)
+        iter = self.optionIter()
+        for dct in iter:
+            result = api.findReferenceInTarget(MODEL, MODEL, **dct)
+            self.assertTrue(len(result.assignment_pairs) == 1)
+            self.assertTrue(np.all(result.assignment_pairs[0].species_assignment == [0, 1]))
+            self.assertTrue(np.all(result.assignment_pairs[0].reaction_assignment == [0]))
+            self.assertTrue(result.is_truncated == False)
 
     def testClusterStructurallyIdenticalModelsInDirectory(self):
         if IGNORE_TEST:
             return
         DIR = os.path.join(cn.TEST_DIR, "oscillators")
         ffiles = [f for f in os.listdir(DIR) if "best" in f]
-        df = api.clusterStructurallyIdenticalModelsInDirectory(DIR, cn.ID_STRONG, is_report=IS_PLOT)
-        self.assertEqual(len(df), len(ffiles))
+        iter = self.optionIter(["is_subset", "num_process"])
+        for dct in iter:
+            df = api.clusterStructurallyIdenticalModelsInDirectory(DIR, **dct)
+            self.assertEqual(len(df), len(ffiles))
 
     def testFindReferencesInTargets(self):
         if IGNORE_TEST:
             return
         DIR = os.path.join(cn.TEST_DIR, "oscillators")
         count = len([f for f in os.listdir(DIR) if "best" in f])
-        df = api.findReferencesInTargets(DIR, DIR, cn.ID_STRONG, is_report=IS_PLOT)
-        self.assertEqual(len(df), count**2)
-        num_match = np.sum([len(v) > 0 for v in df["induced_network"]])
-        self.assertGreaterEqual(num_match, count)  # May be networks that are a subnet of another
+        iter = self.optionIter(["is_subset"])
+        for dct in iter:
+            df = api.findReferencesInTargets(DIR, DIR, **dct)
+            self.assertEqual(len(df), count**2)
+            num_match = np.sum([len(v) > 0 for v in df[cn.FINDER_INDUCED_NETWORK]]) \
+                + np.sum([v for v in df[cn.FINDER_IS_TRUNCATED]])
+            self.assertGreaterEqual(num_match, count)  # May be networks that are a subnet of another
+
+    def testMakeSerializationFile(self):
+        if IGNORE_TEST:
+            return
+        DIR = os.path.join(cn.TEST_DIR, "oscillators")
+        api.makeSerializationFile(DIR, SERIALIZATION_PATH)
+        self.assertTrue(os.path.isfile(SERIALIZATION_PATH))
 
 
 if __name__ == '__main__':
