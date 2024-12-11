@@ -17,4 +17,4 @@ jobs:
         pip install -r requirements.txt
     - name: Run tests
       run: |
-        cd src; nose2 sirn_tests
+        cd src; nose2 pySubnetSB_tests
