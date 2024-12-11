@@ -344,3 +344,6 @@ class NamedMatrix(Matrix):
             NamedMatrix: A random NamedMatrix.
         """
         return NamedMatrix(np.random.rand(num_row, num_column))
+
+
+NULL_NMAT = NamedMatrix(np.array([[]]))

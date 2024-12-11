@@ -29,6 +29,9 @@ class Matrix(object):
             self.num_mat, self.num_row, self.num_column = 0, 0, 0
         self._hash:Optional[int] = None  # Deferred execution to improve efficiency
 
+    def __len__(self)->int:
+        return self.num_row
+
     @property
     def hash(self)->int:
         # This is an order dependent hash
@@ -80,7 +83,7 @@ class Matrix(object):
         return False
     
     @classmethod
-    def makeTrinaryMatrix(cls, num_row: int=3, num_column: int=2, prob0=1.0/3)->np.array:
+    def makeTrinaryMatrix(cls, num_row: int=3, num_column: int=2, prob0=1.0/3)->np.ndarray:
         """
         Make a trinary matrix with 0, 1, and -1. No row or column can have all zeros.
         Args:

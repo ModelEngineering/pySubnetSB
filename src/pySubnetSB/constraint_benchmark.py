@@ -101,7 +101,8 @@ class ConstraintBenchmark(object):
                 target_constraint = constraint_cls(
                     new_target_network.reactant_nmat, new_target_network.product_nmat,
                     is_subset=is_subset)
-            compatibility_collection = reference_constraint.makeCompatibilityCollection(target_constraint)
+            compatibility_collection = reference_constraint.makeCompatibilityCollection(
+                  target_constraint).compatibility_collection
             times.append(time.time() - start)
             num_permutations.append(compatibility_collection.log10_num_assignment)
         self.benchmark_result_df = pd.DataFrame({C_TIME: times, C_LOG10_NUM_PERMUTATION: num_permutations})

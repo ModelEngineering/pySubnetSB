@@ -79,6 +79,10 @@ class DummyConstraint(Constraint):
         else:
             raise RuntimeError("Failed to make a random network")
         return DummyConstraint(network.reactant_nmat, network.product_nmat)
+    
+    @property
+    def row_names(self)->np.ndarray:
+        return np.array(SPECIES_NAMES)
 
 
 #############################
@@ -252,17 +256,17 @@ class TestConstraint(unittest.TestCase):
     def testCalculateCompatibility(self):
         if IGNORE_TEST:
             return
-        result = self.constraint.calculateBooleanCompatibilityVector(self.constraint.equality_nmat,
+        result, _ = self.constraint.calculateBooleanCompatibilityVector(self.constraint.equality_nmat,
               self.constraint.equality_nmat, is_equality=True)
         num_true = np.sum(result)
         self.assertEqual(num_true, self.constraint.equality_nmat.num_row)
         #
-        result = self.constraint.calculateBooleanCompatibilityVector(self.constraint.numerical_inequality_nmat,
+        result, _ = self.constraint.calculateBooleanCompatibilityVector(self.constraint.numerical_inequality_nmat,
               self.constraint.equality_nmat, is_equality=True)
         num_true = np.sum(result)
         self.assertEqual(num_true, 0)
         #
-        result = self.constraint.calculateBooleanCompatibilityVector(self.constraint.equality_nmat,
+        result, _ = self.constraint.calculateBooleanCompatibilityVector(self.constraint.equality_nmat,
               self.constraint.numerical_inequality_nmat, is_equality=False)
         num_true = np.sum(result)
         self.assertEqual(num_true, 5)
@@ -270,8 +274,14 @@ class TestConstraint(unittest.TestCase):
     def testMakeCompatibilityCollection(self):
         if IGNORE_TEST:
             return
-        compatibility_collection = self.constraint.makeCompatibilityCollection(self.constraint)
+        compatibility_collection = self.constraint.makeCompatibilityCollection(self.constraint).compatibility_collection
         self.assertTrue(np.isclose(compatibility_collection.log10_num_assignment, 0))
+    
+    def testMakeCompatibilityCollectionDiagnostic(self):
+        if IGNORE_TEST:
+            return
+        result = self.constraint.makeCompatibilityCollection(self.constraint, is_diagnostic=True)
+        self.assertEqual(len(result.diagnostic_nmat), NUM_SPECIES**2)
     
     def testMakeCompatibilityCollectionScale(self):
         if IGNORE_TEST:
@@ -279,7 +289,7 @@ class TestConstraint(unittest.TestCase):
         scale = 10  # scaling factor
         constraint = ScalableDummyConstraint(50)
         new_constraint = constraint.scale(scale)
-        compatibility_collection = constraint.makeCompatibilityCollection(new_constraint)
+        compatibility_collection = constraint.makeCompatibilityCollection(new_constraint).compatibility_collection
         trues = [len(lst) >= scale
                    for lst in compatibility_collection.compatibilities]
         self.assertTrue(all(trues))
@@ -300,9 +310,15 @@ class TestConstraint(unittest.TestCase):
             large_network = network.fill(num_fill_reaction=fill_size*size, num_fill_species=fill_size*size)
             large_constraint = SpeciesConstraint(large_network.reactant_nmat, large_network.product_nmat)
             constraint = SpeciesConstraint(network.reactant_nmat, network.product_nmat)
-            compatibility_collection = constraint.makeCompatibilityCollection(large_constraint)
+            compatibility_collection = constraint.makeCompatibilityCollection(large_constraint).compatibility_collection
             arr = compatibility_collection.expand()
             #print(np.log10(arr.shape[0]), compatibility_collection.log10_num_permutation)
+
+    def testLabelSelfOther(self):
+        if IGNORE_TEST:
+            return
+        label_nmat = self.constraint._labelSelfOther(self.constraint)
+        self.assertEqual(len(label_nmat), NUM_SPECIES**2)
 
 
 

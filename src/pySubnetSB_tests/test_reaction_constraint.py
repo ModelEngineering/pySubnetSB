@@ -103,7 +103,7 @@ class TestReactionConstraint(unittest.TestCase):
             big_reaction_constraint = ReactionConstraint(big_network.reactant_nmat, big_network.product_nmat,
                                                        is_subset=True)
             compatibility_collection = reaction_constraint.makeCompatibilityCollection(
-                  big_reaction_constraint)
+                  big_reaction_constraint).compatibility_collection
             name_arr = np.array(big_reaction_constraint.reactant_nmat.column_names)
             for i, arr in enumerate(compatibility_collection.compatibilities):
                 reference_name = "J" + str(i)
@@ -135,7 +135,7 @@ class TestReactionConstraint(unittest.TestCase):
         big_reaction_constraint = ReactionConstraint(big_network.reactant_nmat, big_network.product_nmat,
                                                        is_subset=True)
         compatibility_collection = reaction_constraint.makeCompatibilityCollection(
-                  big_reaction_constraint)
+                  big_reaction_constraint).compatibility_collection
         name_arr = np.array(big_reaction_constraint.reactant_nmat.column_names)
         for i, arr in enumerate(compatibility_collection.compatibilities):
                 reference_name = "J" + str(i)
@@ -165,7 +165,8 @@ class TestReactionConstraint(unittest.TestCase):
         target_network = Network.makeFromAntimonyStr(target_model)
         target_constraint = ReactionConstraint(target_network.reactant_nmat, target_network.product_nmat,
                 is_subset=True)
-        compatibility_collection = reference_constraint.makeCompatibilityCollection(target_constraint)
+        compatibility_collection = reference_constraint.makeCompatibilityCollection(
+              target_constraint).compatibility_collection
         trues = [len(v) > 0 for v in compatibility_collection.compatibilities]
         self.assertTrue(all(trues))
 
