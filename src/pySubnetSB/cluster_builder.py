@@ -86,7 +86,6 @@ class ClusterBuilder(object):
         result = self.network_collection.network_dct[processed_network.network_name]
         return result
 
-    # FIXME: perm->assignments; report # assignment_pairs, not #permutations
     def cluster(self)->None:
         """
         Clusters the network in the collection by finding those that have structural identity. ProcessedNetwork
@@ -106,8 +105,7 @@ class ClusterBuilder(object):
         """
         # Initialize result
         self.processed_network_collections = []
-        if self.is_report:
-            print(f"\n**Number of hash values: {self.num_hash}", end="")
+        #print(f"\n**Number of hash values: {self.num_hash}", end="")
         # Construct collections of structurally identical Networks
         for idx, (hash_val, hash_networks) in enumerate(self.hash_dct.items()):
             if self.is_report:

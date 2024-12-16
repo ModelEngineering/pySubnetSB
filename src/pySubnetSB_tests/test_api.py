@@ -22,6 +22,7 @@ SBML_PATH = os.path.join(cn.TEST_DIR, "test_api.sbml")
 ANT_PATH = os.path.join(cn.TEST_DIR, "test_api.ant")
 SERIALIZATION_PATH = os.path.join(cn.TEST_DIR, "test_api.txt")
 REMOVE_FILES = [SBML_PATH, ANT_PATH, SERIALIZATION_PATH]
+MODEL_DIR = os.path.join(cn.TEST_DIR, "oscillators")
 
 #############################
 # Tests
@@ -124,21 +125,19 @@ class TestFunctions(unittest.TestCase):
     def testClusterStructurallyIdenticalModelsInDirectory(self):
         if IGNORE_TEST:
             return
-        DIR = os.path.join(cn.TEST_DIR, "oscillators")
-        ffiles = [f for f in os.listdir(DIR) if "best" in f]
+        ffiles = [f for f in os.listdir(MODEL_DIR) if "best" in f]
         iter = self.optionIter(["is_subset", "num_process"])
         for dct in iter:
-            df = api.clusterStructurallyIdenticalModelsInDirectory(DIR, **dct)
+            df = api.clusterStructurallyIdenticalModelsInDirectory(MODEL_DIR, **dct)
             self.assertEqual(len(df), len(ffiles))
 
     def testFindReferencesInTargets(self):
         if IGNORE_TEST:
             return
-        DIR = os.path.join(cn.TEST_DIR, "oscillators")
-        count = len([f for f in os.listdir(DIR) if "best" in f])
+        count = len([f for f in os.listdir(MODEL_DIR) if "best" in f])
         iter = self.optionIter(["is_subset"])
         for dct in iter:
-            df = api.findReferencesInTargets(DIR, DIR, **dct)
+            df = api.findReferencesInTargets(MODEL_DIR, MODEL_DIR, **dct)
             self.assertEqual(len(df), count**2)
             num_match = np.sum([len(v) > 0 for v in df[cn.FINDER_INDUCED_NETWORK]]) \
                 + np.sum([v for v in df[cn.FINDER_IS_TRUNCATED]])
@@ -147,8 +146,7 @@ class TestFunctions(unittest.TestCase):
     def testMakeSerializationFile(self):
         if IGNORE_TEST:
             return
-        DIR = os.path.join(cn.TEST_DIR, "oscillators")
-        api.makeSerializationFile(DIR, SERIALIZATION_PATH)
+        api.makeSerializationFile(MODEL_DIR, SERIALIZATION_PATH)
         self.assertTrue(os.path.isfile(SERIALIZATION_PATH))
 
 
