@@ -83,7 +83,8 @@ class CompatibilityCollection(object):
             max_num_assignment (int, optional): maximum number of assignments Defaults to cn.MAX_NUM_ASSIGNMENT.
 
         Returns:
-            Tuple[np.ndarray, bool]: _description_
+            np.ndarray: two dimensional array of assignments
+            bool: is truncated
         """
         MAX_BATCH_SIZE = 1000
         #####

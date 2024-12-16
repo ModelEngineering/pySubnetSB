@@ -6,7 +6,7 @@ import collections
 import json
 import pandas as pd  # type: ignore
 import numpy as np
-from typing import Optional, Union, List
+from typing import Optional, Union, List, Any
 
 
 SubsetResult = collections.namedtuple('SubsetResult', ['named_matrix', 'row_idxs', 'column_idxs'])
@@ -198,14 +198,57 @@ class NamedMatrix(Matrix):
                     raise ValueError(f'Could not find name {sub_name} in other names!')
             return np.array(indices)
         #
-        row_idxs = findIndices(row_names, self.row_names)  # type: ignore
-        column_idxs = findIndices(column_names, self.column_names)  # type: ignore
+        if row_names is None:
+            row_idxs = np.array(range(self.num_row))
+        else:
+            row_idxs = findIndices(row_names, self.row_names)
+        if column_names is None:
+            column_idxs = np.array(range(self.num_column))
+        else:
+            column_idxs = findIndices(column_names, self.column_names)
         new_values = self.values[row_idxs, :].copy()
         new_values = new_values[:, column_idxs]
         named_matrix = NamedMatrix(new_values, row_names=self.row_names[row_idxs],
                                    column_names=self.column_names[column_idxs])
         return SubsetResult(named_matrix=named_matrix,
                             row_idxs=row_idxs, column_idxs=column_idxs)
+    
+    def getRowIdx(self, row_name:str)->int:
+        """
+        Obtain the index of the row by name.
+
+        Args:
+            row_name (str): _description_
+
+        Returns:
+            int: _description_
+        """
+        return list(self.row_names).index(row_name)
+    
+    def getColumnIdx(self, column_name:str)->int:
+        """
+        Obtain the index of the column by name.
+
+        Args:
+            column_name (str): _description_
+
+        Returns:
+            int: _description_
+        """
+        return list(self.column_names).index(column_name)
+    
+    def getValueByNames(self, row_name:str, column_name:str)->Any:
+        """
+        Obtains the value of the NamedMatrix by row and column names.
+
+        Args:
+            row_name (str): _description_
+            column_name (str): _description_
+
+        Returns:
+            Any: _description_
+        """
+        return self.values[self.getRowIdx(row_name), self.getColumnIdx(column_name)]
         
     def getSubMatrix(self, row_idxs:np.ndarray, column_idxs:np.ndarray)->Matrix:
         """

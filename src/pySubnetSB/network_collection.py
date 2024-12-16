@@ -156,10 +156,10 @@ class NetworkCollection(object):
             if ffile.endswith(".xml"):
                 try:
                     roadrunner = te.loadSBMLModel(os.path.join(indir_path, ffile))
+                    clean_antimony_str = roadrunner.getAntimony()
                 except:
                     print(f"Could not process {ffile}. File ignored.")
                     continue
-                clean_antimony_str = roadrunner.getAntimony()
                 network = Network.makeFromAntimonyStr(clean_antimony_str, roadrunner=roadrunner, network_name=network_name)
             elif any([ffile.endswith(ext) for ext in ANTIMONY_EXTS]) or len(ffile.split('.')) == 1:
                 path = os.path.join(indir_path, ffile)

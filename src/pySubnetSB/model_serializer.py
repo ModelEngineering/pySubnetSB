@@ -105,7 +105,11 @@ class ModelSerializer(object):
             with open(self.serialization_path, 'a') as f:
                 for network in network_collection.networks:
                     processed_network_names.append(network.network_name)
-                    f.write(f'{network.serialize()}\n')
+                    try:
+                        stg = f'{network.serialize()}\n'
+                        f.write(stg)
+                    except:
+                        print(f"**Error serializing {network.network_name}")
         if report_interval is not None:
             print("Done!")
     

@@ -23,7 +23,6 @@ import pySubnetSB.constants as cn # type: ignore
 from pySubnetSB.named_matrix import NamedMatrix, NULL_NMAT # type: ignore
 from pySubnetSB.compatibility_collection import CompatibilityCollection # type: ignore
 
-import collections
 import json
 import scipy.special  # type: ignore
 import numpy as np
@@ -37,20 +36,24 @@ NULL_INT = -1
 class CompatibilityCollectionResult(object):
 
     def __init__(self, compatibility_collection:CompatibilityCollection,
-          diagnostic_nmat:NamedMatrix=NULL_NMAT,
-          self_equality_nmat:NamedMatrix=NULL_NMAT,
+          equality_compatibility_nmat=NULL_NMAT,
+          inequality_compatibility_numerical_nmat=NULL_NMAT,
+          inequality_compatibility_bitwise_nmat=NULL_NMAT,
+          reference_equality_nmat:NamedMatrix=NULL_NMAT,
           target_equality_nmat:NamedMatrix=NULL_NMAT,
-          self_numerical_inequality_nmat:NamedMatrix=NULL_NMAT,
+          reference_numerical_inequality_nmat:NamedMatrix=NULL_NMAT,
           target_numerical_inequality_nmat:NamedMatrix=NULL_NMAT,
-          self_bitwise_inequality_nmat:NamedMatrix=NULL_NMAT,
+          reference_bitwise_inequality_nmat:NamedMatrix=NULL_NMAT,
           target_bitwise_inequality_nmat:NamedMatrix=NULL_NMAT):
         self.compatibility_collection = compatibility_collection
-        self.diagnostic_nmat = diagnostic_nmat
-        self.self_equality_nmat = self_equality_nmat
+        self.equality_compatibility_nmat = equality_compatibility_nmat
+        self.inequality_compatibility_numerical_nmat = inequality_compatibility_numerical_nmat
+        self.inequality_compatibility_bitwise_nmat = inequality_compatibility_bitwise_nmat
+        self.reference_equality_nmat = reference_equality_nmat
         self.target_equality_nmat = target_equality_nmat
-        self.self_numerical_inequality_nmat = self_numerical_inequality_nmat
+        self.reference_numerical_inequality_nmat = reference_numerical_inequality_nmat
         self.target_numerical_inequality_nmat = target_numerical_inequality_nmat
-        self.self_bitwise_inequality_nmat = self_bitwise_inequality_nmat
+        self.reference_bitwise_inequality_nmat = reference_bitwise_inequality_nmat
         self.target_bitwise_inequality_nmat = target_bitwise_inequality_nmat
 
 
@@ -274,7 +277,7 @@ class Constraint(object):
         return classifications
 
     @classmethod 
-    def calculateBooleanCompatibilityVector(cls, self_constraint_nmat:NamedMatrix,
+    def calculateBooleanCompatibilityVector(cls, reference_constraint_nmat:NamedMatrix,
               other_constraint_nmat:NamedMatrix, is_equality:bool=True,
               is_bitwise:bool=False)->Tuple[np.ndarray, NamedMatrix]:  # type: ignore
         """
@@ -287,70 +290,37 @@ class Constraint(object):
 
         Returns:
             np.ndarray - vector of booleans
-                index n represents i*self_num_row + jth row in other
+                index n represents i*reference_num_row + jth row in other
             NamedMatrix - matrix of booleans where the rows are the same as the input matrices
         """
-        if self_constraint_nmat.num_column != other_constraint_nmat.num_column:
+        if reference_constraint_nmat.num_column != other_constraint_nmat.num_column:
             raise ValueError("Incompatible number of columns.")
         #
-        self_num_row = self_constraint_nmat.num_row
+        reference_num_row = reference_constraint_nmat.num_row
         other_num_row = other_constraint_nmat.num_row
         # Check for a null
         num_column = other_constraint_nmat.num_column
         # Calculate the CompatibilityCollection
         #    Create the self array with repeated blocks of each row
-        self_arr = np.concatenate([self_constraint_nmat.values]*other_num_row, axis=1)
-        self_arr = np.reshape(self_arr, (self_num_row*other_num_row, num_column))
+        reference_arr = np.concatenate([reference_constraint_nmat.values]*other_num_row, axis=1)
+        reference_arr = np.reshape(reference_arr, (reference_num_row*other_num_row, num_column))
         #    Create the other array with all values of each row
         other_arr = np.reshape(other_constraint_nmat.values, other_num_row*num_column)
-        other_arr = np.concatenate([other_arr]*self_num_row)
-        other_arr = np.reshape(other_arr, (self_num_row*other_num_row, num_column))
+        other_arr = np.concatenate([other_arr]*reference_num_row)
+        other_arr = np.reshape(other_arr, (reference_num_row*other_num_row, num_column))
         # Calculate the compatibility boolean vector
         if is_equality:
-            satisfy_arr = self_arr == other_arr
+            satisfy_arr = reference_arr == other_arr
         else:
             if is_bitwise:
-                satisfy_arr = np.bitwise_and(self_arr, other_arr) == self_arr
+                satisfy_arr = np.bitwise_and(reference_arr, other_arr) == reference_arr
             else:
-                satisfy_arr = self_arr <= other_arr
+                satisfy_arr = reference_arr <= other_arr
         satisfy_nmat = NamedMatrix(satisfy_arr,
-                           column_names=self_constraint_nmat.column_names)
+                           column_names=reference_constraint_nmat.column_names)
         result_arr = np.sum(satisfy_arr, axis=1) == num_column
         return result_arr, satisfy_nmat
     
-    def _labelSelfOther(self, target:'Constraint')->NamedMatrix:
-        """
-        Construct labels rows in the cross product of self and other constraint matrices.
-        Self indices run slower than other, as indicated below for a comparison of species names
-        with 2 species (S*) in self and 3 in other (A*).
-
-              self_idx  other_idx
-              S0           A0
-              S0           A1
-              S0           A2
-              S1           A0
-              S1           A1
-              S1           A2
-
-        Args:
-            target: Constraint
-            is_species:boolean (default: True) True if species, False if reactions
-        """
-        # Get the names of the elements being constrained
-        self_names = self.row_names
-        other_names = target.row_names
-        self_length = len(self_names)
-        other_length = len(other_names)
-        # Construct the NamedMatrix
-        self_labels = np.repeat(self_names, other_length)
-        length = self_labels.shape[0]
-        self_labels = np.reshape(self_labels, (length, 1))
-        other_labels = np.array([other_names]*self_length).flatten()
-        other_labels = np.reshape(other_labels, (length, 1))
-        arr = np.concatenate([self_labels, other_labels], axis=1)
-        label_nmat = NamedMatrix(arr, column_names=["self", "other"])
-        return label_nmat
-
     def makeCompatibilityCollection(self, target:'Constraint',
           is_diagnostic:bool=False)->CompatibilityCollectionResult:
         """
@@ -364,34 +334,27 @@ class Constraint(object):
             CompatibilityCollectionResult
 
         """
+        # Initializations
+        equality_compatibility_nmat = NULL_NMAT
+        inequality_compatibility_numerical_nmat = NULL_NMAT
+        inequality_compatibility_bitwise_nmat = NULL_NMAT
         # Calculate the compatibility of the constraints
-        diagnostic_nmat = NULL_NMAT
         if self.equality_nmat != NULL_NMAT:
             is_equality_compatibility = True
             equality_compatibility_arr, equality_compatibility_nmat =  \
                  self.calculateBooleanCompatibilityVector(self.equality_nmat, target.equality_nmat, is_equality=True)
-            if diagnostic_nmat != NULL_NMAT:
-                diagnostic_nmat = equality_compatibility_nmat
         else:
             is_equality_compatibility = False
         if self.numerical_inequality_nmat != NULL_NMAT:
             is_inequality_compatibility = True
-            inequality_compatibility_arr, inequality_compatibility_nmat = self.calculateBooleanCompatibilityVector(
+            inequality_compatibility_arr, inequality_compatibility_numerical_nmat = self.calculateBooleanCompatibilityVector(
                   self.numerical_inequality_nmat,
                   target.numerical_inequality_nmat, is_equality=False)
-            if diagnostic_nmat != NULL_NMAT:
-                if is_diagnostic:
-                    diagnostic_nmat = NamedMatrix.hstack([diagnostic_nmat, inequality_compatibility_nmat])
-            else:
-                if is_diagnostic:
-                    diagnostic_nmat = inequality_compatibility_nmat
             if self.bitwise_inequality_nmat != NULL_NMAT:
-                inequality_bitwise_arr, inequality_bitwise_nmat = self.calculateBooleanCompatibilityVector(
+                inequality_bitwise_arr, inequality_compatibility_bitwise_nmat = self.calculateBooleanCompatibilityVector(
                   self.bitwise_inequality_nmat,
                   target.bitwise_inequality_nmat, is_equality=False, is_bitwise=True)
                 inequality_compatibility_arr &= inequality_bitwise_arr
-                if is_diagnostic:
-                    diagnostic_nmat = NamedMatrix.hstack([diagnostic_nmat, inequality_bitwise_nmat])
         else:
             is_inequality_compatibility = False
         # Calculate the compatibility vector by combining the equality and inequality constraints
@@ -413,23 +376,20 @@ class Constraint(object):
             sel_idxs = compatibility_arr[idxs]
             target_rows = target_arr[sel_idxs]
             compatibility_collection.add(irow, target_rows)
-        if diagnostic_nmat != NULL_NMAT:
-            label_nmat = self._labelSelfOther(target)
-            diagnostic_nmat = NamedMatrix.hstack([label_nmat, diagnostic_nmat])
+        if is_diagnostic:
             result = CompatibilityCollectionResult(compatibility_collection=compatibility_collection,
-                  diagnostic_nmat=diagnostic_nmat,
-                  self_equality_nmat=self.equality_nmat, target_equality_nmat=target.equality_nmat,
-                  self_numerical_inequality_nmat=self.numerical_inequality_nmat,
-                  target_numerical_inequality_nmat=target.numerical_inequality_nmat,
-                  self_bitwise_inequality_nmat=self.bitwise_inequality_nmat,
-                  target_bitwise_inequality_nmat=target.bitwise_inequality_nmat)
+                    equality_compatibility_nmat=equality_compatibility_nmat,
+                    inequality_compatibility_numerical_nmat=inequality_compatibility_numerical_nmat,
+                    inequality_compatibility_bitwise_nmat=inequality_compatibility_bitwise_nmat,
+                    reference_equality_nmat=self.equality_nmat,
+                    target_equality_nmat=target.equality_nmat,
+                    reference_numerical_inequality_nmat=self.numerical_inequality_nmat,
+                    target_numerical_inequality_nmat=target.numerical_inequality_nmat,
+                    reference_bitwise_inequality_nmat=self.bitwise_inequality_nmat,
+                    target_bitwise_inequality_nmat=target.bitwise_inequality_nmat)
         else:
             result = CompatibilityCollectionResult(compatibility_collection=compatibility_collection)
         return result
-
-
-        return CompatibilityCollectionResult(compatibility_collection=compatibility_collection,
-              diagnostic_nmat=diagnostic_nmat)
     
     def makeSuccessorPredecessorConstraintMatrix(self)->NamedMatrix:
         """Make a marix of count of successor and predecessor counts. Uses

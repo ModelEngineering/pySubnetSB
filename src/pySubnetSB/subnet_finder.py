@@ -99,7 +99,11 @@ class SubnetFinder(object):
                 species_names = target_network.species_names[species_assignment_arr]
                 reaction_names = target_network.reaction_names[reaction_assignment_arr]
                 network_name = f"{reference_network.network_name}_{target_network.network_name}"
-                induced_network = Network(reference_network.reactant_nmat.values, reference_network.product_nmat.values,
+                induced_reactant_arr = target_network.reactant_nmat.values[species_assignment_arr, :]
+                induced_reactant_arr = induced_reactant_arr[:, reaction_assignment_arr]
+                induced_product_arr = target_network.product_nmat.values[species_assignment_arr, :]
+                induced_product_arr = induced_product_arr[:, reaction_assignment_arr]
+                induced_network = Network(induced_reactant_arr, induced_product_arr,
                       reaction_names=reaction_names, species_names=species_names,
                       network_name=network_name)
                 if is_report:

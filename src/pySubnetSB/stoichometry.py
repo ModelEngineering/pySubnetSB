@@ -24,7 +24,7 @@ class Stoichiometry(object):
         Returns:
             Result: Result(reactant_mat, product_mat, stoichiometry_mat, species_names, reaction_names)
         """
-        self. antimony_str = antimony_str
+        self.antimony_str = antimony_str
         self.roadrunner = roadrunner
         self.reactant_mat, self.product_mat, self.standard_mat, self.species_names, self.reaction_names \
             = self.calculate() 
@@ -57,7 +57,7 @@ class Stoichiometry(object):
             else:
                 speciesId = model.getNthBoundarySpeciesId(ispecies - num_floating_species)
             for ireaction in range(num_reaction):
-                # Get the product stoihiometry
+                # Get the product stoichiometry
                 numProducts = model.getNumProducts(ireaction)
                 for k1 in range(numProducts):
                     productId = model.getProduct(ireaction, k1)

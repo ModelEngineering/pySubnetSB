@@ -3,6 +3,7 @@ from pySubnetSB.network_base import NetworkBase # type: ignore
 from pySubnetSB.named_matrix import NamedMatrix # type: ignore
 from pySubnetSB import util # type: ignore
 
+import os
 from pynauty import Graph  # type: ignore
 import matplotlib.pyplot as plt
 import numpy as np
@@ -276,6 +277,13 @@ class TestNetwork(unittest.TestCase):
             return
         roadrunner = te.loada(BIG_NETWORK)
         network = NetworkBase.makeFromAntimonyStr(None, roadrunner=roadrunner)
+        self.assertGreater(network.num_species, 0)
+
+    def testMakeFromSBMLFile(self):
+        if IGNORE_TEST:
+            return
+        PATH = os.path.join(cn.TEST_DIR, "xml_files/BIOMD0000000033.xml")
+        network = NetworkBase.makeFromSBMLFile(PATH)
         self.assertGreater(network.num_species, 0)
 
 if __name__ == '__main__':

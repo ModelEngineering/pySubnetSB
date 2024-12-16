@@ -16,6 +16,7 @@ import numpy as np
 import os
 import pandas as pd  # type: ignore
 from pynauty import Graph  # type: ignore
+import tellurium as te  # type: ignore
 from typing import Optional, Tuple, Any, Union
 
 
@@ -348,6 +349,27 @@ class NetworkBase(object):
             network = cls.makeFromAntimonyStr(antimony_str, network_name=network_name)
         except:
             network = None
+        return network
+    
+    @classmethod
+    def makeFromSBMLFile(cls, sbml_path:str,
+                         network_name:Optional[str]=None)->Union['NetworkBase', None]:
+        """
+        Make a Network from an SBML file. The default network name is the file name.
+
+        Args:
+            sbml_path (str): path to an SBML file.
+            network_name (str): Name of the network.
+
+        Returns:
+            Network
+        """
+        roadrunner = te.loadSBMLModel(sbml_path)
+        stoichiometry = Stoichiometry(None, roadrunner=roadrunner)
+        if stoichiometry.reactant_mat is None:
+            return None
+        network = cls(stoichiometry.reactant_mat, stoichiometry.product_mat, network_name=network_name,
+                      species_names=stoichiometry.species_names, reaction_names=stoichiometry.reaction_names)
         return network
     
     @classmethod

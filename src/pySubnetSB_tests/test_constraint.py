@@ -1,7 +1,7 @@
 from pySubnetSB.constraint import Constraint, ReactionClassification, CompatibilityCollection    # type: ignore
 from pySubnetSB.named_matrix import NamedMatrix   # type: ignore
 from pySubnetSB.network import Network  # type: ignore
-from pySubnetSB.species_constraint import SpeciesConstraint  # type: ignore
+from pySubnetSB.reaction_constraint import ReactionConstraint  # type: ignore
 
 import itertools
 import numpy as np
@@ -277,12 +277,6 @@ class TestConstraint(unittest.TestCase):
         compatibility_collection = self.constraint.makeCompatibilityCollection(self.constraint).compatibility_collection
         self.assertTrue(np.isclose(compatibility_collection.log10_num_assignment, 0))
     
-    def testMakeCompatibilityCollectionDiagnostic(self):
-        if IGNORE_TEST:
-            return
-        result = self.constraint.makeCompatibilityCollection(self.constraint, is_diagnostic=True)
-        self.assertEqual(len(result.diagnostic_nmat), NUM_SPECIES**2)
-    
     def testMakeCompatibilityCollectionScale(self):
         if IGNORE_TEST:
             return
@@ -308,18 +302,12 @@ class TestConstraint(unittest.TestCase):
         for size in range(3, 20):
             network = Network.makeRandomNetworkByReactionType(size, size)
             large_network = network.fill(num_fill_reaction=fill_size*size, num_fill_species=fill_size*size)
-            large_constraint = SpeciesConstraint(large_network.reactant_nmat, large_network.product_nmat)
-            constraint = SpeciesConstraint(network.reactant_nmat, network.product_nmat)
+            large_constraint = ReactionConstraint(large_network.reactant_nmat, large_network.product_nmat)
+            constraint = ReactionConstraint(network.reactant_nmat, network.product_nmat)
             compatibility_collection = constraint.makeCompatibilityCollection(large_constraint).compatibility_collection
-            arr = compatibility_collection.expand()
-            #print(np.log10(arr.shape[0]), compatibility_collection.log10_num_permutation)
-
-    def testLabelSelfOther(self):
-        if IGNORE_TEST:
-            return
-        label_nmat = self.constraint._labelSelfOther(self.constraint)
-        self.assertEqual(len(label_nmat), NUM_SPECIES**2)
-
+            result = compatibility_collection.expand()
+            self.assertFalse(result[1])
+            self.assertEqual(result[0].shape[1], size)
 
 
 if __name__ == '__main__':

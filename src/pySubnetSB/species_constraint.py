@@ -24,7 +24,7 @@ class SpeciesConstraint(Constraint):
             product_nmat (NamedMatrix)
             is_subset (bool, optional) Consider self as a subset of other.
         """
-        super().__init__(reactant_nmat=reactant_nmat, product_nmat=product_nmat)
+        super().__init__(reactant_nmat=reactant_nmat, product_nmat=product_nmat, is_subset=is_subset)
         #
         self._is_initialized = False
         self._numerical_enumerated_nmat = NULL_NMAT
