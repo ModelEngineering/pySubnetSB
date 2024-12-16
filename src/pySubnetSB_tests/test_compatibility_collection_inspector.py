@@ -73,28 +73,6 @@ class TestCompatibilityCollectionInspector(unittest.TestCase):
             value = self.inspector._getConstraintValue(element_name, column_name, is_reference)
             self.assertTrue(np.all(nmat.values[row_idx, column_idx] == value))
 
-    def testCompatibilityCollectionBug(self):
-        if IGNORE_TEST:
-            return
-        reference_model = """
-        S3 -> S2;  S3*19.3591127845924;
-        S0 -> S4 + S0;  S0*10.3068257839885;
-        S4 + S2 -> S4;  S4*S2*13.8915863630362;
-        S2 -> S0 + S2;  S2*0.113616698747501;
-        S4 + S0 -> S4;  S4*S0*0.240788980014622;
-        S2 -> S2 + S2;  S2*1.36258363821544;
-        S2 + S4 -> S2;  S2*S4*1.37438814584166;
-        S0 = 2; S1 = 5; S2 = 7; S3 = 10; S4 = 1;
-        """
-        reference_network = Network.makeFromAntimonyStr(reference_model)
-        PATH = "/Users/jlheller/home/Technical/repos/SBMLModel/data/BIOMD0000000695.xml"
-        target_network = Network.makeFromSBMLFile(PATH)
-        inspector = CompatibilityCollectionInspector(reference_network, target_network, is_species=True,
-              is_subset=True)
-        df = inspector.explainNotCompatible("S2", "xFinal_7")
-        self.assertEqual(len(df), 2)
-
-
 
 if __name__ == '__main__':
     unittest.main(failfast=True)
