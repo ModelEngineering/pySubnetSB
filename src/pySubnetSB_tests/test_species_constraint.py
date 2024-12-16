@@ -99,9 +99,9 @@ class TestSpeciesConstraint(unittest.TestCase):
             network = Network.makeRandomNetworkByReactionType(reference_size, reference_size)
             big_network = network.fill(num_fill_reaction=filler_size, num_fill_species=filler_size)
             reaction_constraint = SpeciesConstraint(network.reactant_nmat, network.product_nmat,
-                                                   is_subset=True)
+                                                   is_subnet=True)
             big_reaction_constraint = SpeciesConstraint(big_network.reactant_nmat, big_network.product_nmat,
-                                                       is_subset=True)
+                                                       is_subnet=True)
             compatibility_collection = reaction_constraint.makeCompatibilityCollection(
                   big_reaction_constraint).compatibility_collection
             name_arr = np.array(big_reaction_constraint.reactant_nmat.row_names)

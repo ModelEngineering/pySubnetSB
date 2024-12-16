@@ -115,7 +115,7 @@ class TestNetwork(unittest.TestCase):
         product_arr = np.vstack([self.network.product_nmat.values]*2)
         product_arr = np.hstack([product_arr]*2)
         target_network = Network(reactant_arr, product_arr)
-        result = self.network.isStructurallyIdentical(target_network, is_subset=False, identity=cn.ID_WEAK)
+        result = self.network.isStructurallyIdentical(target_network, is_subnet=False, identity=cn.ID_WEAK)
         self.assertFalse(result)
     
     def testIsStructurallyIdenticalDoubleSubset(self):
@@ -124,7 +124,7 @@ class TestNetwork(unittest.TestCase):
         reactant_arr = np.hstack([self.network.reactant_nmat.values]*2)
         product_arr = np.hstack([self.network.product_nmat.values]*2)
         target_network = Network(reactant_arr, product_arr)
-        result = self.network.isStructurallyIdentical(target_network, is_subset=True, identity=cn.ID_WEAK)
+        result = self.network.isStructurallyIdentical(target_network, is_subnet=True, identity=cn.ID_WEAK)
         self.assertTrue(result)
 
     def testIsStructurallyIdenticalSimpleRandomlyPermute(self):
@@ -154,7 +154,7 @@ class TestNetwork(unittest.TestCase):
                                                                         num_species=14)
                     target = reference.fill(num_fill_reaction=fill_factor*reference_size,
                         num_fill_species=fill_factor*reference_size)
-                    result = reference.isStructurallyIdentical(target, identity=identity, is_subset=True,
+                    result = reference.isStructurallyIdentical(target, identity=identity, is_subnet=True,
                           is_report=True)
                     msg = f"identity: {identity}, reference_size: {reference_size}, fill_factor: {fill_factor}"
                     msg += f"\n   num_species_candidate: {result.num_species_candidate}"
@@ -174,11 +174,11 @@ class TestNetwork(unittest.TestCase):
             num_processed = 0
             for _ in range(num_iteration):
                 for identity in [cn.ID_WEAK, cn.ID_STRONG]:
-                    for is_subset in [False, True]:
+                    for is_subnet in [False, True]:
                         reference = Network.makeRandomNetworkByReactionType(reference_size)
                         target = Network.makeRandomNetworkByReactionType(target_factor*reference_size)
                         # Analyze
-                        result = reference.isStructurallyIdentical(target, identity=identity, is_subset=is_subset,
+                        result = reference.isStructurallyIdentical(target, identity=identity, is_subnet=is_subnet,
                             max_num_assignment=100)
                         num_truncate += result.is_truncated
                         num_processed += 1

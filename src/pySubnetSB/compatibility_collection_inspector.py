@@ -23,27 +23,27 @@ ColumnDescriptor = collections.namedtuple("ColumnDescriptor", ["column_name", "n
 #####################################
 class CompatibilityCollectionInspector(object):
 
-    def __init__(self, reference_network, target_network, is_species:bool=True, is_subset:bool=False):
+    def __init__(self, reference_network, target_network, is_species:bool=True, is_subnet:bool=False):
         """
         Args:
             reference_network (Network)
             target_network (Network)
             is_species (bool, optional): _description_. Defaults to True.
-            is_subset (bool, optional): check for su
+            is_subnet (bool, optional): check for su
         """
         self.reference_network = reference_network
         self.target_network = target_network
         self.is_species = is_species
-        self.is_subset = is_subset
+        self.is_subnet = is_subnet
         #
         if self.is_species:
             constraint_cls = SpeciesConstraint
         else:
             constraint_cls = ReactionConstraint
         self.reference_constraint = constraint_cls(self.reference_network.reactant_nmat,
-              self.reference_network.product_nmat, is_subset=self.is_subset)
+              self.reference_network.product_nmat, is_subnet=self.is_subnet)
         self.target_constraint = constraint_cls(self.target_network.reactant_nmat,
-              self.target_network.product_nmat, is_subset=self.is_subset)
+              self.target_network.product_nmat, is_subnet=self.is_subnet)
         self.compatibility_collection_result = self.reference_constraint.makeCompatibilityCollection(
               self.target_constraint, is_diagnostic=True)
         # 

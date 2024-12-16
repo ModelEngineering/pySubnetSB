@@ -46,8 +46,8 @@ class TestBenchmark(unittest.TestCase):
         if IGNORE_TEST:
             return
         for is_species in [True, False]:
-            for is_subset in [True, False]:
-                df = self.benchmark.run(is_species=is_species, is_subset=is_subset)
+            for is_subnet in [True, False]:
+                df = self.benchmark.run(is_species=is_species, is_subnet=is_subnet)
                 self.validateBenchmarkDataframe(self.benchmark, df)
 
     def testRunIsContainsReferenceFalse(self):
@@ -56,8 +56,8 @@ class TestBenchmark(unittest.TestCase):
         benchmark = ConstraintBenchmark(NUM_REACTION, NUM_SPECIES, NUM_ITERATION,
               is_contains_reference=False)
         for is_species in [True, False]:
-            for is_subset in [True, False]:
-                df = benchmark.run(is_species=is_species, is_subset=is_subset)
+            for is_subnet in [True, False]:
+                df = benchmark.run(is_species=is_species, is_subnet=is_subnet)
                 self.validateBenchmarkDataframe(benchmark, df)
 
     def testPlotConstraintStudy(self):

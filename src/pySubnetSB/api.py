@@ -105,19 +105,19 @@ class ModelSpecification(object):
 def findReferenceInTarget(
       reference_model:Union[str, ModelSpecification],
       target_model:Union[str, ModelSpecification],
-      is_subset:bool=True,
+      is_subnet:bool=True,
       num_process:int=-1,
       max_num_assignment:int=int(1e12),
       identity:str=cn.ID_STRONG,
       is_report:bool=True)->StructuralAnalysisResult:
     """
-    Searches the target model to determine if the reference model is a subnet (if is_subset is True) or
-    if the reference model is structurally identical to the target model (if is_subset is False).
+    Searches the target model to determine if the reference model is a subnet (if is_subnet is True) or
+    if the reference model is structurally identical to the target model (if is_subnet is False).
 
     Args:
         reference_model (str/ModelSpecification): Antimony str or other model reference
         target_model (str/ModelSpecification): Antimony str or other model reference
-        is_subset (bool): If True, the reference model is a subnet of the target model;
+        is_subnet (bool): If True, the reference model is a subnet of the target model;
                           otherwise, the reference model is structurally identical to the target model.
         num_process (int): Number of processes to use. If -1, use all available processors.
         max_num_assignment (int): Maximum number of assignment pairs
@@ -135,7 +135,7 @@ def findReferenceInTarget(
     target_network = ModelSpecification.makeNetwork(target_model)
     return reference_network.isStructurallyIdentical(
             target_network,
-            is_subset=is_subset,
+            is_subnet=is_subnet,
             num_process=num_process,
             identity=identity,
             max_num_assignment=max_num_assignment,
@@ -189,14 +189,14 @@ def findReferencesInTargets(
       max_num_assignment:int=int(1e12),
       is_report:bool=True)->pd.DataFrame:
     """
-    Searches the target directory to determine if the reference directory contains subnets (if is_subset is True) or
+    Searches the target directory to determine if the reference directory contains subnets (if is_subnet is True) or
     if the reference directory contains models that are structurally identical to the target directory
-    (if is_subset is False).
+    (if is_subnet is False).
 
     Args:
         reference_dir (str): Directory with Antimony models or SBML models or a serialization file
         target_dir (str): Directory with Antimony models or SBML models or a serialization file
-        is_subset (bool): If True, the reference directory contains subnets of the target directory;
+        is_subnet (bool): If True, the reference directory contains subnets of the target directory;
                           otherwise, the reference directory contains models that are structurally identical to the target directory.
         num_process (int): Number of processes to use. If -1, use all available processors.
         max_num_assignment (int): Maximum number of assignment pairs

@@ -118,7 +118,7 @@ class Network(NetworkBase):
         target_graph = target.makePynautyNetwork()
         return pynauty.isomorphic(self_graph, target_graph)
 
-    def isStructurallyIdentical(self, target:'Network', is_subset:bool=False, num_process:int=-1,
+    def isStructurallyIdentical(self, target:'Network', is_subnet:bool=True, num_process:int=-1,
             max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT,
             max_batch_size:int=cn.MAX_BATCH_SIZE, identity:str=cn.ID_WEAK,
             is_report:bool=True, is_return_if_truncated:bool=True)->StructuralAnalysisResult:
@@ -128,7 +128,7 @@ class Network(NetworkBase):
         Args:
             target (Network): Network to search for structurally identity
             num_process (int, optional): Number of processes (default: -1 is all)
-            is_subsets (bool, optional): Consider subsets
+            is_subnets (bool, optional): Consider subsets
             max_num_assignment (int, optional): Maximum number of assignments to search (no limit if negative)
             max_batch_size (int, optional): Maximum batch size
             identity (str, optional): cn.ID_WEAK or cn.ID_STRONG
@@ -152,8 +152,8 @@ class Network(NetworkBase):
         target_reactant_nmat, target_product_nmat = target.getMatricesForIdentity(identity)
         #####
         def makeAssignmentArr(cls:type)->Tuple[np.ndarray[int], bool, bool]:  # type: ignore
-            reference_constraint = cls(reference_reactant_nmat, reference_product_nmat, is_subset=is_subset)
-            target_constraint = cls(target_reactant_nmat, target_product_nmat, is_subset=is_subset)
+            reference_constraint = cls(reference_reactant_nmat, reference_product_nmat, is_subnet=is_subnet)
+            target_constraint = cls(target_reactant_nmat, target_product_nmat, is_subnet=is_subnet)
             compatibility_collection = reference_constraint.makeCompatibilityCollection(
                   target_constraint).compatibility_collection
             compatibility_collection, prune_is_truncated = compatibility_collection.prune(log10_max_num_assignment)

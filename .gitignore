@@ -11,6 +11,8 @@ __pycache__/
 *.zip
 src_archives
 data/glasgow/
+*serialized*.txt
+sub/
 
 
 irn/

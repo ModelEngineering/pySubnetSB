@@ -85,9 +85,9 @@ class TestFunctions(unittest.TestCase):
             excludes = []
         dct = {}
         dcts = []
-        for is_subset in [True, False]:
-            if not 'is_subset' in excludes:
-                dct['is_subset'] = is_subset
+        for is_subnet in [True, False]:
+            if not 'is_subnet' in excludes:
+                dct['is_subnet'] = is_subnet
             for num_process in [1, -1]:
                 if not 'num_process' in excludes:
                     dct['num_process'] = num_process
@@ -108,7 +108,7 @@ class TestFunctions(unittest.TestCase):
     def testOptionIter(self):
         if IGNORE_TEST:
             return
-        for dct in self.optionIter(["is_subset", "num_process"]):
+        for dct in self.optionIter(["is_subnet", "num_process"]):
             self.assertFalse("num_process" in dct)
 
     def testFindReferenceInTarget(self):
@@ -126,7 +126,7 @@ class TestFunctions(unittest.TestCase):
         if IGNORE_TEST:
             return
         ffiles = [f for f in os.listdir(MODEL_DIR) if "best" in f]
-        iter = self.optionIter(["is_subset", "num_process"])
+        iter = self.optionIter(["is_subnet", "num_process"])
         for dct in iter:
             df = api.clusterStructurallyIdenticalModelsInDirectory(MODEL_DIR, **dct)
             self.assertEqual(len(df), len(ffiles))
@@ -135,7 +135,7 @@ class TestFunctions(unittest.TestCase):
         if IGNORE_TEST:
             return
         count = len([f for f in os.listdir(MODEL_DIR) if "best" in f])
-        iter = self.optionIter(["is_subset"])
+        iter = self.optionIter(["is_subnet"])
         for dct in iter:
             df = api.findReferencesInTargets(MODEL_DIR, MODEL_DIR, **dct)
             self.assertEqual(len(df), count**2)

@@ -70,7 +70,7 @@ class NetworkBase(object):
         self._reaction_names = reaction_names
         self._stoichiometry_nmat:Optional[NamedMatrix] = None
         self._network_hash:Optional[int] = None  # Hash for weak identity
-        self._constraint_pair_dct:dict = {}  # keys are identity, is_subset
+        self._constraint_pair_dct:dict = {}  # keys are identity, is_subnet
 
     def __bool__(self)->bool:
         return (self.num_species > 0) and (self.num_reaction > 0)
@@ -125,23 +125,23 @@ class NetworkBase(object):
         repr += '\n' + '\n'.join(reactions)
         return repr
     
-    def getConstraints(self, identity:str, is_subset:bool)->ConstraintPair:
+    def getConstraints(self, identity:str, is_subnet:bool)->ConstraintPair:
         """
         Get the constraints for the network.
 
         Args:
             identity (str): cn.ID_STRONG or cn.ID_WEAK
-            is_subset (bool): True if the constraints are for a subset.
+            is_subnet (bool): True if the constraints are for a subset.
 
         Returns:
             Tuple[SpeciesConstraint, ReactionConstraint]
         """
-        key = (identity, is_subset)
+        key = (identity, is_subnet)
         if not key in self._constraint_pair_dct:
             reactant_nmat, product_nmat = self.getMatricesForIdentity(identity)
             constraint_pair = ConstraintPair(
-                  ReactionConstraint(reactant_nmat, product_nmat, is_subset=is_subset),
-                  SpeciesConstraint(reactant_nmat, product_nmat, is_subset=is_subset))
+                  ReactionConstraint(reactant_nmat, product_nmat, is_subnet=is_subnet),
+                  SpeciesConstraint(reactant_nmat, product_nmat, is_subnet=is_subnet))
             self._constraint_pair_dct[key] = constraint_pair
         return self._constraint_pair_dct[key]
     

@@ -99,9 +99,9 @@ class TestReactionConstraint(unittest.TestCase):
             big_network = network.fill(num_fill_reaction=filler_size, num_fill_species=filler_size)
             # Not doing initialization
             reaction_constraint = ReactionConstraint(network.reactant_nmat, network.product_nmat,
-                                                   is_subset=True)
+                                                   is_subnet=True)
             big_reaction_constraint = ReactionConstraint(big_network.reactant_nmat, big_network.product_nmat,
-                                                       is_subset=True)
+                                                       is_subnet=True)
             compatibility_collection = reaction_constraint.makeCompatibilityCollection(
                   big_reaction_constraint).compatibility_collection
             name_arr = np.array(big_reaction_constraint.reactant_nmat.column_names)
@@ -131,9 +131,9 @@ class TestReactionConstraint(unittest.TestCase):
         """
         big_network = Network.makeFromAntimonyStr(big_model)
         reaction_constraint = ReactionConstraint(network.reactant_nmat, network.product_nmat,
-                                                   is_subset=True)
+                                                   is_subnet=True)
         big_reaction_constraint = ReactionConstraint(big_network.reactant_nmat, big_network.product_nmat,
-                                                       is_subset=True)
+                                                       is_subnet=True)
         compatibility_collection = reaction_constraint.makeCompatibilityCollection(
                   big_reaction_constraint).compatibility_collection
         name_arr = np.array(big_reaction_constraint.reactant_nmat.column_names)
@@ -153,7 +153,7 @@ class TestReactionConstraint(unittest.TestCase):
             """
         reference_network = Network.makeFromAntimonyStr(reference_model)
         reference_constraint = ReactionConstraint(reference_network.reactant_nmat, reference_network.product_nmat,
-                is_subset=True)
+                is_subnet=True)
         target_model = """
             S1 -> S2; 2
             S2 -> S3; 2
@@ -164,7 +164,7 @@ class TestReactionConstraint(unittest.TestCase):
             """
         target_network = Network.makeFromAntimonyStr(target_model)
         target_constraint = ReactionConstraint(target_network.reactant_nmat, target_network.product_nmat,
-                is_subset=True)
+                is_subnet=True)
         compatibility_collection = reference_constraint.makeCompatibilityCollection(
               target_constraint).compatibility_collection
         trues = [len(v) > 0 for v in compatibility_collection.compatibilities]

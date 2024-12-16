@@ -73,11 +73,11 @@ class ConstraintBenchmark(object):
         else:
             return ReactionConstraint
 
-    def run(self, is_subset:bool=True, is_species:bool=True)->pd.DataFrame:
+    def run(self, is_subnet:bool=True, is_species:bool=True)->pd.DataFrame:
         """Evaluates the effectiveness of reaction and species constraints.
 
         Args:
-            is_subset (bool, optional): is subset constraint
+            is_subnet (bool, optional): is subset constraint
             is_species (bool, optional): is species constraint
 
         Returns:
@@ -92,15 +92,15 @@ class ConstraintBenchmark(object):
             start = time.time()
             reference_constraint = constraint_cls(
                     reference_network.reactant_nmat, reference_network.product_nmat,
-                    is_subset=is_subset)
-            if is_subset:
+                    is_subnet=is_subnet)
+            if is_subnet:
                 target_constraint = constraint_cls(
-                    target_network.reactant_nmat, target_network.product_nmat, is_subset=is_subset)
+                    target_network.reactant_nmat, target_network.product_nmat, is_subnet=is_subnet)
             else:
                 new_target_network, _ = reference_network.permute()
                 target_constraint = constraint_cls(
                     new_target_network.reactant_nmat, new_target_network.product_nmat,
-                    is_subset=is_subset)
+                    is_subnet=is_subnet)
             compatibility_collection = reference_constraint.makeCompatibilityCollection(
                   target_constraint).compatibility_collection
             times.append(time.time() - start)
@@ -121,7 +121,7 @@ class ConstraintBenchmark(object):
             kwargs: constructor options
         """
         benchmark = ConstraintBenchmark(reference_size, fill_size=fill_size, num_iteration=num_iteration)
-        def doPlot(df:pd.DataFrame, node_str:str, is_subset:bool=False, pos:int=0):
+        def doPlot(df:pd.DataFrame, node_str:str, is_subnet:bool=False, pos:int=0):
             ax = axes.flatten()[pos]
             xv = np.array(range(len(df)))
             yv = df[C_LOG10_NUM_PERMUTATION].values.copy()
@@ -131,7 +131,7 @@ class ConstraintBenchmark(object):
             yv = np.sort(yv)
             xv = xv/len(yv)
             ax.plot(xv, yv)
-            title = 'Subset' if is_subset else 'Full'
+            title = 'Subset' if is_subnet else 'Full'
             title = node_str + ' ' + title
             ax.set_title(title)
             ax.set_ylim(0, 10)
@@ -151,20 +151,20 @@ class ConstraintBenchmark(object):
         fig.suptitle(suptitle)
         # Collect data and construct plots
         pos = 0
-        for is_subset in [False, True]:
+        for is_subnet in [False, True]:
             dataframe_dct:dict = {}
             for is_species in [False, True]:
                 if is_species:
                     node_str = 'Spc.'
                 else:
                     node_str = 'Rct.'
-                dataframe_dct[is_species] = benchmark.run(is_species=is_species, is_subset=is_subset)
-                doPlot(dataframe_dct[is_species], node_str, is_subset, pos=pos)
+                dataframe_dct[is_species] = benchmark.run(is_species=is_species, is_subnet=is_subnet)
+                doPlot(dataframe_dct[is_species], node_str, is_subnet, pos=pos)
                 pos += 1
             # Construct totals plot
             df = dataframe_dct[True].copy()
             df += dataframe_dct[False]
-            doPlot(df, "Total", is_subset, pos=pos)
+            doPlot(df, "Total", is_subnet, pos=pos)
             pos += 1
         if is_plot:
             plt.show()
@@ -188,15 +188,15 @@ class ConstraintBenchmark(object):
                 fill_size = target_size - reference_size
                 data_dct[C_NUM_REFERENCE].append(reference_size)
                 data_dct[C_NUM_TARGET].append(target_size)
-                is_subset = fill_size > 0
+                is_subnet = fill_size > 0
                 if fill_size < 0:
                     result = np.nan
                 else:
                     fill_size = max(1, fill_size)
                     benchmark = ConstraintBenchmark(reference_size, fill_size=fill_size,
                           is_contains_reference=is_contains_reference, num_iteration=num_iteration)
-                    df_species = benchmark.run(is_species=True, is_subset=is_subset)
-                    df_reaction = benchmark.run(is_species=False, is_subset=is_subset)
+                    df_species = benchmark.run(is_species=True, is_subnet=is_subnet)
+                    df_reaction = benchmark.run(is_species=False, is_subnet=is_subnet)
                     df = df_species + df_reaction
                     result = np.percentile(df[C_LOG10_NUM_PERMUTATION].values, percentile)
                 data_dct[C_LOG10_NUM_PERMUTATION].append(result)

@@ -129,7 +129,7 @@ class ClusterBuilder(object):
                     first_network = self.processed2Network(first_processed_network)
                     result = first_network.isStructurallyIdentical(network,
                             max_num_assignment=self.max_num_assignment,
-                            identity=self.identity, is_subset=False, is_report=self.is_report)
+                            identity=self.identity, is_subnet=False, is_report=self.is_report)
                     if result:
                         processed_network_collection.add(processed_network)
                         is_selected = True

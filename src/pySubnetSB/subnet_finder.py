@@ -82,7 +82,7 @@ class SubnetFinder(object):
                   identity=self.identity,
                   num_process=self.num_process,
                   is_report=is_report,
-                  is_subset=True,
+                  is_subnet=True,
                   max_num_assignment=max_num_assignment)
             dct[cn.FINDER_REFERENCE_NAME].append(reference_network.network_name)
             dct[cn.FINDER_TARGET_NAME].append(target_network.network_name)

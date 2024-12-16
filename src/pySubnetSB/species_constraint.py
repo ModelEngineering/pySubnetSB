@@ -17,14 +17,14 @@ from typing import List
 #####################################
 class SpeciesConstraint(Constraint):
 
-    def __init__(self, reactant_nmat:NamedMatrix, product_nmat:NamedMatrix, is_subset:bool=False):
+    def __init__(self, reactant_nmat:NamedMatrix, product_nmat:NamedMatrix, is_subnet:bool=False):
         """
         Args:
             reactant_nmat (NamedMatrix)
             product_nmat (NamedMatrix)
-            is_subset (bool, optional) Consider self as a subset of other.
+            is_subnet (bool, optional) Consider self as a subset of other.
         """
-        super().__init__(reactant_nmat=reactant_nmat, product_nmat=product_nmat, is_subset=is_subset)
+        super().__init__(reactant_nmat=reactant_nmat, product_nmat=product_nmat, is_subnet=is_subnet)
         #
         self._is_initialized = False
         self._numerical_enumerated_nmat = NULL_NMAT

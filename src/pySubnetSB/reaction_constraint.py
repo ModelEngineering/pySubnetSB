@@ -19,13 +19,13 @@ from typing import List
 class ReactionConstraint(Constraint):
 
     def __init__(self, reactant_nmat:NamedMatrix, product_nmat:NamedMatrix,
-                 is_subset:bool=False):
+                 is_subnet:bool=False):
         """
         Args:
             reactant_nmat (NamedMatrix)
             product_nmat (NamedMatrix)
         """
-        super().__init__(reactant_nmat=reactant_nmat, product_nmat=product_nmat, is_subset=is_subset)
+        super().__init__(reactant_nmat=reactant_nmat, product_nmat=product_nmat, is_subnet=is_subnet)
         self._is_initialized = False
         self._numerical_enumerated_nmat = NULL_NMAT  
         self._numerical_categorical_nmat = NULL_NMAT

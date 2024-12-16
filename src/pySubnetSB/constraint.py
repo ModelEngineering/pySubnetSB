@@ -117,7 +117,7 @@ class ReactionClassification(object):
 #####################################
 class Constraint(object):
 
-    def __init__(self, reactant_nmat:NamedMatrix, product_nmat:NamedMatrix, is_subset:bool=True):
+    def __init__(self, reactant_nmat:NamedMatrix, product_nmat:NamedMatrix, is_subnet:bool=True):
         """
         Args:
             reactant_nmat: NamedMatrix
@@ -127,13 +127,13 @@ class Constraint(object):
         """
         self.reactant_nmat = reactant_nmat
         self.product_nmat = product_nmat
-        self.is_subset = is_subset
+        self.is_subnet = is_subnet
         # Calculated
         self._reaction_classes = ReactionClassification.getReactionClassifications()
         self.num_species, self.num_reaction = self.reactant_nmat.num_row, self.reactant_nmat.num_column
         self.reaction_classification_arr = self.classifyReactions()
         # Outputs are categorical_nmat and enumerated_nmat, which are implemented by subclass
-        self._is_subset_initialized = False
+        self._is_subnet_initialized = False
         self._equality_nmat = NULL_NMAT
         self._numerical_inequality_nmat = NULL_NMAT
         self._bitwise_inequality_nmat = NULL_NMAT
@@ -194,9 +194,9 @@ class Constraint(object):
     
     def _initializeSubset(self):
         # Initialize the equality and inequality NamedMatrices
-        if self._is_subset_initialized:
+        if self._is_subnet_initialized:
             return
-        if self.is_subset:
+        if self.is_subnet:
             self._equality_nmat = self.categorical_nmat
             self._numerical_inequality_nmat = self.numerical_enumerated_nmat
             self._bitwise_inequality_nmat = self.bitwise_enumerated_nmat
@@ -210,7 +210,7 @@ class Constraint(object):
             if self.bitwise_enumerated_nmat != NULL_NMAT:
                 self._equality_nmat = NamedMatrix.hstack([self._equality_nmat, self.bitwise_enumerated_nmat])
             self._numerical_inequality_nmat = NULL_NMAT
-        self._is_subset_initialized = True
+        self._is_subnet_initialized = True
    
     @property
     def equality_nmat(self)->NamedMatrix:
@@ -239,9 +239,9 @@ class Constraint(object):
             return False
         return True
     
-    def setSubset(self, is_subset:bool)->None:
-        self.is_subset = is_subset
-        self._is_subset_initialized = False
+    def setSubset(self, is_subnet:bool)->None:
+        self.is_subnet = is_subnet
+        self._is_subnet_initialized = False
 
     def copy(self):
         return self.__class__(self.reactant_nmat.copy(), self.product_nmat.copy())
