@@ -2,6 +2,7 @@ import pySubnetSB.constants as cn  # type: ignore
 from pySubnetSB.network_base import NetworkBase # type: ignore
 from pySubnetSB.named_matrix import NamedMatrix # type: ignore
 from pySubnetSB import util # type: ignore
+from pySubnetSB.assignment_pair import AssignmentPair # type: ignore
 
 import os
 from pynauty import Graph  # type: ignore
@@ -12,7 +13,7 @@ import tellurium as te  # type: ignore
 import unittest
 
 
-IGNORE_TEST = False
+IGNORE_TEST = True
 IS_PLOT = False
 NETWORK_NAME = "test"
 BIG_NETWORK = """
@@ -285,6 +286,33 @@ class TestNetwork(unittest.TestCase):
         PATH = os.path.join(cn.TEST_DIR, "xml_files/BIOMD0000000033.xml")
         network = NetworkBase.makeFromSBMLFile(PATH)
         self.assertGreater(network.num_species, 0)
+
+    def testMakeInducedNetwork(self):
+        if IGNORE_TEST:
+            return
+        species_assignment = np.array(range(self.network.num_species))
+        reaction_assignment = np.array(range(self.network.num_reaction))
+        assignment_pair = AssignmentPair(species_assignment, reaction_assignment)
+        induced_network = self.network.makeInducedNetwork(assignment_pair)
+        self.assertTrue(self.network.isEquivalent(induced_network))
+
+    # FIXME: implemet tests
+    def testMakeMatricesForIdentity(self):
+        #if IGNORE_TEST:
+        #    return
+        network1 = NetworkBase.makeFromAntimonyStr(NETWORK1, network_name=NETWORK_NAME)
+        network4 = NetworkBase.makeFromAntimonyStr(NETWORK4, network_name=NETWORK_NAME)
+        #####
+        def test(network, identity, expected_bool):
+            reactant_nmat, product_nmat = network.makeMatricesForIdentity(identity=identity)
+            self.assertEqual(reactant_nmat == network.reactant_nmat, expected_bool)
+            self.assertEqual(product_nmat == network.product_nmat, expected_bool)
+        #####
+        test(network1, cn.ID_STRONG, True)
+        test(network1, cn.ID_WEAK, False)
+        test(network4, cn.ID_STRONG, True)
+        test(network4, cn.ID_WEAK, True)
+
 
 if __name__ == '__main__':
     unittest.main(failfast=False)

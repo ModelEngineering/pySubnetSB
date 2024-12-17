@@ -26,6 +26,7 @@ class StructuralAnalysisResult(object):
                  is_truncated:Optional[bool]=False,
                  num_species_candidate:int=-1,
                  num_reaction_candidate:int=-1,
+                 network:Optional['Network']=None,
                  )->None:
         """
         Args:
@@ -38,6 +39,25 @@ class StructuralAnalysisResult(object):
         self.is_truncated = is_truncated
         self.num_species_candidate = num_species_candidate
         self.num_reaction_candidate = num_reaction_candidate
+        self.network = network
+
+    def makeInducedNetwork(self, assignment_pair_idx:int=0)->'Network':
+        """
+        Creates an induced network from the assignment pair.
+
+        Args:
+            assignment_pair_idx (int): index of the assignment pair
+
+        Returns:
+            str
+        """
+        if self.network is None:
+            raise ValueError("Network is not defined.")
+        if len(self.assignment_pairs) <= assignment_pair_idx:
+            msg = f'Assignment pair index {assignment_pair_idx} is out of range.'
+            msg += f' Max is {len(self.assignment_pairs)}'
+            raise ValueError(msg)
+        return self.network.makeInducedNetwork(self.assignment_pairs[assignment_pair_idx])
 
     def __bool__(self)->bool:
         return len(self.assignment_pairs) > 0
@@ -148,8 +168,8 @@ class Network(NetworkBase):
             log10_max_num_assignment = np.inf
         else:
             log10_max_num_assignment = np.log10(max_num_assignment)
-        reference_reactant_nmat, reference_product_nmat = self.getMatricesForIdentity(identity)
-        target_reactant_nmat, target_product_nmat = target.getMatricesForIdentity(identity)
+        reference_reactant_nmat, reference_product_nmat = self.makeMatricesForIdentity(identity)
+        target_reactant_nmat, target_product_nmat = target.makeMatricesForIdentity(identity)
         #####
         def makeAssignmentArr(cls:type)->Tuple[np.ndarray[int], bool, bool]:  # type: ignore
             reference_constraint = cls(reference_reactant_nmat, reference_product_nmat, is_subnet=is_subnet)
@@ -214,5 +234,7 @@ class Network(NetworkBase):
         assignment_pairs = evaluator.evaluateAssignmentPairs(reactant_assignment_pairs)
         # Return result
         return StructuralAnalysisResult(assignment_pairs=assignment_pairs,
-              num_reaction_candidate=reaction_assignment_arr.shape[0], num_species_candidate=species_assignment_arr.shape[0],
-              is_truncated=is_truncated)
+              num_reaction_candidate=reaction_assignment_arr.shape[0],
+              num_species_candidate=species_assignment_arr.shape[0],
+              is_truncated=is_truncated,
+              network=target)

@@ -96,20 +96,10 @@ class SubnetFinder(object):
                 # Construct the induced subnet
                 species_assignment_arr = result.assignment_pairs[0].species_assignment
                 reaction_assignment_arr = result.assignment_pairs[0].reaction_assignment
-                species_names = target_network.species_names[species_assignment_arr]
-                reaction_names = target_network.reaction_names[reaction_assignment_arr]
-                network_name = f"{reference_network.network_name}_{target_network.network_name}"
-                induced_reactant_arr = target_network.reactant_nmat.values[species_assignment_arr, :]
-                induced_reactant_arr = induced_reactant_arr[:, reaction_assignment_arr]
-                induced_product_arr = target_network.product_nmat.values[species_assignment_arr, :]
-                induced_product_arr = induced_product_arr[:, reaction_assignment_arr]
-                induced_network = Network(induced_reactant_arr, induced_product_arr,
-                      reaction_names=reaction_names, species_names=species_names,
-                      network_name=network_name)
                 if is_report:
                     print(f"Found matching model: {reference_network.network_name} and {target_network.network_name}")
                 dct[cn.FINDER_REFERENCE_NETWORK].append(str(reference_network))
-                dct[cn.FINDER_INDUCED_NETWORK].append(str(induced_network))
+                dct[cn.FINDER_INDUCED_NETWORK].append(str(result.induced_network))
                 dct[cn.FINDER_NUM_ASSIGNMENT_PAIR].append(len(result.assignment_pairs))
                 # Create a more complete assignment pair
                 assignment_pair = AssignmentPair(species_assignment=species_assignment_arr,

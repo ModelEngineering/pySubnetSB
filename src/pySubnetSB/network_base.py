@@ -138,14 +138,14 @@ class NetworkBase(object):
         """
         key = (identity, is_subnet)
         if not key in self._constraint_pair_dct:
-            reactant_nmat, product_nmat = self.getMatricesForIdentity(identity)
+            reactant_nmat, product_nmat = self.makeMatricesForIdentity(identity)
             constraint_pair = ConstraintPair(
                   ReactionConstraint(reactant_nmat, product_nmat, is_subnet=is_subnet),
                   SpeciesConstraint(reactant_nmat, product_nmat, is_subnet=is_subnet))
             self._constraint_pair_dct[key] = constraint_pair
         return self._constraint_pair_dct[key]
     
-    def getMatricesForIdentity(self, identity:str)->Tuple[NamedMatrix, NamedMatrix]:
+    def makeMatricesForIdentity(self, identity:str)->Tuple[NamedMatrix, NamedMatrix]:
         """Calculates the reactant and product NamedMatrix based on the identity calculation being done.
 
         Args:
@@ -154,10 +154,10 @@ class NetworkBase(object):
         if identity == cn.ID_STRONG:
             return self.reactant_nmat, self.product_nmat
         else:
-            reactant_arr = (self.standard_nmat.values<0)*self.reactant_nmat.values
+            reactant_arr = -1*(self.standard_nmat.values<0)*self.standard_nmat.values
             reactant_nmat = self.reactant_nmat.copy()
             reactant_nmat.values = reactant_arr
-            product_arr = (self.standard_nmat.values>0)*self.product_nmat.values
+            product_arr = (self.standard_nmat.values>0)*self.standard_nmat.values
             product_nmat = self.product_nmat.copy()
             product_nmat.values = product_arr
             return reactant_nmat, product_nmat
@@ -190,8 +190,8 @@ class NetworkBase(object):
         Returns:
             bool
         """
-        reference_reactant_nmat, reference_product_nmat = self.getMatricesForIdentity(identity)
-        target_reactant_nmat, target_product_nmat = other.getMatricesForIdentity(identity)
+        reference_reactant_nmat, reference_product_nmat = self.makeMatricesForIdentity(identity)
+        target_reactant_nmat, target_product_nmat = other.makeMatricesForIdentity(identity)
         return bool(np.all(reference_reactant_nmat.values == target_reactant_nmat.values) 
             and np.all(reference_product_nmat.values == target_product_nmat.values))
     
@@ -786,3 +786,22 @@ class NetworkBase(object):
         if is_permute:
             target_network, _ = target_network.permute()
         return target_network
+    
+    def makeInducedNetwork(self, assignment_pair:AssignmentPair)->'NetworkBase':
+        """
+        Makes an induced network based on an assignment pair.
+
+        Args:
+            assignment_pair (AssignmentPair): Assignment pair.
+
+        Returns:
+            Network
+        """
+        species_assignment = assignment_pair.species_assignment
+        reaction_assignment = assignment_pair.reaction_assignment
+        reactant_arr = self.reactant_nmat.values[species_assignment, :]
+        product_arr = self.product_nmat.values[species_assignment, :]
+        reactant_arr = reactant_arr[:, reaction_assignment]
+        product_arr = product_arr[:, reaction_assignment]
+        return self.__class__(reactant_arr, product_arr, reaction_names=self.reaction_names[reaction_assignment],
+                        species_names=self.species_names[species_assignment])
