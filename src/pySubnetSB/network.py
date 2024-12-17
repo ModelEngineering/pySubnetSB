@@ -41,6 +41,11 @@ class StructuralAnalysisResult(object):
         self.num_reaction_candidate = num_reaction_candidate
         self.network = network
 
+    @property
+    def induced_network(self)->'Network':
+        """Induced network from the first assignment pair."""
+        return self.makeInducedNetwork()
+
     def makeInducedNetwork(self, assignment_pair_idx:int=0)->'Network':
         """
         Creates an induced network from the assignment pair.
