@@ -30,6 +30,10 @@ class ProcessedNetworkCollection(object):
         self.antimony_directory = antimony_directory # Directory where the network is stored
 
     @property
+    def is_indeterminate(self)->bool:
+        return any([n.is_indeterminate for n in self.processed_networks])
+
+    @property
     def processing_time(self)->float:
         return np.sum([c.processing_time for c in self.processed_networks])
 

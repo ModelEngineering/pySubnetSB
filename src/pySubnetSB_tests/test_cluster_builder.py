@@ -101,7 +101,12 @@ class TestClusterBuilder(unittest.TestCase):
             builder = ClusterBuilder(network_collection, max_num_assignment=100000, is_report=IS_PLOT,
                                      identity=identity)
             builder.cluster()
-            self.assertEqual(len(builder.processed_network_collections), num_collection)
+            num_builder_collection = len(builder.processed_network_collections)
+            if num_builder_collection >  num_collection:
+                num_indeterminate = np.sum([b.in_determinate for b in builder.processed_network_collections])
+                self.assertEqual(num_indeterminate, num_builder_collection - num_collection) 
+            else:
+                self.assertEqual(num_builder_collection, num_collection)
             for network_collection in network_collections:
                 self.assertTrue(str(network_collection) in str(network_collections))
         #

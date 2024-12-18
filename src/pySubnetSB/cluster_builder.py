@@ -38,7 +38,7 @@ class ClusterBuilder(object):
         self.num_hash = len(self.hash_dct)
         self.max_hash = max([len(l) for l in self.hash_dct.values()])  # Most NetworkCollection
         # Results
-        self.processed_network_collections:List['ProcessedNetworkCollection'] = []
+        self.processed_network_collections:List[ProcessedNetworkCollection] = []
 
     @property
     def num_indeterminant(self)->int:

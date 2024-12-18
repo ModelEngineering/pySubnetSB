@@ -224,7 +224,7 @@ class ParallelSubnetFinder(object):
         target_dct = {n.network_name: idx for idx, n in enumerate(self.target_networks)}
         if len(df) > 0:
             completed_workunits = [Workunit(reference_dct[ref_name], target_dct[tar_name])
-                  for ref_name, tar_name in zip(df[cn.FINDER_REFERENCE_NETWORK], df[cn.FINDER_TARGET_NETWORK])]
+                  for ref_name, tar_name in zip(df[cn.FINDER_REFERENCE_NAME], df[cn.FINDER_TARGET_NAME])]
         else:
             completed_workunits = []
         pair_iterator = itertools.product(range(len(self.reference_networks)), range(len(self.target_networks)))

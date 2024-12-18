@@ -2,7 +2,7 @@
 
 import pySubnetSB.constants as cn # type: ignore
 from pySubnetSB.parallel_subnet_finder import ParallelSubnetFinder  # type: ignore
-from pySubnetSB.subnet_finder import SubnetFinder  # type: ignore
+from pySubnetSB.subnet_finder import SubnetFinder, NetworkPair  # type: ignore
 
 import numpy as np
 from multiprocessing import freeze_support
@@ -34,7 +34,7 @@ def main(is_initialize:bool=False)->None:
     # Handle the cases where the search is truncated
     truncated_idx = initial_df["is_truncated"]
     truncated_df = initial_df[truncated_idx]
-    network_pairs = [SubnetFinder.NetworkPair(r, t) for r, t
+    network_pairs = [NetworkPair(r, t) for r, t
           in zip(truncated_df["reference_network"], truncated_df["induced_network"])]
     incremental_df = SubnetFinder(network_pairs, identity=cn.ID_STRONG).find(
         is_report=True, max_num_assignment=MAX_NUM_ASSIGNMENT_FINAL)
