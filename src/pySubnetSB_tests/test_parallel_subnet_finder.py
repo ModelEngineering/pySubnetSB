@@ -80,6 +80,16 @@ class TestParallelSubnetFinder(unittest.TestCase):
         self.assertGreaterEqual(len(prune_df), NUM_NETWORK)
     
     @util.timeit
+    def testFindOneProcessWithCheckpoint(self):
+        if IGNORE_TEST:
+            return
+        _ = self.finder.parallelFind(is_report=IS_PLOT, is_initialize=True, num_worker=1)
+        df = self.finder.parallelFind(is_report=IS_PLOT, is_initialize=False, num_worker=1)
+        self.assertEqual(len(df), NUM_NETWORK**2)
+        prune_df = WorkerCheckpointManager.prune(df)[0]
+        self.assertGreaterEqual(len(prune_df), NUM_NETWORK)
+    
+    @util.timeit
     def testFindManyProcess(self):
         if IGNORE_TEST:
             return

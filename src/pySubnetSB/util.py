@@ -9,6 +9,7 @@ from typing import List, Tuple, Union
 
 IS_TIMEIT = False
 ArrayContext = collections.namedtuple('ArrayContext', "string, num_row, num_column")
+INT_MAX = 1000000
 
 def isInt(val: str)->bool:
     """Determines if a string is an integer.
@@ -343,3 +344,54 @@ def getDefaultReactionNames(num_reaction:int)->np.ndarray:
         np.ndarray[str]: reaction names
     """
     return np.array([f"J{i}" for i in range(num_reaction)])
+
+def encodeIntPair(int1:Union[int, np.ndarray], int2:Union[int, np.ndarray],
+      max_int:int=INT_MAX)->Union[np.int64, np.ndarray]:
+    """Encodes a pair of integers as a single integer.
+
+    Args:
+        int1 (int | p.ndarray): An integer.
+        int2 (int | np.ndarray): An integer.
+        max_int (int): The maximum integer value. Defaults to 1e6
+
+    Returns:
+        int | np.ndarray: An encoded integer.
+    """
+    if isinstance(int1, np.ndarray):
+        is_int = False
+        arr1:np.ndarray = int1.astype(np.int64)
+        arr2:np.ndarray = int2.astype(np.int64)  # type: ignore
+    else:
+        is_int = True
+        arr1 = np.array([int1]).astype(np.int64)
+        arr2 = np.array([int2]).astype(np.int64)
+    if any(arr1 > max_int) or any(arr2 > max_int):
+        raise ValueError(f"Integers must be less than {max_int}.")
+    result = arr1*max_int + arr2
+    if is_int:
+        return result[0]
+    else:
+        return result
+
+def decodeIntPair(encoded_int:Union[np.int64, np.ndarray],
+      max_int:int=INT_MAX)->Tuple[Union[int, np.ndarray], Union[int, np.ndarray]]:
+    """Encodes a pair of integers as a single integer.
+
+    Args:
+        encoded_int(int64 | np.ndarray): An integer.
+        max_int (int): The maximum integer value. Defaults to 1e6
+
+    Returns:
+        int: An encoded integer.
+    """
+    int2 = encoded_int % max_int
+    if isinstance(int2, np.ndarray):
+        int2 = [int(i) for i in int2] # type: ignore
+    else:
+        int2 = int(int2)  # type: ignore
+    int1 = (encoded_int - int2)/max_int
+    if isinstance(int1, np.ndarray):
+        int1 = [int(i) for i in int1] # type: ignore
+    else:
+        int1 = int(int1)  # type: ignore
+    return int1, int2  # type: ignore

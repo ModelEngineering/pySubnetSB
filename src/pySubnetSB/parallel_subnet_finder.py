@@ -13,6 +13,7 @@ from pySubnetSB.checkpoint_manager import CheckpointManager # type: ignore
 from pySubnetSB.worker_checkpoint_manager import WorkerCheckpointManager # type: ignore
 from pySubnetSB.network import Network # type: ignore
 from pySubnetSB.subnet_finder_workunit_manager import SubnetFinderWorkunitManager  # type: ignore
+from pySubnetSB import util
 
 import itertools
 import os
@@ -223,13 +224,19 @@ class ParallelSubnetFinder(object):
         reference_dct = {n.network_name: idx for idx, n in enumerate(self.reference_networks)}
         target_dct = {n.network_name: idx for idx, n in enumerate(self.target_networks)}
         if len(df) > 0:
-            completed_workunits = [Workunit(reference_dct[ref_name], target_dct[tar_name])
-                  for ref_name, tar_name in zip(df[cn.FINDER_REFERENCE_NAME], df[cn.FINDER_TARGET_NAME])]
+            ref_idx_arr = np.array([reference_dct[str(n)] for n in df[cn.FINDER_REFERENCE_NAME]])
+            tgt_idx_arr = np.array([target_dct[str(n)] for n in df[cn.FINDER_TARGET_NAME]])
+            completed_encodes = set(util.encodeIntPair(ref_idx_arr, tgt_idx_arr))
         else:
-            completed_workunits = []
-        pair_iterator = itertools.product(range(len(self.reference_networks)), range(len(self.target_networks)))
-        workunits = [Workunit(i, j) for i, j in pair_iterator]
-        workunits = [w for w in workunits if w not in completed_workunits]
+            completed_encodes = set([])
+        all_pairs = list(itertools.product(range(len(self.reference_networks)),
+              range(len(self.target_networks))))
+        all_ref_idx_arr = np.array([i for i, j in all_pairs])
+        all_tgt_idx_arr = np.array([j for i, j in all_pairs])
+        all_pair_encodeds = set(util.encodeIntPair(all_ref_idx_arr, all_tgt_idx_arr))
+        unfinished_arr = np.array(list(all_pair_encodeds - completed_encodes))
+        unfinished_pairs = util.decodeIntPair(unfinished_arr)
+        workunits = [Workunit(i, j) for i, j in zip(unfinished_pairs[0], unfinished_pairs[1])]
         printPerformanceInformation(f"parallelFind/time1: {len(workunits)} workunits.")
         # Create the workunits
         workunit_manager = SubnetFinderWorkunitManager(self.workunit_csv_path, num_worker=num_worker,
@@ -237,7 +244,7 @@ class ParallelSubnetFinder(object):
         workunit_manager.makeWorkunitFile()
         if num_worker == 1:
             # Handle single process
-            args = list(getArgs(0, is_terminate=False))
+            args = getArgs(0, is_terminate=False)
             executeWorker(*args)
         else:
             # Parallel processing

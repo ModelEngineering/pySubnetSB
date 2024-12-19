@@ -223,6 +223,28 @@ class TestFunctions(unittest.TestCase):
         partitions = util.partitionArray(arr, num_partition)
         self.assertEqual(len(partitions), num_partition-1)
 
+    def testEncodeIntPairDecodeIntPair(self):
+        if IGNORE_TEST:
+            return
+        for _ in range(100):
+            int1, int2 = (np.random.randint(1000, 100000), np.random.randint(1000, 100000))
+            encoded_int = util.encodeIntPair(int1, int2)
+            decoded_int1, decoded_int2 = util.decodeIntPair(encoded_int)
+            self.assertEqual(int1, decoded_int1)
+            self.assertEqual(int2, decoded_int2)
+    
+    def testEncodeIntPairDecodeIntPairArray(self):
+        if IGNORE_TEST:
+            return
+        size = 10
+        for _ in range(100):
+            int1 = np.random.randint(1000, 100000, size)
+            int2 = np.random.randint(1000, 100000, size)
+            encoded_int = util.encodeIntPair(int1, int2)
+            decoded_int1, decoded_int2 = util.decodeIntPair(encoded_int)
+            self.assertTrue(np.all(int1 == decoded_int1))
+            self.assertTrue(np.all(int2 == decoded_int2))
+
 
 if __name__ == '__main__':
     unittest.main()
