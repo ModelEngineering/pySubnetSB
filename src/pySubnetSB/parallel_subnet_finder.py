@@ -128,7 +128,7 @@ class ParallelSubnetFinder(object):
             """
             serialization_path = os.path.join(serialization_dir, filename)
             serializer = ModelSerializer(serialization_dir, serialization_path)
-            serializer.serializeNetworks(networks)
+            serializer.serializeNetworks(networks, is_initialize=True)
             return serialization_path
         #####
         target_serialization_path = serializeNetworks(target_networks, target_serialization_filename)
