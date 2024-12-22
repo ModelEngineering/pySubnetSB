@@ -32,8 +32,6 @@ TARGET_SERIALIZATION_FILENAME = "target_serialized.txt"
 CHECKPOINT_PATH = os.path.join(cn.DATA_DIR, CHECKPOINT_FILE)
 WORKUNIT_CSV_PATH = os.path.join(cn.DATA_DIR, WORKUNIT_CSV_FILE)
 CHECKPOINT_INTERVAL = 100 # Number of workunits procesed between checkpoints
-# BioModels
-BIOMODELS_SERIALIZATION_PATH = os.path.join(cn.DATA_DIR, "biomodels_serialized.txt")   # Serialized BioModels
 BIOMODELS_SERIALIZATION_TARGET_FILENAME = 'biomodels_serialized_target.txt'  # Serialized target models
 BIOMODELS_SERIALIZATION_REFERENCE_FILENAME = 'biomodels_serialized_reference.txt' # Serialized reference models
 BIOMODELS_CHECKPOINT_FILENAME = "biomodels_checkpoint.csv"
@@ -208,9 +206,12 @@ class ParallelSubnetFinder(object):
                 print(msg)
         #####        
         def getArgs(worker_idx:int, is_terminate:bool=True)->tuple:
+            is_initialize_worker = True  # Initialize the worker checkpoint
             return worker_idx, self.workunit_csv_path, num_worker, self.checkpoint_path, \
                           self.reference_serialization_path, self.target_serialization_path, \
-                          self.identity, is_report, is_initialize, max_num_assignment, \
+                          self.identity, is_report, \
+                          is_initialize_worker, \
+                          max_num_assignment,  \
                           CHECKPOINT_INTERVAL, is_terminate
         #####
         printPerformanceInformation("parallelFind/time0", initialize=True)
@@ -238,35 +239,45 @@ class ParallelSubnetFinder(object):
         unfinished_pairs = util.decodeIntPair(unfinished_arr)
         workunits = [Workunit(i, j) for i, j in zip(unfinished_pairs[0], unfinished_pairs[1])]
         printPerformanceInformation(f"parallelFind/time1: {len(workunits)} workunits.")
-        # Create the workunits
-        workunit_manager = SubnetFinderWorkunitManager(self.workunit_csv_path, num_worker=num_worker,
-                reference_networks=self.reference_networks, target_networks=self.target_networks)
-        workunit_manager.makeWorkunitFile()
-        if num_worker == 1:
-            # Handle single process
-            args = getArgs(0, is_terminate=False)
-            executeWorker(*args)
+        if len(workunits) > 0:
+            # Create the workunits
+            workunit_manager = SubnetFinderWorkunitManager(self.workunit_csv_path, num_worker=num_worker,
+                   reference_networks=self.reference_networks, target_networks=self.target_networks)
+            workunit_manager.makeWorkunitFile()
+            if num_worker == 1:
+               # Handle single process
+               args = getArgs(0, is_terminate=False)
+               executeWorker(*args)
+            else:
+               # Parallel processing
+               processes = []
+               for process_idx in range(num_worker):
+                   proc = mp.Process(target=executeWorker, args=(getArgs(process_idx)))
+                   processes.append(proc)
+                   proc.start()
+               # Wait for the processes to finish
+               for process_idx, proc in enumerate(processes):
+                   proc.join()
+                   printPerformanceInformation(f"parallelFind/time3a, process {process_idx}")
+            _print(f"**{num_worker} processes completed.")
+            printPerformanceInformation("parallelFind/time4")
+            # Merge the results
+            merged_checkpoint_result = WorkerCheckpointManager.merge(
+                  self.checkpoint_path, num_worker, is_report=is_report)
+            printPerformanceInformation(f"parallelFind/time5")
+            df = merged_checkpoint_result.merged_checkpoint_manager.recover().full_df
+            # Eliminate the checkpoint files
+            for worker_idx in range(num_worker):
+                worker_checkpoint_path = WorkerCheckpointManager.makeWorkerCheckpointPath(
+                    self.checkpoint_path, worker_idx)
+                worker_checkpoint_manager = WorkerCheckpointManager(worker_checkpoint_path)
+                worker_checkpoint_manager.remove()
         else:
-            # Parallel processing
-            processes = []
-            for process_idx in range(num_worker):
-                proc = mp.Process(target=executeWorker, args=(getArgs(process_idx)))
-                processes.append(proc)
-                proc.start()
-            # Wait for the processes to finish
-            for process_idx, proc in enumerate(processes):
-                proc.join()
-                printPerformanceInformation(f"parallelFind/time3a, process {process_idx}")
-        _print(f"**{num_worker} processes completed.")
-        printPerformanceInformation("parallelFind/time4")
-        # Merge the results
-        merged_checkpoint_result = WorkerCheckpointManager.merge(
-              self.checkpoint_path, num_worker, is_report=is_report)
+            # No workunits to process
+            df = manager.recover()
         # Return the results
-        printPerformanceInformation(f"parallelFind/time5")
-        df = merged_checkpoint_result.merged_checkpoint_manager.recover().full_df
         if is_report:
-            msg = f"**Done. Processed {merged_checkpoint_result.num_reference_network}"
+            msg = f"**Done. Processed {len(df)}"
             msg += f" reference networks in {self.checkpoint_path}."
             print(msg)
         return df
@@ -317,7 +328,7 @@ class ParallelSubnetFinder(object):
         if max_num_target_network == -1:
             max_num_target_network = int(1e9)
         # Construct the reference and target networks
-        serializer = ModelSerializer(None, BIOMODELS_SERIALIZATION_PATH)
+        serializer = ModelSerializer(None, cn.BIOMODELS_SERIALIZATION_PATH)
         collection = serializer.deserialize()
         all_networks = collection.networks
         if skip_networks is not None:

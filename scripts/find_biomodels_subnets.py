@@ -3,9 +3,13 @@
 import pySubnetSB.constants as cn # type: ignore
 from pySubnetSB.parallel_subnet_finder import ParallelSubnetFinder  # type: ignore
 from pySubnetSB.subnet_finder import SubnetFinder, NetworkPair  # type: ignore
+from pySubnetSB.network import Network  # type: ignore
+from pySubnetSB.model_serializer import ModelSerializer  # type: ignore
 
 import numpy as np
+import pandas as pd # type: ignore
 from multiprocessing import freeze_support
+from typing import List
 
 
 MAX_NUM_ASSIGNMENT_INITIAL = 1000
@@ -16,6 +20,7 @@ SKIP_NETWORKS = ["BIOMD0000000192", "BIOMD0000000394", "BIOMD0000000433", "BIOMD
       "BIOMD0000000464",  "BIOMD0000000979", "BIOMD0000000980", # Large number of assignments, none of which are matches
       "BIOMD0000000987", 
               ]
+OUTPUT_CSV = "biomodels_subnet_final.csv"
 
 def main(is_initialize:bool=False)->None:
     # Find subnets of the Biomodels database
@@ -34,15 +39,33 @@ def main(is_initialize:bool=False)->None:
     # Handle the cases where the search is truncated
     truncated_idx = initial_df["is_truncated"]
     truncated_df = initial_df[truncated_idx]
-    network_pairs = [NetworkPair(r, t) for r, t
-          in zip(truncated_df["reference_network"], truncated_df["induced_network"])]
-    incremental_df = SubnetFinder(network_pairs, identity=cn.ID_STRONG).find(
+    reference_networks = _deserializeBiomodels(truncated_df["reference_name"].values)
+    target_networks = _deserializeBiomodels(truncated_df["target_name"].values)
+    network_pairs = [NetworkPair(r, t) for r, t in zip(reference_networks, target_networks)]
+    # Process the truncated networks
+    final_df = initial_df[~truncated_idx].copy()
+    for network_pair in network_pairs:
+        new_df = SubnetFinder([network_pair], identity=cn.ID_STRONG).find(
         is_report=True, max_num_assignment=MAX_NUM_ASSIGNMENT_FINAL)
+        final_df = pd.concat([final_df, new_df])
+        final_df.to_csv(OUTPUT_CSV, index=False)
     # Create the final DataFrame
-    final_df = initial_df.copy()
-    final_df[truncated_idx] = incremental_df
-    final_df.to_csv("biomodels_subnet_final.csv", index=False)
+    final_df.to_csv(OUTPUT_CSV, index=False)
+
+def _deserializeBiomodels(names:List[str])->List[Network]:
+    """Deserializes the named BioModels networks
+
+    Args:
+        names: str
+
+    Returns:
+        List[Network]
+    """
+    serializer = ModelSerializer(serialization_path=cn.BIOMODELS_SERIALIZATION_PATH)
+    networks = serializer.deserialize(model_names=names).networks
+    return networks
+
 
 if __name__ == "__main__":
     freeze_support()
-    main(is_initialize=True)
+    main(is_initialize=False)

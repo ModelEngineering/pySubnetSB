@@ -54,9 +54,9 @@ class TestSubnetFinderWorkunitManager(unittest.TestCase):
     def testMakeWorkunitFile(self):
         if IGNORE_TEST:
             return
-        serializer = ModelSerializer(None, serialization_file=REFERENCE_SERIALIZATION_PATH)
+        serializer = ModelSerializer(None, serialization_path=REFERENCE_SERIALIZATION_PATH)
         serializer.serializeNetworks(REFERENCE_NETWORKS)
-        serializer = ModelSerializer(None, serialization_file=TARGET_SERIALIZATION_PATH)
+        serializer = ModelSerializer(None, serialization_path=TARGET_SERIALIZATION_PATH)
         serializer.serializeNetworks(TARGET_NETWORKS)
         self.manager.makeWorkunitFile()
         df = self.manager.getWorkunitDataframe()

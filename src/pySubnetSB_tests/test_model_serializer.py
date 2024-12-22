@@ -18,7 +18,8 @@ SERIALIZATION_FILE = os.path.join(cn.DATA_DIR, 'oscillators_serializers.txt')
 class TestModelSerializer(unittest.TestCase):
 
     def setUp(self):
-        self.model_serializer = ModelSerializer.makeOscillatorSerializer(MODEL_DIRECTORY, parent_directory=cn.TEST_DIR)
+        self.model_serializer = ModelSerializer.makeOscillatorSerializer(MODEL_DIRECTORY,
+              parent_directory=cn.TEST_DIR)
         self.remove()
 
     def tearDown(self):
@@ -43,6 +44,18 @@ class TestModelSerializer(unittest.TestCase):
         ffiles = [f for f in os.listdir(os.path.join(cn.TEST_DIR, MODEL_DIRECTORY))
               if not f.endswith('txt')]
         self.assertTrue(len(ffiles) - len(network_collection) <= 1)
+
+    def testDeserializeWithNames(self):
+        if IGNORE_TEST:
+            return
+        SIZE = 5
+        self.model_serializer.serialize()
+        network_collection = self.model_serializer.deserialize()
+        names = [n.network_name for n in network_collection.networks[0:SIZE]]
+        new_network_collection = self.model_serializer.deserialize(model_names=names)
+        self.assertEqual(len(new_network_collection), SIZE)
+        for idx, name in enumerate(names):
+            self.assertEqual(name, new_network_collection.networks[idx].network_name)
 
         
 

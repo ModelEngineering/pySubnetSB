@@ -10,5 +10,5 @@ BIOMODEL_DIR = "/Users/jlheller/home/Technical/repos/SBMLModel/data"
 BIOMODEL_FIILES = [f for f in os.listdir(BIOMODEL_DIR) if f.endswith(".xml")]
 SERIALIZATION_FILE = os.path.join(cn.DATA_DIR, "biomodels_serialized.txt")
 
-serializer = ModelSerializer(BIOMODEL_DIR, serialization_file=SERIALIZATION_FILE)
+serializer = ModelSerializer(BIOMODEL_DIR, serialization_path=SERIALIZATION_FILE)
 network_collection = serializer.serialize()

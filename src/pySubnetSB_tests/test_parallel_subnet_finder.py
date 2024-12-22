@@ -143,7 +143,8 @@ class TestParallelSubnetFinder(unittest.TestCase):
         ffiles = [f for f in os.listdir(BIOMODELS_DIR) if f.endswith(".xml")]
         df = ParallelSubnetFinder.directoryFind(BIOMODELS_DIR,
               BIOMODELS_DIR, identity=cn.ID_WEAK,
-              is_report=IS_PLOT, is_initialize=True, checkpoint_path=CHECKPOINT_PATH,
+              is_report=IS_PLOT, is_initialize=True, 
+              checkpoint_path=CHECKPOINT_PATH,
               max_num_assignment=1e2)
         count = len(df[df[cn.FINDER_REFERENCE_NAME] == df[cn.FINDER_TARGET_NAME]])
         self.assertEqual(count, len(ffiles))
@@ -162,6 +163,7 @@ class TestParallelSubnetFinder(unittest.TestCase):
               reference_serialization_filename=REFERENCE_SERIALIZATION_FILENAME,
               target_serialization_filename=TARGET_SERIALIZATION_FILENAME,
               is_report=IS_PLOT,
+              checkpoint_path=CHECKPOINT_PATH,
               identity=cn.ID_STRONG)
         prune_result = WorkerCheckpointManager.prune(df)
         self.assertGreaterEqual(len(prune_result.full_df), max_num_network**2)

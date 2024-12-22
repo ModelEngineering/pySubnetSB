@@ -17,7 +17,7 @@ BATCHSIZE = 20
 class ModelSerializer(object):
 
     def __init__(self, model_directory:Optional[str]=None,
-          serialization_file:str=DEFAULT_SERIALIZATION_FILENAME)->None:
+          serialization_path:str=DEFAULT_SERIALIZATION_FILENAME)->None:
         """
         The constructor has two forms:
         1. A model directory is given and optionally a name is given for the serialization file.
@@ -27,15 +27,15 @@ class ModelSerializer(object):
             serialization_file (str): Path for file where serialization results are stored
         """
         self.model_directory = model_directory
-        self.serialization_file = serialization_file
+        self.serialization_file = serialization_path
         # self.serialization_path is the path to the serialization file
         if model_directory is None:
-            if serialization_file.endswith("txt"):
-                self.serialization_path = serialization_file
+            if serialization_path.endswith("txt"):
+                self.serialization_path = serialization_path
             else:
                 raise ValueError("model_directory should be set if serialization_file is not a txt file.")
         else:
-            self.serialization_path = os.path.join(model_directory, serialization_file)
+            self.serialization_path = os.path.join(model_directory, serialization_path)
 
     def remove(self)->None:
         """Removes the serialization file."""
@@ -125,15 +125,21 @@ class ModelSerializer(object):
             for network in networks:
                 f.write(f'{network.serialize()}\n')
 
-    def deserialize(self)->NetworkCollection:
-        """Deserializes the network collection."""
+    def deserialize(self, model_names:Optional[List[str]]=None)->NetworkCollection:
+        """Deserializes the network collection.
+        Args:
+            model_names (List[str]): If set, only networks with these names are deserialized.
+        Returns:
+            NetworkCollection: Collection of networks
+        """
         with open(self.serialization_path, 'r') as f:
             serialization_strs = f.readlines()
         networks = []
         for serialization_str in serialization_strs:
             network = Network.deserialize(serialization_str)
             if network.num_species > 0:
-                networks.append(network)
+                if (model_names is None) or (network.network_name in model_names):
+                    networks.append(network)
         return NetworkCollection(networks, directory=self.model_directory)
 
 # Run as a main program
