@@ -19,6 +19,7 @@ SKIP_NETWORKS = ["BIOMD0000000192", "BIOMD0000000394", "BIOMD0000000433", "BIOMD
       "BIOMD0000000084", "BIOMD0000000296", "BIOMD0000000719",  "BIOMD0000000915",  "BIOMD0000001015", "BIOMD0000001009", "BIOMD0000000464", 
       "BIOMD0000000464",  "BIOMD0000000979", "BIOMD0000000980", # Large number of assignments, none of which are matches
       "BIOMD0000000987", 
+        "BIOMD0000000284",  # killed in 2nd stage
               ]
 OUTPUT_CSV = "biomodels_subnet_final.csv"
 
@@ -45,6 +46,13 @@ def main(is_initialize:bool=False)->None:
     # Process the truncated networks
     final_df = initial_df[~truncated_idx].copy()
     for network_pair in network_pairs:
+        is_skip = False
+        for network in network_pair:
+            if network.network_name in SKIP_NETWORKS:
+                is_skip = True
+                continue
+        if is_skip:
+            continue
         new_df = SubnetFinder([network_pair], identity=cn.ID_STRONG).find(
         is_report=True, max_num_assignment=MAX_NUM_ASSIGNMENT_FINAL)
         final_df = pd.concat([final_df, new_df])

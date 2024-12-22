@@ -222,6 +222,9 @@ class ParallelSubnetFinder(object):
         manager = CheckpointManager(self.checkpoint_path, is_initialize=is_initialize,
               is_report=is_report)
         df = manager.recover()
+        if len(df) > 0:
+            known_names = set(df[cn.FINDER_REFERENCE_NAME]).intersection([n.network_name for n in self.reference_networks])
+            df = df[df[cn.FINDER_REFERENCE_NAME].isin(known_names)]
         reference_dct = {n.network_name: idx for idx, n in enumerate(self.reference_networks)}
         target_dct = {n.network_name: idx for idx, n in enumerate(self.target_networks)}
         if len(df) > 0:
