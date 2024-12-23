@@ -4,15 +4,19 @@
 The null distribution are randomly generated models tuned to the BioModels repository.
 A monte carlo simulation is used to generate the null distribution, and test models to see if
 a reference network is present in the target network.
+
+TODO:
+1. Automatically choose target sizes to evaluate.
 """
 
 import pySubnetSB.constants as cn # type: ignore
 from pySubnetSB.network import Network  # type: ignore
 
 import collections
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd  # type: ignore
-from typing import List  # type: ignore
+from typing import List, Optional  # type: ignore
 import tqdm # type: ignore
 
 
@@ -22,6 +26,12 @@ NUM_TARGET_SPECIES = "num_target_species"
 NUM_TARGET_REACTION = "num_target_reaction"
 FRAC_INDUCED = "frac_induced"
 FRAC_TRUNCATED = "frac_truncated"
+# Default values
+NUM_ITERATION = 1000
+
+
+PlotSignificanceResult = collections.namedtuple("PlotSignificanceResult",
+      ["target_sizes", "frac_induces", "frac_truncates"])   
 
 
 SignificanceCalculatorResult = collections.namedtuple("SignificanceCalculatorResult", 
@@ -39,13 +49,14 @@ class SignificanceCalculator(object):
         self.num_target_species = num_target_species
         self.identity = identity
 
-    def calculate(self, num_iteration:int,
+    def calculate(self, num_iteration:int, is_report:bool=True,
           max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT)->SignificanceCalculatorResult:
         """
         Calculates the significance level of finding an induced subnetwork in a target network.
 
         Args:
             num_iteration (int): Number of iterations
+            is_report (bool): If True, report progress
             max_num_assignment (int): Maximum number of assignment pairs
 
         Returns:
@@ -53,7 +64,7 @@ class SignificanceCalculator(object):
         """
         num_induced = 0
         num_truncated = 0
-        for _ in tqdm.tqdm(range(num_iteration), desc="iteration"):
+        for _ in tqdm.tqdm(range(num_iteration), desc="iteration", disable=not is_report):
             target_network = Network.makeRandomNetworkByReactionType(self.num_target_reaction,
                   self.num_target_reaction)
             result = self.reference_network.isStructurallyIdentical(target_network,
@@ -103,7 +114,7 @@ class SignificanceCalculator(object):
                 reference_network = Network.makeRandom(reference_size, reference_size)
                 calculator = SignificanceCalculator(reference_network, target_size, target_size,
                       identity=identity)
-                result = calculator.calculate(num_iteration, max_num_assignment)
+                result = calculator.calculate(num_iteration, max_num_assignment=max_num_assignment)
                 dct[REFERENCE_SIZE].append(reference_size)
                 dct[TARGET_SIZE].append(target_size)
                 dct[FRAC_INDUCED].append(result.frac_induced)
@@ -111,3 +122,45 @@ class SignificanceCalculator(object):
         # Create the DataFrame
         df = pd.DataFrame(dct)
         return df
+
+    def plotSignificance(self, target_sizes:Optional[List[int]]=None, num_iteration:int=NUM_ITERATION,
+          max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT,
+          is_report:bool=True, is_plot=True)->PlotSignificanceResult:
+        """
+        Plots fraction of random targets in which the reference is used.
+        1 - fraction_induced is significance level.
+
+        Args:
+            target_sizes (List[int]): _description_
+            num_iteration (int, optional): _description_. Defaults to 1000.
+            is_report (bool, optional): Report progress. Defaults to True.
+            is_plot (bool, optional): Plot
+
+        Returns:
+            PlotSignificanceResult
+
+        To further adorn the plot, use is_plot=False and then plt.gca() to get the axis.
+        """
+        # Set default target sizes
+        if target_sizes is None:
+            min_size = max(self.reference_network.num_species, self.reference_network.num_reaction)
+            target_sizes = [n for n in range(min_size, 6*min_size, min_size)]
+        frac_induces = []
+        frac_truncates = []
+        for target_size in tqdm.tqdm(target_sizes, desc="targets", disable=not is_report):
+            calculator = SignificanceCalculator(self.reference_network, target_size,
+                target_size, identity=self.identity)
+            result = calculator.calculate(num_iteration, max_num_assignment=max_num_assignment,
+                is_report=False)
+            frac_induces.append(result.frac_induced)
+            frac_truncates.append(result.frac_truncated)
+        _ = plt.bar(target_sizes, frac_induces, color='blue', alpha=0.5)
+        _ = plt.bar(target_sizes, frac_truncates, bottom=frac_induces, color='red', alpha=0.5)
+        plt.ylim([0, 1])
+        plt.xlabel("Target size")
+        plt.ylabel("fraction induced")
+        plt.legend(["induced", "truncated"])
+        if is_plot:
+            plt.show()
+        return PlotSignificanceResult(target_sizes=target_sizes, frac_induces=frac_induces,
+            frac_truncates=frac_truncates)
