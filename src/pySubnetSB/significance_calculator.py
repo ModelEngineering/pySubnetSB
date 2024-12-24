@@ -16,7 +16,7 @@ import collections
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd  # type: ignore
-from typing import List, Optional  # type: ignore
+from typing import List, Optional, Tuple  # type: ignore
 import tqdm # type: ignore
 
 
@@ -67,6 +67,8 @@ class SignificanceCalculator(object):
         for _ in tqdm.tqdm(range(num_iteration), desc="iteration", disable=not is_report):
             target_network = Network.makeRandomNetworkByReactionType(self.num_target_reaction,
                   self.num_target_reaction)
+            if (target_network.num_species < self.num_target_species):
+                continue
             result = self.reference_network.isStructurallyIdentical(target_network,
                   identity=self.identity, is_subnet=True,
                     max_num_assignment=max_num_assignment, is_report=False)
@@ -164,3 +166,36 @@ class SignificanceCalculator(object):
             plt.show()
         return PlotSignificanceResult(target_sizes=target_sizes, frac_induces=frac_induces,
             frac_truncates=frac_truncates)
+
+    @classmethod 
+    def calculateOccurrenceProbability(cls, reference_network:Network, num_iteration:int=10000,
+              identity:str=cn.ID_STRONG, is_report:bool=True,
+              max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT)->Tuple[float, float]:
+        """
+        Calculates the probability of finding an induced subnetwork in a target network.
+
+        Args:
+            reference_network (Network): Reference network
+            num_iteration (int): Number of iterations
+
+        Returns:
+            float: fraction_induced, fraction_truncated
+        """
+        """ calculator = SignificanceCalculator(reference_network, reference_network.num_species,
+              reference_network.num_reaction)
+        result = calculator.calculate(num_iteration, is_report=False)
+        return result.frac_induced, result.frac_truncated """
+        initial_networks = [Network.makeRandomNetworkByReactionType(reference_network.num_reaction,
+              reference_network.num_species)
+             for _ in range(num_iteration)]
+        networks = [n for n in initial_networks if n.network_hash == reference_network.network_hash]
+        # Calculate the fraction of identical networks for those with the same hash
+        num_identical = 0
+        num_truncated = 0
+        for network in networks:
+            result = reference_network.isStructurallyIdentical(network, identity=identity,
+                max_num_assignment=max_num_assignment,
+                is_subnet=False, is_report=is_report)
+            num_identical += 1 if result else 0
+            num_truncated += 1 if result.is_truncated else 0
+        return num_identical/num_iteration, num_truncated/num_iteration

@@ -389,9 +389,40 @@ class NetworkBase(object):
         return cls(reactant_arr, product_arr)
     
     @classmethod
-    def makeRandomNetworkByReactionType(cls, 
+    def makeRandomNetworkByReactionType(cls, num_reaction:int, num_species:int=-1,
+              **kwargs)->'NetworkBase':
+        """
+        Makes a random network based on the type of reaction. Parameers are in the form
+            <p<#products>r<#reactants>_frc> where #products and #reactants are the number of
+            products and reactants. Ensures that reactions are unique.
+        Fractions are from the paper "SBMLKinetics: a tool for annotation-independent classification of
+            reaction kinetics for SBML models", Jin Liu, BMC Bioinformatics, 2023.
+
+        Args:
+            num_reaction (int): Number of reactions.
+            num_species (int): Number of species. If <0, then num_species = num_reaction.
+            is_unique (bool): Ensure that reactions are unique.
+            is_prune_species (bool): Prune species not used in any reaction.
+            fractions by number of products and reactants
+
+        Returns:
+            Network
+        """
+        # Get the network consistent with the requirements
+        max_attempts =  100
+        if num_species < 0:
+            num_species = num_reaction
+        for _ in range(max_attempts): 
+            network = cls._makeRandomNetworkByReactionType(num_reaction, num_species=num_species, **kwargs)
+            if network.num_species == num_species:
+                return network
+        raise ValueError(f"Could not find a network with {num_species} species.")
+
+    
+    @classmethod
+    def _makeRandomNetworkByReactionType(cls, 
               num_reaction:int,
-              num_species:Optional[int]=None,
+              num_species:int=-1,
               is_prune_species:bool=True,
               p0r0_frc:Optional[float]=0.0,
               p0r1_frc:Optional[float]=0.1358,
@@ -428,10 +459,9 @@ class NetworkBase(object):
         Returns:
             Network
         """
-        SUFFIX = "_frc"
-        # Handle defaults
-        if num_species is None:
+        if num_species < 0:
             num_species = num_reaction
+        SUFFIX = "_frc"
         # Initializations
         REACTION_TYPES = [f"p{i}r{j}" for i in range(4) for j in range(4)]
         FRAC_NAMES = [n + SUFFIX for n in REACTION_TYPES]
@@ -740,7 +770,7 @@ class NetworkBase(object):
             outputs.append(f"{vertex},,{label}")
         return '\n'.join(outputs)
     
-    def fill(self, num_fill_species:Optional[int]=3, num_fill_reaction:Optional[int]=3,
+    def fill(self, num_fill_species:int=3, num_fill_reaction:Optional[int]=3,
                is_permute:bool=True)->'NetworkBase':
         """Creates a new network that augments (fills) the existing network with new species and reactions.
 
@@ -765,7 +795,7 @@ class NetworkBase(object):
         if num_fill_reaction < 1: # type: ignore
             raise ValueError("Number of filler reaction must be at least 1.")
         filler_network = NetworkBase.makeRandomNetworkByReactionType(num_fill_reaction,  # type: ignore
-            num_fill_species)
+            num_species=num_fill_species)
         # Creates a supernetwork with the reference in the upper left corner of the matrices
         # and the filler network in the bottom right. Then, randomize.
         self_pad_arr = np.zeros((self.num_species, filler_network.num_reaction))   # type: ignore

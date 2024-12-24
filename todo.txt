@@ -3,7 +3,11 @@
 3. Create samples for command line
 5.1 Evaluation of the effectiveness of constraints
 Analysis
-  1. Evaluate significance of biomodels induced models
+  1. Evaluate significance of biomodels induced models.
+    a. Compare appproximate significance level with simulations
+    b. Scatter plot with greyed out points for low significance level (or different size? <0.01, <0.05, >0.05)
+      (1) CSV file summarizing biomodels - num_species, num_reaction, probability of occurrence
+      (2) Subnet.csv reports on pairs where subnet is found
   3. Detailed analysis of
      a. Characterize weak structural identical
      b. Are strong structural identical multitone?
@@ -15,3 +19,5 @@ Analysis
 Data
 1. Create datasets for weak and strong analysis of BioModels
 2. Create dataset for summarizes of BioModels models by number of reactions, species
+      (1) CSV file summarizing biomodels - num_species, num_reaction, probability of occurrence
+      (2) Subnet.csv reports on pairs where subnet is found

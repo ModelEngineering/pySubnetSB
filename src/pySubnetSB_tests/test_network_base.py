@@ -13,7 +13,7 @@ import tellurium as te  # type: ignore
 import unittest
 
 
-IGNORE_TEST = True
+IGNORE_TEST = False
 IS_PLOT = False
 NETWORK_NAME = "test"
 BIG_NETWORK = """
@@ -179,6 +179,7 @@ class TestNetwork(unittest.TestCase):
         for _ in range(100):
             size = np.random.randint(3, 20)
             network = NetworkBase.makeRandomNetworkByReactionType(size)
+            self.assertEqual(network.num_species, size)
             eval_arr = np.vstack([network.reactant_nmat.values, network.product_nmat.values])
             # Verify that all reactions have at least one participant
             sum_arr = np.sum(eval_arr, axis=0)
@@ -296,10 +297,9 @@ class TestNetwork(unittest.TestCase):
         induced_network = self.network.makeInducedNetwork(assignment_pair)
         self.assertTrue(self.network.isEquivalent(induced_network))
 
-    # FIXME: implemet tests
     def testMakeMatricesForIdentity(self):
-        #if IGNORE_TEST:
-        #    return
+        if IGNORE_TEST:
+            return
         network1 = NetworkBase.makeFromAntimonyStr(NETWORK1, network_name=NETWORK_NAME)
         network4 = NetworkBase.makeFromAntimonyStr(NETWORK4, network_name=NETWORK_NAME)
         #####

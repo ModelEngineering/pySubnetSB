@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import unittest
 
 
-IGNORE_TEST = False
+IGNORE_TEST = True
 IS_PLOT = False
 SIMPLE_MODEL = """
 S1 -> S2; k1*S1
@@ -100,6 +100,16 @@ class TestSignificanceCalculator(unittest.TestCase):
         ax = plt.gca()
         ax.set_title("Significance of Induced Subnetwork")
         plt.show()
+
+    def testCalculateOccurrenceProbability(self):
+        #if IGNORE_TEST:
+        #    return
+        reference_network = REFERENCE_NETWORK
+        reference_network = Network.makeFromAntimonyStr(COMPLEX_MODEL)
+        result = self.calculator.calculateOccurrenceProbability(
+              reference_network, num_iteration=1000000, is_report=False,
+              max_num_assignment=MAX_NUM_ASSIGNMENT)
+        import pdb; pdb.set_trace()
         
 
 if __name__ == '__main__':
