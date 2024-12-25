@@ -2,9 +2,13 @@
 
 """
 Assumes
+1. Files present
+    cn.BIOMODELS_SERIALIZATION_PATH
+    cn.OSCILOSCOPE_SERIALIZATION_PATH
 
-    Returns:
-        _type_: _description_
+To do
+1. add to model summary is_boundary_model
+
 """
 import pySubnetSB.constants as cn # type: ignore
 from pySubnetSB.model_serializer import ModelSerializer  # type: ignore
@@ -96,6 +100,18 @@ def makeModelSummary(input_path:str, output_path:str, num_reaction_threshold:int
         dct[cn.D_PROBABILITY_OF_OCCURRENCE_WEAK].append(result_weak[0])
         df = pd.DataFrame(dct)
         df.to_csv(worker_output_path, index=False)
+
+def merge():
+    """
+    Merges the worker files into a single file.
+    """
+    ffiles = [f for f in os.listdir(cn.DATA_DIR) if f.endswith(".csv") and "worker" in f]
+    dfs = []
+    for ffile in ffiles:
+        df = pd.read_csv(os.path.join(cn.DATA_DIR, ffile))
+        dfs.append(pd)
+    df = pd.concat(dfs)
+    df.to_csv(cn.BIOMODELS_SUMMARY_PATH, index=False)
 
 
 if __name__ == '__main__':

@@ -16,6 +16,7 @@ import collections
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd  # type: ignore
+import seaborn as sns # type: ignore
 from typing import List, Optional, Tuple  # type: ignore
 import tqdm # type: ignore
 
@@ -199,3 +200,52 @@ class SignificanceCalculator(object):
             num_identical += 1 if result else 0
             num_truncated += 1 if result.is_truncated else 0
         return num_identical/num_iteration, num_truncated/num_iteration
+
+    @classmethod 
+    def plotProbabilityOfOccurrence(cls, data_df:pd.DataFrame, column:str,
+          is_plot:bool=True)->None:
+        """
+        Plots mean and standard deviation (in parens) of the probability of occurrence
+        of reaction networks in -log10 units.
+          x - number of species
+          y - number of reactions
+          heatmap - probability of occurrence
+
+        Args:
+            data_df (pd.DataFrame): Dataframe with columns num_species
+            column (str): Column to analyze. Must be a probability.
+        """
+        #####
+        def transform(df:pd.DataFrame)->pd.DataFrame:
+            df.sort_index(level=0, ascending=False, inplace=True)
+            df.style.format({c: '{:.2f}' for c in df.columns})
+            return df
+        #####
+        # Transform the data
+        df = data_df.copy()
+        df[column] = df[column].map(lambda x: max(x, 1e-5))
+        df[column] = df[column].map(lambda x: -np.log10(x))
+        mean_df = df.pivot_table(index=cn.D_NUM_SPECIES, columns=cn.D_NUM_REACTION,
+              values=column, aggfunc='median')
+        mean_df = transform(mean_df)
+        std_df = df.pivot_table(index=cn.D_NUM_SPECIES, columns=cn.D_NUM_REACTION,
+              values=column, aggfunc='std')
+        std_df = transform(std_df)
+        # Create the labels
+        label_df = mean_df.copy().astype(str)
+        for index in mean_df.index:
+            for column in mean_df.columns:
+                is_assigned = False
+                if not np.isnan(mean_df.loc[index, column]):
+                    if index in std_df.index and column in std_df.columns:
+                        text = f"{mean_df.loc[index, column]:1.2f}\n({std_df.loc[index, column]:1.2f})"
+                        text = text.replace("(nan)", "")
+                        label_df.loc[index, column] = text
+                        is_assigned = True
+                if not is_assigned:
+                    label_df.loc[index, column] = ""
+        ax = sns.heatmap(mean_df, annot=label_df.values, fmt="", cmap="coolwarm", vmin=0, vmax=5,
+              annot_kws={'size': 8},
+              cbar_kws={'label': '-log10 Probability of occurrence'})
+        if is_plot:
+            plt.show()

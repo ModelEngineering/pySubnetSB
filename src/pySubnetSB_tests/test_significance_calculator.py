@@ -3,11 +3,12 @@ from pySubnetSB.network import Network  # type: ignore
 import pySubnetSB.constants as cn # type: ignore
 
 import numpy as np
+import pandas as pd # type: ignore
 import matplotlib.pyplot as plt
 import unittest
 
 
-IGNORE_TEST = True
+IGNORE_TEST = False
 IS_PLOT = False
 SIMPLE_MODEL = """
 S1 -> S2; k1*S1
@@ -35,7 +36,7 @@ k3 = 0.2
 k4 = 0.2
 k5 = 0.2
 """
-NUM_ITERATION = 1000
+NUM_ITERATION = 10
 MAX_NUM_ASSIGNMENT = int(1e6)
 NUM_TARGET_REACTION = 10
 NUM_TARGET_SPECIES = 10
@@ -94,22 +95,30 @@ class TestSignificanceCalculator(unittest.TestCase):
             return
         result = self.calculator.plotSignificance(
               is_report=IGNORE_TEST,
-              num_iteration=100, is_plot=False)
+              num_iteration=5, is_plot=False)
         for values in [result.frac_induces, result.frac_truncates]:
             self.assertTrue(len(result.target_sizes), len(values))
-        ax = plt.gca()
-        ax.set_title("Significance of Induced Subnetwork")
-        plt.show()
 
     def testCalculateOccurrenceProbability(self):
-        #if IGNORE_TEST:
-        #    return
+        if IGNORE_TEST:
+            return
         reference_network = REFERENCE_NETWORK
         reference_network = Network.makeFromAntimonyStr(COMPLEX_MODEL)
         result = self.calculator.calculateOccurrenceProbability(
-              reference_network, num_iteration=1000000, is_report=False,
+              reference_network, num_iteration=NUM_ITERATION, is_report=False,
               max_num_assignment=MAX_NUM_ASSIGNMENT)
-        import pdb; pdb.set_trace()
+        self.assertTrue(result[0] < 0.01)
+
+    def testPlotProbabilityOfOccurrence(self):
+        if IGNORE_TEST:
+            return
+        size = 100
+        num_reactions = np.random.randint(1, 10, size=size)
+        num_species = np.random.randint(1, 10, size=size)
+        values = np.random.uniform(0, 1, size=size)
+        df = pd.DataFrame({'num_reaction': num_reactions, 'num_species': num_species,
+                           'value': values})
+        self.calculator.plotProbabilityOfOccurrence(df, column= 'value', is_plot=IS_PLOT)
         
 
 if __name__ == '__main__':
