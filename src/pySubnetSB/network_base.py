@@ -409,7 +409,7 @@ class NetworkBase(object):
             Network
         """
         # Get the network consistent with the requirements
-        max_attempts =  100
+        max_attempts =  1000
         if num_species < 0:
             num_species = num_reaction
         for _ in range(max_attempts): 

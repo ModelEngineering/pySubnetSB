@@ -123,5 +123,19 @@ FINDER_NUM_ASSIGNMENT_PAIR = "num_assignment_pair"
 FINDER_IS_TRUNCATED = "is_truncated"
 FINDER_DATAFRAME_COLUMNS = [FINDER_REFERENCE_NAME,  FINDER_TARGET_NAME,  FINDER_REFERENCE_NETWORK,
       FINDER_INDUCED_NETWORK,  FINDER_NAME_DCT, FINDER_NUM_ASSIGNMENT_PAIR, FINDER_IS_TRUNCATED]
-# BioModels
+# Data columns
+D_MODEL_NAME = "model_name"
+D_REFERENCE_MODEL = "reference_model"
+D_TARGET_MODEL = "target_model"
+D_NUM_SPECIES = "num_species"
+D_NUM_REACTION = "num_reaction"
+D_PROBABILITY_OF_OCCURRENCE_WEAK = "probability_of_occurrence_weak"
+D_PROBABILITY_OF_OCCURRENCE_STRONG = "probability_of_occurrence_strong"
+# Data paths
 BIOMODELS_SERIALIZATION_PATH = os.path.join(DATA_DIR, "biomodels_serialized.txt")   # Serialized BioModels
+OSCILLATORS_SERIALIZATION_PATH = os.path.join(DATA_DIR, "oscillators_serialized.txt")   # Serialized BioModels
+FULL_BIOMODELS_STRONG_PATH = os.path.join(DATA_DIR, "full_biomodels_strong.csv")
+FULL_BIOMODELS_WEAK_PATH = os.path.join(DATA_DIR, "full_biomodels_weak.csv")
+SUBNET_BIOMODELS_STRONG_PATH = os.path.join(DATA_DIR, "subnet_biomodels_strong.csv")
+SUBNET_BIOMODELS_WEAK_PATH = os.path.join(DATA_DIR, "subnet_biomodels_weak.csv")
+BIOMODELS_SUMMARY_PATH = os.path.join(DATA_DIR, "biomodels_summary.csv")

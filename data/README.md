@@ -24,6 +24,7 @@
   * ``model_name`` (ModelName)
   * ``num_species`` (Count)
   * ``num_reaction`` (Count)
-  * ``probability_of_occurrence`` (Probability)
+  * ``weak_probability_of_occurrence`` (Probability for weak identity)
+  * ``strong_probability_of_occurrence`` (Probability for strong identity)
 * ``biomodels_serialized.txt``: serialization file for BioModels in format used in APIs. Each line is a serialization for a model. Lines can be added and/or deleted.
 * ``oscillators_serialized.txt``: serialization file for oscillators in same format as ``biomodels_serialized.txt``.

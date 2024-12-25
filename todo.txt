@@ -16,8 +16,7 @@ Analysis
      sirn is cluster superset of naive
   5. Statistics for clusters: cluster_size, clustereq1, clustergt1_size
   6. Examine strong clusters to see differences. Simulate.
-Data
-1. Create datasets for weak and strong analysis of BioModels
-2. Create dataset for summarizes of BioModels models by number of reactions, species
-      (1) CSV file summarizing biomodels - num_species, num_reaction, probability of occurrence
-      (2) Subnet.csv reports on pairs where subnet is found
+Create mk_plots
+Data - mk_data
+1. Data in data/README.md
+2. Starts from full_biomodels<weak | strong>.csv, biomodels_serialized.txt, oscillators_serialized.txt
