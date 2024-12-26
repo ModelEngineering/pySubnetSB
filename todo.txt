@@ -1,3 +1,7 @@
+Setup to use repetitions of summary data
+Extend script to merge new data
+script to calculate null distribution for subset inclusions
+
 1.1 Better repo
 2.1 Create jupyter example
 3. Create samples for command line

@@ -178,7 +178,7 @@ class TestNetwork(unittest.TestCase):
             return
         for _ in range(100):
             size = np.random.randint(3, 20)
-            network = NetworkBase.makeRandomNetworkByReactionType(size)
+            network = NetworkBase.makeRandomNetworkByReactionType(size, is_exact=True)
             self.assertEqual(network.num_species, size)
             eval_arr = np.vstack([network.reactant_nmat.values, network.product_nmat.values])
             # Verify that all reactions have at least one participant
