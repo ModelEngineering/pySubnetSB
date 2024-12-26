@@ -67,7 +67,7 @@ class SignificanceCalculator(object):
         num_truncated = 0
         for _ in tqdm.tqdm(range(num_iteration), desc="iteration", disable=not is_report):
             target_network = Network.makeRandomNetworkByReactionType(self.num_target_reaction,
-                  self.num_target_reaction)
+                  self.num_target_reaction, is_exact=True)
             if (target_network.num_species < self.num_target_species):
                 continue
             result = self.reference_network.isStructurallyIdentical(target_network,
@@ -187,7 +187,7 @@ class SignificanceCalculator(object):
         result = calculator.calculate(num_iteration, is_report=False)
         return result.frac_induced, result.frac_truncated """
         initial_networks = [Network.makeRandomNetworkByReactionType(reference_network.num_reaction,
-              reference_network.num_species)
+              reference_network.num_species, is_exact=True)
              for _ in range(num_iteration)]
         networks = [n for n in initial_networks if n.network_hash == reference_network.network_hash]
         # Calculate the fraction of identical networks for those with the same hash

@@ -60,8 +60,7 @@ class TestStoichiometryMatrices(unittest.TestCase):
     def testWithFile(self):
         if IGNORE_TEST:
             return
-        ffiles = [f for f in os.listdir(MODEL_DIR) if not f.endswith(".txt")]
-        path = os.path.join(MODEL_DIR, ffiles[0])
+        path = os.path.join(MODEL_DIR, "bestmodel_jJykOfGq0Kgy")
         rr = te.loada(path)
         antimony_str = rr.getAntimony()
         smat = rr.getFullStoichiometryMatrix()

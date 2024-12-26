@@ -389,7 +389,7 @@ class NetworkBase(object):
         return cls(reactant_arr, product_arr)
     
     @classmethod
-    def makeRandomNetworkByReactionType(cls, num_reaction:int, num_species:int=-1,
+    def makeRandomNetworkByReactionType(cls, num_reaction:int, num_species:int=-1, is_exact:bool=False,
               **kwargs)->'NetworkBase':
         """
         Makes a random network based on the type of reaction. Parameers are in the form
@@ -401,6 +401,7 @@ class NetworkBase(object):
         Args:
             num_reaction (int): Number of reactions.
             num_species (int): Number of species. If <0, then num_species = num_reaction.
+            is_exact (bool): Ensure that the number of species is exactly num_species.
             is_unique (bool): Ensure that reactions are unique.
             is_prune_species (bool): Prune species not used in any reaction.
             fractions by number of products and reactants
@@ -408,6 +409,8 @@ class NetworkBase(object):
         Returns:
             Network
         """
+        if not is_exact:
+            return cls._makeRandomNetworkByReactionType(num_reaction, num_species=num_species, **kwargs)
         # Get the network consistent with the requirements
         max_attempts =  1000
         if num_species < 0:
