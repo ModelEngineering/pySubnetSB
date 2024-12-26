@@ -132,6 +132,7 @@ D_NUM_SPECIES = "num_species"
 D_NUM_REACTION = "num_reaction"
 D_PROBABILITY_OF_OCCURRENCE_WEAK = "probability_of_occurrence_weak"
 D_PROBABILITY_OF_OCCURRENCE_STRONG = "probability_of_occurrence_strong"
+D_IS_BOUNDARY_NETWORK = "is_boundary_network"
 # Data paths
 BIOMODELS_SERIALIZATION_PATH = os.path.join(DATA_DIR, "biomodels_serialized.txt")   # Serialized BioModels
 OSCILLATORS_SERIALIZATION_PATH = os.path.join(DATA_DIR, "oscillators_serialized.txt")   # Serialized BioModels

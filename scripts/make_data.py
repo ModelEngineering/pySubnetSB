@@ -18,6 +18,7 @@ import argparse
 import os
 import numpy as np
 import pandas as pd # type: ignore
+from typing import List
 
 NUM_ITERATION_SIGNIFICANCE = 100000
 COLUMNS = [cn.D_MODEL_NAME, cn.D_NUM_REACTION, cn.D_NUM_SPECIES,
@@ -101,24 +102,53 @@ def makeModelSummary(input_path:str, output_path:str, num_reaction_threshold:int
         df = pd.DataFrame(dct)
         df.to_csv(worker_output_path, index=False)
 
-def merge():
+def mergeModelBiomodelsSummary(dfs:List[pd.DataFrame],
+      serialization_path:str=cn.BIOMODELS_SERIALIZATION_PATH)->pd.DataFrame:
     """
-    Merges the worker files into a single file.
+    Merges multiple model by calculating the median of the probability of occurrence.
+    Also, add is_boundary_network if it's missing.
     """
-    ffiles = [f for f in os.listdir(cn.DATA_DIR) if f.endswith(".csv") and "worker" in f]
-    dfs = []
-    for ffile in ffiles:
-        df = pd.read_csv(os.path.join(cn.DATA_DIR, ffile))
-        dfs.append(pd)
-    df = pd.concat(dfs)
-    df.to_csv(cn.BIOMODELS_SUMMARY_PATH, index=False)
+    result_df = dfs[0].copy().set_index(cn.D_MODEL_NAME)
+    # Get the networks
+    serializer = ModelSerializer(None, serialization_path=serialization_path)
+    networks = serializer.deserialize().networks
+    network_dct = {network.network_name: network for network in networks}
+    #
+    merged_df = pd.concat(dfs)
+    group_dct = merged_df.groupby(cn.D_MODEL_NAME).groups
+    for model_name, idx_lst in group_dct.items():
+        idxs = idx_lst.to_list()
+        for column in [cn.D_PROBABILITY_OF_OCCURRENCE_STRONG, cn.D_PROBABILITY_OF_OCCURRENCE_WEAK]:
+            values = [dfs[idx].loc[idxs[idx], column]
+              for idx in range(len(idx_lst))]
+            pruned_values = [v for v in values if not np.isnan(v)]
+            if len(pruned_values) == 0:
+                median = np.nan
+            else:
+                median = np.median(pruned_values)
+            result_df.loc[model_name, column] = median
+    # Augment with is_boundary_network
+    if not cn.D_IS_BOUNDARY_NETWORK in result_df.columns:
+        for network in networks:
+            if network.network_name not in result_df.index:
+                continue
+            result_df.loc[network.network_name, cn.D_IS_BOUNDARY_NETWORK] = network.isBoundaryNetwork()
+    # Return result
+    result_df = result_df.reset_index()
+    import pdb; pdb.set_trace()
 
 
 if __name__ == '__main__':
-    #makeSubnetData(cn.FINDER_DATAFRAME_PATH, cn.SUBNET_DATA_PATH)
-    parser = argparse.ArgumentParser(description='Make data for pySubnetSB')
-    parser.add_argument('num_worker', type=int, help='Number of workers')
-    parser.add_argument('worker_idx', type=int, help='Worker index')
-    args = parser.parse_args()
-    makeModelSummary(cn.BIOMODELS_SERIALIZATION_PATH, cn.BIOMODELS_SUMMARY_PATH,
-          num_worker=args.num_worker, worker_idx=args.worker_idx)
+    if False:
+        makeSubnetData(cn.FINDER_DATAFRAME_PATH, cn.SUBNET_DATA_PATH)
+    if False:
+        parser = argparse.ArgumentParser(description='Make data for pySubnetSB')
+        parser.add_argument('num_worker', type=int, help='Number of workers')
+        parser.add_argument('worker_idx', type=int, help='Worker index')
+        args = parser.parse_args()
+        makeModelSummary(cn.BIOMODELS_SERIALIZATION_PATH, cn.BIOMODELS_SUMMARY_PATH,
+            num_worker=args.num_worker, worker_idx=args.worker_idx)
+    if True:
+        df_paths = [os.path.join(cn.DATA_DIR, f) for f in os.listdir(cn.DATA_DIR) if f.endswith("csv") and "biomodels_summary_" in f]  
+        dfs = [pd.read_csv(p) for p in df_paths]
+        mergeModelBiomodelsSummary(dfs)
