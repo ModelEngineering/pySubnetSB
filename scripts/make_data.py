@@ -25,19 +25,31 @@ MAX_SIZE_FOR_POC = 3  # Maximum number of reactions/species to calculate probabi
 NUM_ITERATION_SIGNIFICANCE = 100000
 NUM_ITERATION_SIGNIFICANCE_PAIRS = 10000
 COLUMNS = [cn.D_MODEL_NAME, cn.D_NUM_REACTION, cn.D_NUM_SPECIES,
-        cn.D_PROBABILITY_OF_OCCURRENCE_STRONG, cn.D_PROBABILITY_OF_OCCURRENCE_WEAK]
+        cn.D_PROBABILITY_OF_OCCURRENCE_STRONG, cn.D_PROBABILITY_OF_OCCURRENCE_WEAK,
+        cn.D_TRUNCATED_WEAK, cn.D_TRUNCATED_STRONG, cn.D_IS_BOUNDARY_NETWORK]
 
+# Test paths
+TEST_SUBNET_BIOMODELS_STRONG_PATH = "/tmp/subnet_biomodels_strong.csv"
+TEST_SUBNET_BIOMODELS_WEAK_PATH = "/tmp/subnet_biomodels_weak.csv"
+TEST_BIOMODELS_SUMMARY_PATH = "/tmp/biomodels_summary.csv"
+
+
+
+def printHeader(name:str):
+    print(f"\n***Processing {name}\n ***")
 
 def makeSubnetData(input_path:str, output_path:str,
       serialization_path:str=cn.BIOMODELS_SERIALIZATION_PATH):
     """
     Creates a CSV file that selects those reference, target pairs for which there is an induced network.
+    Calculates the probability of occurrence if the number of reactions > 3.
 
     Args:
         input_path (str): Path CSV file produced by SubnetFinder
         output_path (str): Path to the output CSV file
         serialization_path (str): Path to the serialized networks
     """
+    printHeader("makeSubnetData")
     #####
     def makeRowName(reference_name:str, target_name:str)->str:
         return reference_name + "_" + target_name
@@ -108,6 +120,7 @@ def makeModelSummary(input_path:str, output_path:str, num_reaction_threshold:int
         num_worker (int): Number of workers
         worker_idx (int): Worker index
     """
+    printHeader("makeModelSummary")
     worker_output_path = output_path.replace(".csv", f"_worker_{worker_idx}.csv")
     if not os.path.exists(input_path):
         raise FileNotFoundError(f"File not found: {input_path}")    
@@ -123,12 +136,11 @@ def makeModelSummary(input_path:str, output_path:str, num_reaction_threshold:int
             dct[c] = df[c].tolist()
         processed_network_names = df[cn.D_MODEL_NAME].tolist()
     # Process the networks
-    for idx, network in enumerate(networks):
+    for idx, network in tqdm.tqdm(enumerate(networks), desc="networks", total=len(networks)):
         if idx % num_worker != worker_idx:
             continue
         if network.network_name in processed_network_names:
             continue
-        print(f"Processing {network.network_name} ({idx+1}/{len(networks)})")
         dct[cn.D_MODEL_NAME].append(network.network_name)
         dct[cn.D_NUM_REACTION].append(network.num_reaction)
         dct[cn.D_NUM_SPECIES].append(network.num_species)
@@ -136,13 +148,13 @@ def makeModelSummary(input_path:str, output_path:str, num_reaction_threshold:int
             # Calculate probability of occurrence
             try:
                 result_strong = SignificanceCalculator.calculateNetworkOccurrenceProbability(network,
-                    num_iteration=num_iteration,
+                    num_iteration=num_iteration, is_report=False,
                     identity=cn.ID_STRONG, max_num_assignment=cn.MAX_NUM_ASSIGNMENT)
                 if result_strong[1] > 0.001:
                     print(f"Truncation is too high for strong POC: {result_strong[1]} for {network.network_name}")  
                 #
                 result_weak = SignificanceCalculator.calculateNetworkOccurrenceProbability(network,
-                    num_iteration=num_iteration,
+                    num_iteration=num_iteration, is_report=False,
                     identity=cn.ID_STRONG, max_num_assignment=cn.MAX_NUM_ASSIGNMENT)
                 if result_weak[1] > 0.001:
                     print(f"Truncation is too high for weak POC: {result_weak[1]} for {network.network_name}")  
@@ -155,6 +167,9 @@ def makeModelSummary(input_path:str, output_path:str, num_reaction_threshold:int
             result_weak = (np.nan, np.nan)
         dct[cn.D_PROBABILITY_OF_OCCURRENCE_STRONG].append(result_strong[0])
         dct[cn.D_PROBABILITY_OF_OCCURRENCE_WEAK].append(result_weak[0])
+        dct[cn.D_TRUNCATED_WEAK].append(result_weak[1])
+        dct[cn.D_TRUNCATED_STRONG].append(result_strong[1])
+        dct[cn.D_IS_BOUNDARY_NETWORK].append(network.isBoundaryNetwork())
         df = pd.DataFrame(dct)
         df.to_csv(worker_output_path, index=False)
 
@@ -164,6 +179,7 @@ def mergeModelBiomodelsSummary(dfs:List[pd.DataFrame],
     Merges multiple model by calculating the median of the probability of occurrence.
     Also, add is_boundary_network if it's missing.
     """
+    printHeader("mergeModelBiomodelsSummary")
     result_df = dfs[0].copy().set_index(cn.D_MODEL_NAME)
     # Get the networks
     serializer = ModelSerializer(None, serialization_path=serialization_path)
@@ -190,19 +206,31 @@ def mergeModelBiomodelsSummary(dfs:List[pd.DataFrame],
             result_df.loc[network.network_name, cn.D_IS_BOUNDARY_NETWORK] = network.isBoundaryNetwork()
     # Return result
     result_df = result_df.reset_index()
-    import pdb; pdb.set_trace()
 
 
 if __name__ == '__main__':
+    is_test = False
+    if is_test:
+        subnet_biomodels_strong_path = TEST_SUBNET_BIOMODELS_STRONG_PATH
+        subnet_biomodels_weak_path = TEST_SUBNET_BIOMODELS_WEAK_PATH
+        biomodels_summary_path = TEST_BIOMODELS_SUMMARY_PATH
+    else:
+        subnet_biomodels_strong_path = cn.SUBNET_BIOMODELS_STRONG_PATH
+        subnet_biomodels_weak_path = cn.SUBNET_BIOMODELS_WEAK_PATH
+        biomodels_summary_path = cn.BIOMODELS_SUMMARY_PATH
+    #
     if True:
-        makeSubnetData(cn.FULL_BIOMODELS_STRONG_PATH, cn.SUBNET_BIOMODELS_STRONG_PATH)
-        makeSubnetData(cn.FULL_BIOMODELS_WEAK_PATH, cn.SUBNET_BIOMODELS_WEAK_PATH)
+        makeSubnetData(cn.FULL_BIOMODELS_STRONG_PATH, subnet_biomodels_strong_path)
+        makeSubnetData(cn.FULL_BIOMODELS_WEAK_PATH, subnet_biomodels_weak_path)
+    if False:
+        makeModelSummary(cn.BIOMODELS_SERIALIZATION_PATH, "/tmp/test.csv",
+            num_worker=1, worker_idx=0)
     if False:
         parser = argparse.ArgumentParser(description='Make data for pySubnetSB')
         parser.add_argument('num_worker', type=int, help='Number of workers')
         parser.add_argument('worker_idx', type=int, help='Worker index')
         args = parser.parse_args()
-        makeModelSummary(cn.BIOMODELS_SERIALIZATION_PATH, cn.BIOMODELS_SUMMARY_PATH,
+        makeModelSummary(cn.BIOMODELS_SERIALIZATION_PATH, biomodels_summary_path,
             num_worker=args.num_worker, worker_idx=args.worker_idx)
     if False:
         df_paths = [os.path.join(cn.DATA_DIR, f) for f in os.listdir(cn.DATA_DIR) if f.endswith("csv") and "biomodels_summary_" in f]  

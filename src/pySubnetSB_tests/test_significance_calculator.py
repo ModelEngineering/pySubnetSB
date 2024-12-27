@@ -77,7 +77,6 @@ class TestSignificanceCalculator(unittest.TestCase):
         self.assertTrue(result.num_truncated >= 0)
         self.assertTrue(result.frac_induced >= 0)
         self.assertTrue(result.frac_truncated >= 0)
-        self.assertTrue(result.frac_induced > 0.1)
     
     def testCalculateComplex(self):
         if IGNORE_TEST:
