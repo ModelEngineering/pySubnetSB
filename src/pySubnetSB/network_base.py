@@ -234,7 +234,7 @@ class NetworkBase(object):
             identity = np.array(range(size))
             if size == 1:
                 return identity
-            for _ in range(10):
+            for _ in range(100):
                 perm = np.random.permutation(range(size))
                 if not np.all(perm == identity):
                     break

@@ -36,7 +36,7 @@ TEST_BIOMODELS_SUMMARY_PATH = "/tmp/biomodels_summary.csv"
 
 
 def printHeader(name:str):
-    print(f"\n***Processing {name}\n ***")
+    print(f"\n***Processing {name}***\n")
 
 def makeSubnetData(input_path:str, output_path:str,
       serialization_path:str=cn.BIOMODELS_SERIALIZATION_PATH):
