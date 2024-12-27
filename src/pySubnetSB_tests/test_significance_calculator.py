@@ -50,8 +50,8 @@ REFERENCE_NETWORK = Network.makeFromAntimonyStr(SIMPLE_MODEL)
 class TestSignificanceCalculator(unittest.TestCase):
 
     def setUp(self):
-        self.calculator = SignificanceCalculator(REFERENCE_NETWORK, NUM_TARGET_REACTION,
-              NUM_TARGET_SPECIES, identity=IDENTITY)
+        self.calculator = SignificanceCalculator(REFERENCE_NETWORK, NUM_TARGET_SPECIES,
+              NUM_TARGET_REACTION, identity=IDENTITY)
         
     def testConstructor(self):
         if IGNORE_TEST:
@@ -83,8 +83,8 @@ class TestSignificanceCalculator(unittest.TestCase):
         if IGNORE_TEST:
             return
         reference_network = Network.makeFromAntimonyStr(COMPLEX_MODEL)
-        calculator = SignificanceCalculator(reference_network, NUM_TARGET_REACTION,
-              NUM_TARGET_SPECIES, identity=IDENTITY)
+        calculator = SignificanceCalculator(reference_network, NUM_TARGET_SPECIES,
+              NUM_TARGET_REACTION, identity=IDENTITY)
         result = calculator.calculate(NUM_ITERATION, max_num_assignment=MAX_NUM_ASSIGNMENT,
               is_report=False)
         self.assertTrue(result.frac_induced < 0.1)
@@ -104,7 +104,7 @@ class TestSignificanceCalculator(unittest.TestCase):
             return
         reference_network = REFERENCE_NETWORK
         reference_network = Network.makeFromAntimonyStr(COMPLEX_MODEL)
-        result = self.calculator.calculateOccurrenceProbability(
+        result = self.calculator.calculateNetworkOccurrenceProbability(
               reference_network, num_iteration=NUM_ITERATION, is_report=False,
               max_num_assignment=MAX_NUM_ASSIGNMENT)
         self.assertTrue(result[0] < 0.01)

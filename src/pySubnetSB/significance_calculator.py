@@ -43,14 +43,14 @@ SignificanceCalculatorResult = collections.namedtuple("SignificanceCalculatorRes
 
 class SignificanceCalculator(object):
 
-    def __init__(self, reference_network:Network, num_target_reaction:int, num_target_species:int,
+    def __init__(self, reference_network:Network, num_target_species:int, num_target_reaction:int,
                  identity:str=cn.ID_WEAK)->None:
         self.reference_network = reference_network
         self.num_target_reaction = num_target_reaction
         self.num_target_species = num_target_species
         self.identity = identity
 
-    def calculate(self, num_iteration:int, is_report:bool=True,
+    def calculate(self, num_iteration:int, is_report:bool=True, is_exact:bool=True,
           max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT)->SignificanceCalculatorResult:
         """
         Calculates the significance level of finding an induced subnetwork in a target network.
@@ -58,6 +58,7 @@ class SignificanceCalculator(object):
         Args:
             num_iteration (int): Number of iterations
             is_report (bool): If True, report progress
+            is_exact (bool): If True, use exact network generation
             max_num_assignment (int): Maximum number of assignment pairs
 
         Returns:
@@ -67,7 +68,7 @@ class SignificanceCalculator(object):
         num_truncated = 0
         for _ in tqdm.tqdm(range(num_iteration), desc="iteration", disable=not is_report):
             target_network = Network.makeRandomNetworkByReactionType(self.num_target_reaction,
-                  self.num_target_reaction, is_exact=True)
+                  self.num_target_reaction, is_exact=is_exact)
             if (target_network.num_species < self.num_target_species):
                 continue
             result = self.reference_network.isStructurallyIdentical(target_network,
@@ -169,7 +170,7 @@ class SignificanceCalculator(object):
             frac_truncates=frac_truncates)
 
     @classmethod 
-    def calculateOccurrenceProbability(cls, reference_network:Network, num_iteration:int=10000,
+    def calculateNetworkOccurrenceProbability(cls, reference_network:Network, num_iteration:int=10000,
               identity:str=cn.ID_STRONG, is_report:bool=True,
               max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT)->Tuple[float, float]:
         """
