@@ -34,6 +34,11 @@ TEST_SUBNET_BIOMODELS_WEAK_PATH = "/tmp/subnet_biomodels_weak.csv"
 TEST_BIOMODELS_SUMMARY_PATH = "/tmp/biomodels_summary.csv"
 
 
+def makeRowName(reference_name:str, target_name:str)->str:
+    return reference_name + "_" + target_name
+
+SKIP_ROWS = [makeRowName("BIOMD000000866", "BIOMD0000000942"),
+            ]
 
 def printHeader(name:str):
     print(f"\n***Processing {name}***\n")
@@ -50,10 +55,6 @@ def makeSubnetData(input_path:str, output_path:str,
         serialization_path (str): Path to the serialized networks
     """
     printHeader("makeSubnetData")
-    #####
-    def makeRowName(reference_name:str, target_name:str)->str:
-        return reference_name + "_" + target_name
-    #####
     serializer = ModelSerializer(None, serialization_path=serialization_path)
     networks = serializer.deserialize().networks
     network_dct = {network.network_name: network for network in networks}
@@ -79,6 +80,8 @@ def makeSubnetData(input_path:str, output_path:str,
         reference_network = network_dct[row[cn.FINDER_REFERENCE_NAME]]
         target_network = network_dct[row[cn.FINDER_TARGET_NAME]]
         row_name = makeRowName(row[cn.FINDER_REFERENCE_NAME], row[cn.FINDER_TARGET_NAME])
+        if row_name in SKIP_ROWS:
+            continue
         if row_name in processed_row_names:
             continue
         new_row = row.copy()
@@ -106,6 +109,48 @@ def makeSubnetData(input_path:str, output_path:str,
         new_df = pd.DataFrame(rows)
         new_df.to_csv(output_path, index=False)
     return df
+
+def updateSubnetPOC(input_path:str, model_summary_path:str, output_path:str):
+    """
+    Updates the probability of occurrence of the reference network in the target.
+    Updates are based on a lower bound approximation of POC of the reference in the target.
+
+    Args:
+        input_path (str): Path CSV file produced for makeSubnetData
+        output_path (str): Path to the output CSV file
+        model_summary_path (str): Path to the model summary CSV file
+    """
+    printHeader("updateSubnetPOC")
+    subnet_df = pd.read_csv(input_path)
+    summary_df = pd.read_csv(model_summary_path)
+    summary_df = summary_df.set_index(cn.D_MODEL_NAME)
+    # Create the POC estimates
+    strong_poc_estimates = []
+    weak_poc_estimates = []
+    for idx, row in tqdm.tqdm(subnet_df.iterrows(), desc="subnets", total=len(subnet_df)):
+        reference_name = row[cn.FINDER_REFERENCE_NAME]
+        target_name = row[cn.FINDER_TARGET_NAME]
+        num_reference_reaction = summary_df.loc[reference_name][cn.D_NUM_REACTION]
+        subnet_strong_poc = row[cn.D_PROBABILITY_OF_OCCURRENCE_STRONG]
+        subnet_weak_poc = row[cn.D_PROBABILITY_OF_OCCURRENCE_WEAK]
+        if num_reference_reaction > MAX_SIZE_FOR_POC:
+            continue
+        if not np.isnan(subnet_strong_poc):
+            strong_poc_estimates.append(subnet_strong_poc)
+        if not np.isnan(subnet_weak_poc):
+            weak_poc_estimates.append(subnet_weak_poc)
+        reference_strong_poc = summary_df[reference_name][cn.D_PROBABILITY_OF_OCCURRENCE_STRONG]
+        reference_weak_poc = summary_df[reference_name][cn.D_PROBABILITY_OF_OCCURRENCE_WEAK]
+        num_target_reaction = summary_df.loc[target_name][cn.D_NUM_REACTION]
+        target_reference_ratio = num_target_reaction / num_reference_reaction
+        estimate_strong_poc = 1 - (1 - reference_strong_poc) ** target_reference_ratio
+        estimate_weak_poc = 1 - (1 - reference_weak_poc) ** target_reference_ratio
+        strong_poc_estimates.append(estimate_strong_poc)
+        weak_poc_estimates.append(estimate_weak_poc)
+    # Update the dataframe
+    subnet_df[cn.D_PROBABILITY_OF_OCCURRENCE_STRONG] = strong_poc_estimates
+    subnet_df[cn.D_PROBABILITY_OF_OCCURRENCE_WEAK] = weak_poc_estimates
+    subnet_df.to_csv(output_path, index=False)
 
 def makeModelSummary(input_path:str, output_path:str, num_reaction_threshold:int=10,
       num_iteration:int=NUM_ITERATION_SIGNIFICANCE, num_worker:int=1, worker_idx:int=0):
@@ -173,7 +218,7 @@ def makeModelSummary(input_path:str, output_path:str, num_reaction_threshold:int
         df = pd.DataFrame(dct)
         df.to_csv(worker_output_path, index=False)
 
-def mergeModelBiomodelsSummary(dfs:List[pd.DataFrame],
+def mergeBiomodelsSummary(dfs:List[pd.DataFrame],
       serialization_path:str=cn.BIOMODELS_SERIALIZATION_PATH)->pd.DataFrame:
     """
     Merges multiple model by calculating the median of the probability of occurrence.
@@ -209,30 +254,20 @@ def mergeModelBiomodelsSummary(dfs:List[pd.DataFrame],
 
 
 if __name__ == '__main__':
-    is_test = False
-    if is_test:
-        subnet_biomodels_strong_path = TEST_SUBNET_BIOMODELS_STRONG_PATH
-        subnet_biomodels_weak_path = TEST_SUBNET_BIOMODELS_WEAK_PATH
-        biomodels_summary_path = TEST_BIOMODELS_SUMMARY_PATH
-    else:
-        subnet_biomodels_strong_path = cn.SUBNET_BIOMODELS_STRONG_PATH
-        subnet_biomodels_weak_path = cn.SUBNET_BIOMODELS_WEAK_PATH
-        biomodels_summary_path = cn.BIOMODELS_SUMMARY_PATH
+    subnet_biomodels_strong_path = cn.SUBNET_BIOMODELS_STRONG_PATH
+    subnet_biomodels_weak_path = cn.SUBNET_BIOMODELS_WEAK_PATH
+    biomodels_summary_path = cn.BIOMODELS_SUMMARY_PATH
+    is_makeSubnetData = False
+    is_makeModelSummary = False
+    is_mergeBiomodelsSummary = False
     #
-    if True:
+    if is_makeSubnetData:
         makeSubnetData(cn.FULL_BIOMODELS_STRONG_PATH, subnet_biomodels_strong_path)
         makeSubnetData(cn.FULL_BIOMODELS_WEAK_PATH, subnet_biomodels_weak_path)
-    if False:
-        makeModelSummary(cn.BIOMODELS_SERIALIZATION_PATH, "/tmp/test.csv",
-            num_worker=1, worker_idx=0)
-    if False:
-        parser = argparse.ArgumentParser(description='Make data for pySubnetSB')
-        parser.add_argument('num_worker', type=int, help='Number of workers')
-        parser.add_argument('worker_idx', type=int, help='Worker index')
-        args = parser.parse_args()
+    if is_makeModelSummary:
         makeModelSummary(cn.BIOMODELS_SERIALIZATION_PATH, biomodels_summary_path,
-            num_worker=args.num_worker, worker_idx=args.worker_idx)
-    if False:
+            num_worker=1, worker_idx=0)
+    if 
         df_paths = [os.path.join(cn.DATA_DIR, f) for f in os.listdir(cn.DATA_DIR) if f.endswith("csv") and "biomodels_summary_" in f]  
         dfs = [pd.read_csv(p) for p in df_paths]
-        mergeModelBiomodelsSummary(dfs)
+        mergeBiomodelsSummary(dfs)

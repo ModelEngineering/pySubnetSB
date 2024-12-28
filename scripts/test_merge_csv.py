@@ -13,9 +13,14 @@ IGNORE_TEST = False
 IS_PLOT = False
 NUM_CSV = 3
 FILE_STR = __file__.split("/")[-1].split(".")[0]
+TMP_DIR = "/tmp"
 CSV_PATHS = [os.path.join(cn.SCRIPT_DIR, f"{FILE_STR}_data_{i}.csv") for i in range(NUM_CSV)]
-OUTPUT_PATH = os.path.join(cn.SCRIPT_DIR, "test_merge_csv_output.csv")
-REMOVE_FILES = list(CSV_PATHS) + [OUTPUT_PATH]
+OUTPUT_PATH = os.path.join(TMP_DIR, "test_merge_csv_output.csv")
+TEST_SUBNET_BIOMODELS_STRONG_PATH = "/tmp/subnet_biomodels_strong.csv"
+TEST_SUBNET_BIOMODELS_WEAK_PATH = "/tmp/subnet_biomodels_weak.csv"
+TEST_BIOMODELS_SUMMARY_PATH = "/tmp/biomodels_summary.csv"
+REMOVE_FILES = [OUTPUT_PATH, TEST_SUBNET_BIOMODELS_STRONG_PATH,
+      TEST_SUBNET_BIOMODELS_WEAK_PATH, TEST_BIOMODELS_SUMMARY_PATH]
 
 #############################
 # Tests
