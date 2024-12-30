@@ -29,13 +29,13 @@ WORKUNIT_CSV_FILE = "parallel_subset_finder_workunit.csv"
 SERIALIZATION_FILE = "serialized.txt"
 REFERENCE_SERIALIZATION_FILENAME = "reference_serialized.txt"
 TARGET_SERIALIZATION_FILENAME = "target_serialized.txt"
-CHECKPOINT_PATH = os.path.join(cn.DATA_DIR, CHECKPOINT_FILE)
-WORKUNIT_CSV_PATH = os.path.join(cn.DATA_DIR, WORKUNIT_CSV_FILE)
+CHECKPOINT_PATH = os.path.join(cn.AUXILIARY_DATA_DIR, CHECKPOINT_FILE)
+WORKUNIT_CSV_PATH = os.path.join(cn.AUXILIARY_DATA_DIR, WORKUNIT_CSV_FILE)
 CHECKPOINT_INTERVAL = 100 # Number of workunits procesed between checkpoints
 BIOMODELS_SERIALIZATION_TARGET_FILENAME = 'biomodels_serialized_target.txt'  # Serialized target models
 BIOMODELS_SERIALIZATION_REFERENCE_FILENAME = 'biomodels_serialized_reference.txt' # Serialized reference models
 BIOMODELS_CHECKPOINT_FILENAME = "biomodels_checkpoint.csv"
-BIOMODELS_CHECKPOINT_PATH = os.path.join(cn.DATA_DIR, BIOMODELS_CHECKPOINT_FILENAME)
+BIOMODELS_CHECKPOINT_PATH = os.path.join(cn.AUXILIARY_DATA_DIR, BIOMODELS_CHECKPOINT_FILENAME)
 
 # Performance monitoring
 LAST_TIME = "last_time"

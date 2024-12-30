@@ -6,6 +6,7 @@ for _ in range(2):
     PROJECT_DIR = os.path.dirname(PROJECT_DIR)
 MODEL_DIR = os.path.join(PROJECT_DIR, 'models')
 DATA_DIR = os.path.join(PROJECT_DIR, 'data')
+AUXILIARY_DATA_DIR = os.path.join(PROJECT_DIR, 'auxiliary_data')
 SCRIPT_DIR = os.path.join(PROJECT_DIR, 'scripts')
 TEST_DIR = os.path.join(PROJECT_DIR, 'src', 'pySubnetSB_tests')
 OSCILLATOR_DIRS = [
@@ -142,4 +143,9 @@ FULL_BIOMODELS_STRONG_PATH = os.path.join(DATA_DIR, "full_biomodels_strong.csv")
 FULL_BIOMODELS_WEAK_PATH = os.path.join(DATA_DIR, "full_biomodels_weak.csv")
 SUBNET_BIOMODELS_STRONG_PATH = os.path.join(DATA_DIR, "subnet_biomodels_strong.csv")
 SUBNET_BIOMODELS_WEAK_PATH = os.path.join(DATA_DIR, "subnet_biomodels_weak.csv")
+SUBNET_BIOMODELS_STRONG_AUGMENTED_PATH = os.path.join(DATA_DIR, "subnet_biomodels_strong_augmented.csv")
+SUBNET_BIOMODELS_WEAK_AUGUMENTED_PATH = os.path.join(DATA_DIR, "subnet_biomodels_weak_augmented.csv")
 BIOMODELS_SUMMARY_PATH = os.path.join(DATA_DIR, "biomodels_summary.csv")
+# Concatenation of CSV files from multiple runs of merge_data.makeModelSummary
+BIOMODELS_SUMMARY_MULTIPLE_PATH = os.path.join(AUXILIARY_DATA_DIR,
+      "biomodels_summary", "biomodels_summary.csv")

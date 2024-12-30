@@ -409,17 +409,20 @@ class NetworkBase(object):
         Returns:
             Network
         """
+        if num_reaction <= 0:
+            raise ValueError("Number of reactions must be positive.")
         if not is_exact:
             return cls._makeRandomNetworkByReactionType(num_reaction, num_species=num_species, **kwargs)
         # Get the network consistent with the requirements
-        max_attempts =  1000
+        max_attempts =  100000
         if num_species < 0:
             num_species = num_reaction
         for _ in range(max_attempts): 
             network = cls._makeRandomNetworkByReactionType(num_reaction, num_species=num_species, **kwargs)
             if network.num_species == num_species:
                 return network
-        raise ValueError(f"Could not find a network with {num_species} species.")
+        raise ValueError(
+              f"Could not find a network with {num_species} species and {num_reaction} reactions.")
 
     
     @classmethod

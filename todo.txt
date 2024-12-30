@@ -20,6 +20,8 @@ Analysis
      sirn is cluster superset of naive
   5. Statistics for clusters: cluster_size, clustereq1, clustergt1_size
   6. Examine strong clusters to see differences. Simulate.
+  7. Plot 10 histograms of POC for 10 num_reaction networks.
+
 Create mk_plots
 Data - mk_data
 1. Data in data/README.md
