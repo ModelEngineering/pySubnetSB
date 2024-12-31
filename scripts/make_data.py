@@ -15,6 +15,7 @@ import pySubnetSB.constants as cn # type: ignore
 from pySubnetSB.model_serializer import ModelSerializer  # type: ignore
 from pySubnetSB.significance_calculator import SignificanceCalculator  # type: ignore
 
+import argparse
 import os
 import numpy as np
 import pandas as pd # type: ignore
@@ -284,8 +285,12 @@ if __name__ == '__main__':
         makeSubnetData(cn.FULL_BIOMODELS_WEAK_PATH, cn.SUBNET_BIOMODELS_WEAK_PATH)
     if is_make_model_summary:
         # Create summary statistics for each model
+        parser = argparse.ArgumentParser(description='Make Model Summary')
+        parser.add_argument('num_worker', type=int, help='Number of workers')
+        parser.add_argument('worker_idx', type=int, help='Worker index')
+        args = parser.parse_args()
         makeModelSummary(cn.BIOMODELS_SERIALIZATION_PATH, cn.BIOMODELS_SUMMARY_PATH,
-            num_worker=1, worker_idx=0)
+            num_worker=args.num_worker, worker_idx=args.worker_idx)
     if is_consolidate_biomodels_summary:
         # Merge multiple summaries are produced (because of replications of simulations)
         df_paths = [os.path.join(cn.DATA_DIR, f) for f in os.listdir(cn.DATA_DIR)
