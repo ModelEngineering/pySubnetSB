@@ -22,7 +22,7 @@ import pandas as pd # type: ignore
 import tqdm # type: ignore
 from typing import List, Optional
 
-MAX_SIZE_FOR_POC = 3  # Maximum number of reactions/species to calculate probability of occurrence
+MAX_SIZE_FOR_POC = 10  # Maximum number of reactions/species to calculate probability of occurrence
 NUM_ITERATION_SIGNIFICANCE = 100000
 NUM_ITERATION_SIGNIFICANCE_PAIRS = 10000
 COLUMNS = [cn.D_MODEL_NAME, cn.D_NUM_REACTION, cn.D_NUM_SPECIES,
@@ -117,52 +117,66 @@ def makeSubnetData(input_path:str, output_path:str,
         new_df.to_csv(output_path, index=False)
     return df
 
-def updateSubnetPOC(input_path:str, model_summary_path:str, output_path:str, is_report:bool=True,
-      num_row:int=-1):
+def cleanSummaryData(input_path:str, output_path:str, is_report:bool=True):
     """
-    Updates the probability of occurrence of the reference network in the target.
-    Updates are based on a lower bound approximation of POC of the reference in the target.
+    Cleans the summary data by removing duplicate rows.
+
+    Args:
+        input_path (str): Path to the input CSV file
+        output_path (str): Path to the output CSV file
+    """
+    _printHeader("cleanSummaryData", is_report=is_report)
+    initial_df = pd.read_csv(input_path)
+    df = initial_df.copy()
+    group_dct = df.groupby(cn.D_MODEL_NAME).groups
+    duplicates = [k for k, v in group_dct.items() if len(v) > 1]
+    for name in duplicates:
+        rows = group_dct[name]
+        if len(rows) == 1:
+            continue
+        values = group_dct[name]
+        removes = values[1:]
+        df = df.drop(index=removes)
+    df.to_csv(output_path, index=False)
+
+def addEstimatedPOC(input_path:str, model_summary_path:str, output_path:str, is_report:bool=True,
+      total_row:int=-1):
+    """
+    Adds columns for estimated POC.
 
     Args:
         input_path (str): Path CSV file produced for makeSubnetData
         output_path (str): Path to the output CSV file
         model_summary_path (str): Path to the model summary CSV file
+        total_row (int): Number of rows to process (all if < 0)
     """
     _printHeader("updateSubnetPOC", is_report=is_report)
     subnet_df = pd.read_csv(input_path)
     summary_df = pd.read_csv(model_summary_path)
     summary_df = summary_df.set_index(cn.D_MODEL_NAME)
     # Create the POC estimates
-    strong_poc_estimates = []
-    weak_poc_estimates = []
     num_processed_row = 0
+    rows = []
     for _, row in tqdm.tqdm(subnet_df.iterrows(), desc="subnets", total=len(subnet_df)):
         reference_name = row[cn.FINDER_REFERENCE_NAME]
         target_name = row[cn.FINDER_TARGET_NAME]
         num_reference_reaction = summary_df.loc[reference_name][cn.D_NUM_REACTION]
+        num_reference_reaction = summary_df.loc[reference_name][cn.D_NUM_REACTION]
         subnet_strong_poc = row[cn.D_PROBABILITY_OF_OCCURRENCE_STRONG]
         subnet_weak_poc = row[cn.D_PROBABILITY_OF_OCCURRENCE_WEAK]
-        if num_row > 0 and (num_processed_row >= num_row):
+        if total_row > 0 and (num_processed_row >= total_row):
             break
+        rows.append(row)
         num_processed_row += 1
-        if num_reference_reaction > MAX_SIZE_FOR_POC:
-            continue
-        if not np.isnan(subnet_strong_poc):
-            strong_poc_estimates.append(subnet_strong_poc)
-        if not np.isnan(subnet_weak_poc):
-            weak_poc_estimates.append(subnet_weak_poc)
-        reference_strong_poc = summary_df[reference_name][cn.D_PROBABILITY_OF_OCCURRENCE_STRONG]
-        reference_weak_poc = summary_df[reference_name][cn.D_PROBABILITY_OF_OCCURRENCE_WEAK]
+        reference_strong_poc = summary_df.loc[reference_name][cn.D_PROBABILITY_OF_OCCURRENCE_STRONG]
+        reference_weak_poc = summary_df.loc[reference_name][cn.D_PROBABILITY_OF_OCCURRENCE_WEAK]
         num_target_reaction = summary_df.loc[target_name][cn.D_NUM_REACTION]
         target_reference_ratio = num_target_reaction / num_reference_reaction
-        estimate_strong_poc = 1 - (1 - reference_strong_poc) ** target_reference_ratio
-        estimate_weak_poc = 1 - (1 - reference_weak_poc) ** target_reference_ratio
-        strong_poc_estimates.append(estimate_strong_poc)
-        weak_poc_estimates.append(estimate_weak_poc)
+        row[cn.D_ESTIMATED_POC_STRONG] = 1 - (1 - reference_strong_poc) ** target_reference_ratio
+        row[cn.D_ESTIMATED_POC_WEAK] = 1 - (1 - reference_weak_poc) ** target_reference_ratio
     # Update the dataframe
-    subnet_df[cn.D_PROBABILITY_OF_OCCURRENCE_STRONG] = strong_poc_estimates
-    subnet_df[cn.D_PROBABILITY_OF_OCCURRENCE_WEAK] = weak_poc_estimates
-    subnet_df.to_csv(output_path, index=False)
+    new_df = pd.DataFrame(rows)
+    new_df.to_csv(output_path, index=False)
 
 def makeModelSummary(
       input_path:str=cn.BIOMODELS_SERIALIZATION_PATH,
@@ -249,40 +263,41 @@ def makeModelSummary(
         df = pd.DataFrame(dct)
         df.to_csv(worker_output_path, index=False)
 
-def consolidateBiomodelsSummary(input_path:str=cn.BIOMODELS_SUMMARY_MULTIPLE_PATH,
-      output_path:str=cn.BIOMODELS_SUMMARY_PATH, is_report:bool=True):
-    """
-    Calculates the median probability of occurrence for each model in the input files.
-    Models may have multiple occurrences. The output has only one occurrence of each model.
-    Add is_boundary_network if it's missing.
-    """
-    _printHeader("mergeModelBiomodelsSummary", is_report=is_report)
-    df = pd.read_csv(input_path)
-    # Find the median values
-    sub1_df = df[[cn.D_PROBABILITY_OF_OCCURRENCE_STRONG, cn.D_PROBABILITY_OF_OCCURRENCE_WEAK,
-          cn.D_MODEL_NAME]]
-    median_df = sub1_df.groupby(cn.D_MODEL_NAME).median()
-    # Create dataframe for constant columns
-    sub2_df = df.copy()
-    del sub2_df[cn.D_PROBABILITY_OF_OCCURRENCE_STRONG]
-    del sub2_df[cn.D_PROBABILITY_OF_OCCURRENCE_WEAK]
-    sub2_df = sub2_df.drop_duplicates()
-    #
-    result_df = sub2_df.merge(median_df, left_on=cn.D_MODEL_NAME, right_index=True)
-    result_df.to_csv(output_path, index=False)
+#def consolidateBiomodelsSummary(input_path:str=cn.BIOMODELS_SUMMARY_MULTIPLE_PATH,
+#      output_path:str=cn.BIOMODELS_SUMMARY_PATH, is_report:bool=True):
+#    """
+#    Calculates the median probability of occurrence for each model in the input files.
+#    Models may have multiple occurrences. The output has only one occurrence of each model.
+#    Add is_boundary_network if it's missing.
+#    """
+#    _printHeader("mergeModelBiomodelsSummary", is_report=is_report)
+#    df = pd.read_csv(input_path)
+#    # Find the median values
+#    sub1_df = df[[cn.D_PROBABILITY_OF_OCCURRENCE_STRONG, cn.D_PROBABILITY_OF_OCCURRENCE_WEAK,
+#          cn.D_MODEL_NAME]]
+#    median_df = sub1_df.groupby(cn.D_MODEL_NAME).median()
+#    # Create dataframe for constant columns
+#    sub2_df = df.copy()
+#    del sub2_df[cn.D_PROBABILITY_OF_OCCURRENCE_STRONG]
+#    del sub2_df[cn.D_PROBABILITY_OF_OCCURRENCE_WEAK]
+#    sub2_df = sub2_df.drop_duplicates()
+#    #
+#    result_df = sub2_df.merge(median_df, left_on=cn.D_MODEL_NAME, right_index=True)
+#    result_df.to_csv(output_path, index=False)
 
 
 if __name__ == '__main__':
     # Function invocations are ordered by data depenencies
     is_make_subnet_data = False
     is_make_model_summary = False
-    is_consolidate_biomodels_summary = False
+    is_clean_summary_data = False
+    """ is_consolidate_biomodels_summary = False """
     is_update_subnet_POC = False
     #
     if is_make_subnet_data:
         # Find models in BioModels that are subnets of other models
-        makeSubnetData(cn.FULL_BIOMODELS_STRONG_PATH, cn.SUBNET_BIOMODELS_STRONG_PATH)
-        makeSubnetData(cn.FULL_BIOMODELS_WEAK_PATH, cn.SUBNET_BIOMODELS_WEAK_PATH)
+        makeSubnetData(cn.FULL_BIOMODELS_STRONG_PATH, cn.SUBNET_BIOMODELS_STRONG_PRELIMINARY_PATH)
+        makeSubnetData(cn.FULL_BIOMODELS_WEAK_PATH, cn.SUBNET_BIOMODELS_WEAK_PRELIMINARY_PATH)
     if is_make_model_summary:
         # Create summary statistics for each model
         parser = argparse.ArgumentParser(description='Make Model Summary')
@@ -291,17 +306,21 @@ if __name__ == '__main__':
         args = parser.parse_args()
         makeModelSummary(cn.BIOMODELS_SERIALIZATION_PATH, cn.BIOMODELS_SUMMARY_PATH,
             num_worker=args.num_worker, worker_idx=args.worker_idx)
-    if is_consolidate_biomodels_summary:
+        # Use scripts/merge_csv.py to merge the worker files
+    """ if is_consolidate_biomodels_summary:
         # Merge multiple summaries are produced (because of replications of simulations)
         df_paths = [os.path.join(cn.DATA_DIR, f) for f in os.listdir(cn.DATA_DIR)
               if f.endswith("csv") and "biomodels_summary_" in f]  
         dfs = [pd.read_csv(p) for p in df_paths]
         consolidateBiomodelsSummary(input_path=cn.BIOMODELS_SUMMARY_MULTIPLE_PATH,
-              output_path=cn.BIOMODELS_SUMMARY_PATH)
+              output_path=cn.BIOMODELS_SUMMARY_PATH) """
+    if is_clean_summary_data:
+        # Remove duplicate rows in the summary data
+        cleanSummaryData(cn.BIOMODELS_SUMMARY_PRELIMINARY_PATH, cn.BIOMODELS_SUMMARY_PATH)
     if is_update_subnet_POC:
         # Update the probability of occurrence of induced networks for small models using
         #   an analytic approximation
-        updateSubnetPOC(cn.SUBNET_BIOMODELS_STRONG_PATH, cn.BIOMODELS_SUMMARY_PATH,
-              cn.SUBNET_BIOMODELS_STRONG_AUGMENTED_PATH)
-        updateSubnetPOC(cn.SUBNET_BIOMODELS_WEAK_PATH, cn.BIOMODELS_SUMMARY_PATH,
-              cn.SUBNET_BIOMODELS_WEAK_AUGMENTED_PATH)
+        addEstimatedPOC(cn.SUBNET_BIOMODELS_STRONG_PRELIMINARY_PATH, cn.BIOMODELS_SUMMARY_PATH,
+              cn.SUBNET_BIOMODELS_STRONG_PATH)
+        addEstimatedPOC(cn.SUBNET_BIOMODELS_WEAK_PRELIMINARY_PATH, cn.BIOMODELS_SUMMARY_PATH,
+              cn.SUBNET_BIOMODELS_WEAK_PATH)

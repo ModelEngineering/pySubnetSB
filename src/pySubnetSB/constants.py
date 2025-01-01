@@ -136,16 +136,16 @@ D_TRUNCATED_WEAK = "trunceated_weak"
 D_PROBABILITY_OF_OCCURRENCE_STRONG = "probability_of_occurrence_strong"
 D_TRUNCATED_STRONG = "truncated_strong"
 D_IS_BOUNDARY_NETWORK = "is_boundary_network"
+D_ESTIMATED_POC_STRONG = "estimated_poc_strong"
+D_ESTIMATED_POC_WEAK = "estimated_poc_weak"
 # Data paths
 BIOMODELS_SERIALIZATION_PATH = os.path.join(DATA_DIR, "biomodels_serialized.txt")   # Serialized BioModels
 OSCILLATORS_SERIALIZATION_PATH = os.path.join(DATA_DIR, "oscillators_serialized.txt")   # Serialized BioModels
 FULL_BIOMODELS_STRONG_PATH = os.path.join(DATA_DIR, "full_biomodels_strong.csv")
 FULL_BIOMODELS_WEAK_PATH = os.path.join(DATA_DIR, "full_biomodels_weak.csv")
-SUBNET_BIOMODELS_STRONG_PATH = os.path.join(DATA_DIR, "subnet_biomodels_strong.csv")
-SUBNET_BIOMODELS_WEAK_PATH = os.path.join(DATA_DIR, "subnet_biomodels_weak.csv")
-SUBNET_BIOMODELS_STRONG_AUGMENTED_PATH = os.path.join(DATA_DIR, "subnet_biomodels_strong_augmented.csv")
-SUBNET_BIOMODELS_WEAK_AUGUMENTED_PATH = os.path.join(DATA_DIR, "subnet_biomodels_weak_augmented.csv")
+SUBNET_BIOMODELS_STRONG_PRELIMINARY_PATH = os.path.join(AUXILIARY_DATA_DIR, "subnet_biomodels_strong_preliminary.csv")
+SUBNET_BIOMODELS_WEAK_PRELIMINARY_PATH = os.path.join(AUXILIARY_DATA_DIR, "subnet_biomodels_weak_preliminary.csv")
+SUBNET_BIOMODELS_STRONG_PATH = os.path.join(DATA_DIR, "subnet_biomodels_strong_augmented.csv")
+SUBNET_BIOMODELS_WEAK_PATH = os.path.join(DATA_DIR, "subnet_biomodels_weak_augmented.csv")
+BIOMODELS_SUMMARY_PRELIMINARY_PATH = os.path.join(AUXILIARY_DATA_DIR, "biomodels_summary_preliminary.csv")
 BIOMODELS_SUMMARY_PATH = os.path.join(DATA_DIR, "biomodels_summary.csv")
-# Concatenation of CSV files from multiple runs of merge_data.makeModelSummary
-BIOMODELS_SUMMARY_MULTIPLE_PATH = os.path.join(AUXILIARY_DATA_DIR,
-      "biomodels_summary", "biomodels_summary.csv")

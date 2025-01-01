@@ -1,6 +1,6 @@
 # DATA SETS
 # Provenance
-Data sets are produced by the functions in ``make_data.py`` in the ``scripts`` directory. A couple of the functions are compute intensive, and so have been parallelized. Some manual work is needed to set up parallel runs. Also, to improve the quality of the estimates of probability of occurrence, there may be multiple runs done for ``biomodels_summary`` that should be combined (to calculate mean values) using ``consolidateBiomodelSummary`` in ``merge_data``. Probability of occurrence calculations are only done for smaller models, those with no more than 10 reactions. (See ``makeModelSummary`` to update this threshold.)
+Induced network data ("subnet") originate from ``scripts/find_biomodels_subnet.py``. The other data sets are produced by the functions in ``make_data.py`` in the ``scripts`` directory. A couple of the functions are compute intensive, and so have been parallelized. Some manual work is needed to set up parallel runs. Also, to improve the quality of the estimates of probability of occurrence, there may be multiple runs done for ``biomodels_summary`` that should be combined (to calculate mean values) using ``consolidateBiomodelSummary`` in ``merge_data``. Probability of occurrence calculations are only done for smaller models, those with no more than 10 reactions. (See ``makeModelSummary`` to update this threshold.)
 # Data types
 * ModelName - String that identifies a model. In BioModels, this is the BioModels model name.
 * Network - String containing Antiimony representation of the network (without rate laws and constant initializations)
@@ -23,6 +23,8 @@ Data sets are produced by the functions in ``make_data.py`` in the ``scripts`` d
   * ``truncated_weak`` truncated in the calculation of probability of occurrence with identity=weak
   * ``probability_of_occurrence_strong`` probability of occurrence using strong identity
   * ``probability_of_occurrence_weak`` probability of occurrence using weak identity
+  * ``estimated_POC_strong`` analytical estimate of POC
+  * ``estimated_POC_weak`` analytical estimate of POC
 * ``full_biomodels_weak.csv`` (same as ``biomodels_subnet_strong.csv`` but for weak identity)
 * ``subnet_biomodels_weak.csv`` Subset of ``full_biomodels_weak.csv`` that have induced networks
 * ``biomodels_summary.csv``. Same columns as ``subnet_biomodels_strong.csv``
