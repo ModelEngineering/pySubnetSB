@@ -8,16 +8,16 @@ import numpy as np
 import unittest
 
 
-IGNORE_TEST = True
+IGNORE_TEST = False
 IS_PLOT = False
 TEST_SUBNET_BIOMODELS_STRONG_PATH = "/tmp/subnet_biomodels_strong.csv"
-TEST_SUBNET_BIOMODELS_STRONG_AUGMENTED_PATH = "/tmp/subnet_biomodels_strong_augmented.csv"
+TEST_SUBNET_BIOMODELS_STRONG_PRELIMINARY_PATH = "/tmp/subnet_biomodels_strong_preliminary.csv"
 TEST_SUBNET_BIOMODELS_WEAK_PATH = "/tmp/subnet_biomodels_weak.csv"
-TEST_SUBNET_BIOMODELS_WEAK_AUGMENTED_PATH = "/tmp/subnet_biomodels_weak_augmented.csv"
+TEST_SUBNET_BIOMODELS_WEAK_PRELIMINARY_PATH = "/tmp/subnet_biomodels_weak_preliminary.csv"
 TEST_BIOMODELS_SUMMARY_PATH = "/tmp/biomodels_summary.csv"
 TEST_BIOMODELS_SUMMARY_WORKER_PATH = "/tmp/biomodels_summary_worker_0.csv"
 REMOVE_FILES:list = [TEST_SUBNET_BIOMODELS_STRONG_PATH, TEST_SUBNET_BIOMODELS_WEAK_PATH,
-      TEST_SUBNET_BIOMODELS_STRONG_AUGMENTED_PATH, TEST_SUBNET_BIOMODELS_WEAK_AUGMENTED_PATH,
+      TEST_SUBNET_BIOMODELS_STRONG_PRELIMINARY_PATH, TEST_SUBNET_BIOMODELS_WEAK_PRELIMINARY_PATH,
       TEST_BIOMODELS_SUMMARY_PATH, TEST_BIOMODELS_SUMMARY_WORKER_PATH]
 
 #############################
@@ -40,14 +40,14 @@ class TestFunctions(unittest.TestCase):
         if IGNORE_TEST:
             return
         NUM_ROW = 5
-        md.makeSubnetData(cn.SUBNET_BIOMODELS_STRONG_PATH, TEST_SUBNET_BIOMODELS_STRONG_PATH,
+        md.makeSubnetData(cn.FULL_BIOMODELS_STRONG_PATH, TEST_SUBNET_BIOMODELS_STRONG_PATH,
               num_row=NUM_ROW, is_report=IGNORE_TEST)
         self.assertTrue(os.path.isfile(TEST_SUBNET_BIOMODELS_STRONG_PATH))
         df1 = pd.read_csv(TEST_SUBNET_BIOMODELS_STRONG_PATH)
         self.assertEqual(len(df1), NUM_ROW)
         self.assertEqual(np.sum(df1['num_assignment_pair'] > 0), NUM_ROW)
         # Check recovering existing data
-        md.makeSubnetData(cn.SUBNET_BIOMODELS_STRONG_PATH, TEST_SUBNET_BIOMODELS_STRONG_PATH,
+        md.makeSubnetData(cn.FULL_BIOMODELS_STRONG_PATH, TEST_SUBNET_BIOMODELS_STRONG_PATH,
               num_row=NUM_ROW, is_report=IGNORE_TEST)
         df2 = pd.read_csv(TEST_SUBNET_BIOMODELS_STRONG_PATH)
         self.assertEqual(len(df2), 2*NUM_ROW)
@@ -81,8 +81,8 @@ class TestFunctions(unittest.TestCase):
         self.assertTrue(isinstance(df, pd.DataFrame))
 
     def testAddEstimatedPOC(self):
-        #if IGNORE_TEST:
-        #    return
+        if IGNORE_TEST:
+            return
         dff = pd.read_csv(cn.SUBNET_BIOMODELS_STRONG_PRELIMINARY_PATH)
         md.addEstimatedPOC(cn.SUBNET_BIOMODELS_STRONG_PRELIMINARY_PATH, cn.BIOMODELS_SUMMARY_PATH,
               TEST_SUBNET_BIOMODELS_STRONG_PATH, is_report=IGNORE_TEST)
