@@ -263,27 +263,27 @@ def makeModelSummary(
         df = pd.DataFrame(dct)
         df.to_csv(worker_output_path, index=False)
 
-#def consolidateBiomodelsSummary(input_path:str=cn.BIOMODELS_SUMMARY_MULTIPLE_PATH,
-#      output_path:str=cn.BIOMODELS_SUMMARY_PATH, is_report:bool=True):
-#    """
-#    Calculates the median probability of occurrence for each model in the input files.
-#    Models may have multiple occurrences. The output has only one occurrence of each model.
-#    Add is_boundary_network if it's missing.
-#    """
-#    _printHeader("mergeModelBiomodelsSummary", is_report=is_report)
-#    df = pd.read_csv(input_path)
-#    # Find the median values
-#    sub1_df = df[[cn.D_PROBABILITY_OF_OCCURRENCE_STRONG, cn.D_PROBABILITY_OF_OCCURRENCE_WEAK,
-#          cn.D_MODEL_NAME]]
-#    median_df = sub1_df.groupby(cn.D_MODEL_NAME).median()
-#    # Create dataframe for constant columns
-#    sub2_df = df.copy()
-#    del sub2_df[cn.D_PROBABILITY_OF_OCCURRENCE_STRONG]
-#    del sub2_df[cn.D_PROBABILITY_OF_OCCURRENCE_WEAK]
-#    sub2_df = sub2_df.drop_duplicates()
-#    #
-#    result_df = sub2_df.merge(median_df, left_on=cn.D_MODEL_NAME, right_index=True)
-#    result_df.to_csv(output_path, index=False)
+def consolidateBiomodelsSummary(input_path:str=cn.BIOMODELS_SUMMARY_PRELIMINARY_PATH,
+      output_path:str=cn.BIOMODELS_SUMMARY_PATH, is_report:bool=True):
+    """
+    Calculates the median probability of occurrence for each model in the input files.
+    Models may have multiple occurrences. The output has only one occurrence of each model.
+    Add is_boundary_network if it's missing.
+    """
+    _printHeader("consolidateModelBiomodelsSummary", is_report=is_report)
+    df = pd.read_csv(input_path)
+    # Find the median values
+    sub1_df = df[[cn.D_PROBABILITY_OF_OCCURRENCE_STRONG, cn.D_PROBABILITY_OF_OCCURRENCE_WEAK,
+          cn.D_MODEL_NAME]]
+    median_df = sub1_df.groupby(cn.D_MODEL_NAME).median()
+    # Create dataframe for constant columns
+    sub2_df = df.copy()
+    del sub2_df[cn.D_PROBABILITY_OF_OCCURRENCE_STRONG]
+    del sub2_df[cn.D_PROBABILITY_OF_OCCURRENCE_WEAK]
+    sub2_df = sub2_df.drop_duplicates()
+    #
+    result_df = sub2_df.merge(median_df, left_on=cn.D_MODEL_NAME, right_index=True)
+    result_df.to_csv(output_path, index=False)
 
 
 if __name__ == '__main__':
@@ -291,7 +291,7 @@ if __name__ == '__main__':
     is_make_subnet_data = False
     is_make_model_summary = False
     is_clean_summary_data = False
-    """ is_consolidate_biomodels_summary = False """
+    is_consolidate_biomodels_summary = True
     is_update_subnet_POC = False
     #
     if is_make_subnet_data:
@@ -299,7 +299,9 @@ if __name__ == '__main__':
         makeSubnetData(cn.FULL_BIOMODELS_STRONG_PATH, cn.SUBNET_BIOMODELS_STRONG_PRELIMINARY_PATH)
         makeSubnetData(cn.FULL_BIOMODELS_WEAK_PATH, cn.SUBNET_BIOMODELS_WEAK_PRELIMINARY_PATH)
     if is_make_model_summary:
-        # Create summary statistics for each model
+        # Create summary statistics for each model. This is done multiple times to account for variability.
+        # The result are separate summary files that are merged into BIOMODELS_SUMMARY_PRELIMINARY_PATH
+        # by scripts/merge_csv.py.
         parser = argparse.ArgumentParser(description='Make Model Summary')
         parser.add_argument('num_worker', type=int, help='Number of workers')
         parser.add_argument('worker_idx', type=int, help='Worker index')
@@ -307,13 +309,13 @@ if __name__ == '__main__':
         makeModelSummary(cn.BIOMODELS_SERIALIZATION_PATH, cn.BIOMODELS_SUMMARY_PATH,
             num_worker=args.num_worker, worker_idx=args.worker_idx)
         # Use scripts/merge_csv.py to merge the worker files
-    """ if is_consolidate_biomodels_summary:
+    if is_consolidate_biomodels_summary:
         # Merge multiple summaries are produced (because of replications of simulations)
         df_paths = [os.path.join(cn.DATA_DIR, f) for f in os.listdir(cn.DATA_DIR)
               if f.endswith("csv") and "biomodels_summary_" in f]  
         dfs = [pd.read_csv(p) for p in df_paths]
-        consolidateBiomodelsSummary(input_path=cn.BIOMODELS_SUMMARY_MULTIPLE_PATH,
-              output_path=cn.BIOMODELS_SUMMARY_PATH) """
+        consolidateBiomodelsSummary(input_path=cn.BIOMODELS_SUMMARY_PRELIMINARY_PATH,
+              output_path=cn.BIOMODELS_SUMMARY_PATH)
     if is_clean_summary_data:
         # Remove duplicate rows in the summary data
         cleanSummaryData(cn.BIOMODELS_SUMMARY_PRELIMINARY_PATH, cn.BIOMODELS_SUMMARY_PATH)
