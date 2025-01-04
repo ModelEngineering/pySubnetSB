@@ -291,7 +291,7 @@ if __name__ == '__main__':
     is_make_subnet_data = False
     is_make_model_summary = False
     is_clean_summary_data = False
-    is_consolidate_biomodels_summary = True
+    is_consolidate_biomodels_summary = False
     is_update_subnet_POC = False
     #
     if is_make_subnet_data:
