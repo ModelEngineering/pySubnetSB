@@ -66,7 +66,7 @@ def main(is_initialize:bool=False)->None:
         if is_skip:
             continue
         new_df = SubnetFinder([network_pair], identity=cn.ID_WEAK).find(
-        is_report=True, max_num_assignment=MAX_NUM_ASSIGNMENT_FINAL)
+              is_report=True, max_num_assignment=MAX_NUM_ASSIGNMENT_FINAL)
         final_df = pd.concat([final_df, new_df])
         final_df.to_csv(OUTPUT_CSV, index=False)
     # Create the final DataFrame

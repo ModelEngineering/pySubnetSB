@@ -262,6 +262,7 @@ class ParallelSubnetFinder(object):
                for process_idx, proc in enumerate(processes):
                    proc.join()
                    printPerformanceInformation(f"parallelFind/time3a, process {process_idx}")
+            # Wait for workers to complete
             _print(f"**{num_worker} processes completed.")
             printPerformanceInformation("parallelFind/time4")
             # Merge the results

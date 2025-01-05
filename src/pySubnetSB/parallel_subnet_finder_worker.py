@@ -72,10 +72,6 @@ def executeWorker(worker_idx:int, workunit_path, num_worker:int, checkpoint_path
         return collection.networks
     #####
     is_report_worker = is_report if worker_idx == 0 else False
-    # Find prior work completed
-    merged_checkpoint_result = WorkerCheckpointManager.merge(checkpoint_path, num_worker,
-                is_report=False)
-    completed_workunit_df = merged_checkpoint_result.dataframe
     # Set up the checkpoint manager for this worker
     worker_checkpoint_path = WorkerCheckpointManager.makeWorkerCheckpointPath(checkpoint_path,
           worker_idx)

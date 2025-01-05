@@ -9,6 +9,7 @@ DATA_DIR = os.path.join(PROJECT_DIR, 'data')
 AUXILIARY_DATA_DIR = os.path.join(PROJECT_DIR, 'auxiliary_data')
 SCRIPT_DIR = os.path.join(PROJECT_DIR, 'scripts')
 TEST_DIR = os.path.join(PROJECT_DIR, 'src', 'pySubnetSB_tests')
+PLOT_DIR = os.path.join(PROJECT_DIR, 'plots')
 OSCILLATOR_DIRS = [
         "Oscillators_May_28_2024_8898",
         "Oscillators_June_9_2024_14948",
