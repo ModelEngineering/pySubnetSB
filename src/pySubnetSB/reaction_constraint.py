@@ -9,17 +9,33 @@ Enumerated constraints.
 
 import pySubnetSB.constants as cn # type: ignore
 from pySubnetSB.named_matrix import NamedMatrix # type: ignore
-from pySubnetSB.constraint import Constraint, NULL_NMAT # type: ignore
+from pySubnetSB.constraint import ConstraintOptions, Constraint, NULL_NMAT # type: ignore
 
 import numpy as np
 from typing import List
 
 
 #####################################
+class ReactionConstraintOptions(ConstraintOptions): 
+
+    def __init__(self,
+                 is_make_successor_predecessor_constraint_matrix:bool=True,
+                 is_make_n_step_constraint_matrix:bool=True,
+                 is_make_classification_constraint_matrix:bool=True,
+                 is_make_autocatalysis_constraint_matrix:bool=True):
+        super().__init__(
+            is_make_successor_predecessor_constraint_matrix=is_make_successor_predecessor_constraint_matrix,
+            is_make_n_step_constraint_matrix=is_make_n_step_constraint_matrix,
+            is_make_classification_constraint_matrix=is_make_classification_constraint_matrix,
+            is_make_autocatalysis_constraint_matrix=is_make_autocatalysis_constraint_matrix)
+
+
+#####################################
 class ReactionConstraint(Constraint):
 
     def __init__(self, reactant_nmat:NamedMatrix, product_nmat:NamedMatrix,
-                 is_subnet:bool=False):
+                 reaction_constraint_options:ReactionConstraintOptions=ReactionConstraintOptions(),
+                 is_subnet:bool=True):
         """
         Args:
             reactant_nmat (NamedMatrix)
@@ -33,16 +49,30 @@ class ReactionConstraint(Constraint):
         self._bitwise_categorical_nmat = NULL_NMAT
         self._one_step_nmat = NULL_NMAT
         self._to_reaction_arr = np.eye(self.num_reaction)
+        self.options = reaction_constraint_options
 
     def _initialize(self):
+        """
+        Creates the constraint matrices based on the constraint options.
+        """
         if self._is_initialized:
             return
-        self._numerical_enumerated_nmat = NamedMatrix.hstack([
-              self.makeSuccessorPredecessorConstraintMatrix(),
-              self.makeNStepConstraintMatrix(num_step=2),
-        ])
-        self._numerical_categorical_nmat = NamedMatrix.hstack([self._makeClassificationConstraintMatrix(),
-            self._makeAutocatalysisConstraintMatrix()])
+        numerical_enumerated_nmats = []
+        if self.options.is_make_successor_predecessor_constraint_matrix:
+            numerical_enumerated_nmats.append(self.makeSuccessorPredecessorConstraintMatrix())
+        if self.options.is_make_n_step_constraint_matrix:
+            numerical_enumerated_nmats.append(self.makeNStepConstraintMatrix(num_step=2))
+        #
+        numerical_categorical_nmats = []
+        if self.options.is_make_classification_constraint_matrix:
+            numerical_categorical_nmats.append(self._makeClassificationConstraintMatrix())
+        if self.options.is_make_autocatalysis_constraint_matrix:
+            numerical_categorical_nmats.append(self._makeAutocatalysisConstraintMatrix())
+        #
+        if len(numerical_enumerated_nmats) > 0:
+            self._numerical_enumerated_nmat = NamedMatrix.hstack(numerical_enumerated_nmats)
+        if len(numerical_categorical_nmats) > 0:
+            self._numerical_categorical_nmat = NamedMatrix.hstack(numerical_categorical_nmats)
         self._is_initialized = True
 
     ################# OVERLOADED PARENT CLASS METHODS #################

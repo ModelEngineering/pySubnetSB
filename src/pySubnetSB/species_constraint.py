@@ -8,16 +8,33 @@ Implements the calculation of categorical and enumerated constraints for species
 """
 
 from pySubnetSB.named_matrix import NamedMatrix # type: ignore
-from pySubnetSB.constraint import Constraint, ReactionClassification, NULL_NMAT # type: ignore
+from pySubnetSB.constraint import ConstraintOptions, Constraint, ReactionClassification, NULL_NMAT # type: ignore
+import pySubnetSB.util as util  # type: ignore
 
 import numpy as np
 from typing import List
 
 
+class SpeciesConstraintOptions(ConstraintOptions): 
+
+    def __init__(self, is_reactant_product_count_constraint_matrix:bool=True,
+                 is_autocatalysis_constraint:bool=True,
+                 is_reactant_product_constraint_matrix:bool=True,
+                 is_successor_predecessor_constraint_matrix:bool=True,
+                 is_n_step_constraint_matrix:bool=True):
+        super().__init__(
+              is_reactant_product_count_constraint_matrix=is_reactant_product_count_constraint_matrix,
+              is_autocatalysis_constraint=is_autocatalysis_constraint,
+              is_reactant_product_constraint_matrix=is_reactant_product_constraint_matrix,
+              is_successor_predecessor_constraint_matrix=is_successor_predecessor_constraint_matrix,
+              is_n_step_constraint_matrix=is_n_step_constraint_matrix)
+
+
 #####################################
 class SpeciesConstraint(Constraint):
 
-    def __init__(self, reactant_nmat:NamedMatrix, product_nmat:NamedMatrix, is_subnet:bool=False):
+    def __init__(self, reactant_nmat:NamedMatrix, product_nmat:NamedMatrix, is_subnet:bool=True,
+              species_constraint_options:SpeciesConstraintOptions=SpeciesConstraintOptions()):  
         """
         Args:
             reactant_nmat (NamedMatrix)
@@ -31,6 +48,7 @@ class SpeciesConstraint(Constraint):
         self._categorical_nmat = NULL_NMAT
         self._bitwise_enumerated_nmat = NULL_NMAT
         self._one_step_nmat = NULL_NMAT
+        self.species_constraint_options = species_constraint_options
 
     ################# OVERLOADED PARENT CLASS METHODS #################
     @property
@@ -44,12 +62,22 @@ class SpeciesConstraint(Constraint):
     @property
     def numerical_enumerated_nmat(self)->NamedMatrix:
         if not self._is_initialized:
-            self._numerical_enumerated_nmat = NamedMatrix.hstack([
-                  self._makeReactantProductCountConstraintMatrix(),
-                  self._makeAutocatalysisConstraint(),
-                  self._makeReactantProductConstraintMatrix(),
-                  self.makeSuccessorPredecessorConstraintMatrix()],
-                  self.makeNStepConstraintMatrix(num_step=2))
+            matrices = []
+            if self.species_constraint_options.is_reactant_product_count_constraint_matrix:
+                matrices.append(self._makeReactantProductCountConstraintMatrix())
+            if self.species_constraint_options.is_autocatalysis_constraint:
+                matrices.append(self._makeAutocatalysisConstraint())
+            if self.species_constraint_options.is_reactant_product_constraint_matrix:
+                matrices.append(self._makeReactantProductConstraintMatrix())
+            if self.species_constraint_options.is_successor_predecessor_constraint_matrix:
+                matrices.append(self.makeSuccessorPredecessorConstraintMatrix())
+            if self.species_constraint_options.is_n_step_constraint_matrix:
+                matrices.append(self.makeNStepConstraintMatrix(num_step=2))
+            #
+            if len(matrices) == 0:
+                self._numerical_enumerated_nmat = NULL_NMAT
+            else:
+                self._numerical_enumerated_nmat = NamedMatrix.hstack(matrices)
             self._is_initialized = True
         return self._numerical_enumerated_nmat
 

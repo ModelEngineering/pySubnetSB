@@ -1,5 +1,5 @@
 from pySubnetSB.constraint import NULL_NMAT  # type: ignore
-from pySubnetSB.species_constraint import SpeciesConstraint # type: ignore
+from pySubnetSB.species_constraint import SpeciesConstraint, SpeciesConstraintOptions # type: ignore
 from pySubnetSB.named_matrix import NamedMatrix # type: ignore
 from pySubnetSB.network import Network # type: ignore
 
@@ -13,6 +13,7 @@ IS_PLOT = False
 REACTANT_MATRIX = NamedMatrix(np.array([[1, 0], [0, 1], [0, 0]]))
 PRODUCT_MATRIX = NamedMatrix(np.array([[1, 1], [1, 0], [0, 0]]))
 NUM_ITERATION = 10
+
 
 
 #############################

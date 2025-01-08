@@ -51,6 +51,14 @@ class CompatibilityCollection(object):
             return False
         trues = [np.all(self.compatibilities[i] == other.compatibilities[i]) for i in range(len(self.compatibilities))]
         return bool(np.all(trues))
+    
+    def __le__(self, other)->bool:
+        # self is less equal than other
+        NUM_CHECK = 20
+        # Allow for some variation because of random sampling of the compatibility collection
+        comparisons = [other.log10_num_assignment - self.log10_num_assignment > -0.5
+              for _ in range(NUM_CHECK)]
+        return np.sum(comparisons) > NUM_CHECK*0.75
 
     @property
     def log10_num_assignment(self)->float:

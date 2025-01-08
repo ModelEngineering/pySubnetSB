@@ -31,6 +31,43 @@ from typing import List, Tuple
 
 NULL_INT = -1
 
+#####################################
+class ConstraintOptions(object): 
+
+    # Subclasses for species and reactions
+
+    def __init__(self, **kwargs):
+        """
+        kwargs:
+            names of boolean options and their initial values
+        """
+        self.__dict__.update(kwargs)
+
+    def __repr__(self)->str:
+        true_values = [k for k, v in self.__dict__.items() if v]
+        class_name = str(self.__class__).split(".")[-1][:-2]
+        return f"{class_name} Trues: {', '.join(true_values)}"
+    
+    def setAllFalse(self)->None:
+        """
+        Set all values to False.
+        """
+        self.__dict__ = {k: False for k in self.__dict__.keys()}
+
+    @classmethod
+    def iterator(cls):
+        """
+        Iteratively returns a SPeciesCOnstraintOptions object with a single True value, iterating
+        through the possible values.
+        """
+        constraint_options = cls()
+        option_names = constraint_options.__dict__.keys()
+        for option_name in option_names:
+            constraint_options = cls()
+            constraint_options.setAllFalse()
+            constraint_options.__dict__[option_name] = True
+            yield constraint_options
+
 
 #####################################
 class CompatibilityCollectionResult(object):
@@ -365,7 +402,8 @@ class Constraint(object):
         elif is_inequality_compatibility:
             compatibility_arr = inequality_compatibility_arr
         else:
-            raise ValueError("No compatibility constraints.")
+            # No constraints
+            compatibility_arr = np.repeat(True, target.num_row*self.num_row)
         # Create the compatibility collection
         compatibility_collection = CompatibilityCollection(self.num_row, target.num_row)
         target_arr = np.array(range(target.num_row))

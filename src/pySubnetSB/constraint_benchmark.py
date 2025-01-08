@@ -10,6 +10,10 @@ Key data structures:
         Columns:
             time - execution time
             num_permutations - number of permutations
+
+To do
+   1. Construct bar plots where x-axis indicates the constraints, and y-axis is log10 of num_assignments
+   2. Do (1) for 3 network sizes and species, reactions. 6 plots total.  
 """
 
 from pySubnetSB.reaction_constraint import ReactionConstraint  # type: ignore

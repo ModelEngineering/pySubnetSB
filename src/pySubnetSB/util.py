@@ -1,6 +1,7 @@
 '''Utility functions for the SIRN package.'''
 import collections
 from functools import wraps, cmp_to_key
+import inspect
 import json
 import numpy as np
 import time
@@ -395,3 +396,21 @@ def decodeIntPair(encoded_int:Union[np.int64, np.ndarray],
     else:
         int1 = int(int1)  # type: ignore
     return int1, int2  # type: ignore
+
+def getKeywordNames(func)->List[str]:
+    """
+    Finds the names of keyword paramters of a function.
+
+    Args:
+        func (Function)
+
+    Returns:
+        List[str]
+    """
+    signature = inspect.signature(func)
+    params = signature.parameters
+    result = []
+    for name, param in params.items():
+        if param.default != inspect._empty:
+            result.append(name)
+    return result
