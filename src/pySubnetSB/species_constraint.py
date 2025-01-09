@@ -8,33 +8,20 @@ Implements the calculation of categorical and enumerated constraints for species
 """
 
 from pySubnetSB.named_matrix import NamedMatrix # type: ignore
-from pySubnetSB.constraint import ConstraintOptions, Constraint, ReactionClassification, NULL_NMAT # type: ignore
+from pySubnetSB.constraint import Constraint, ReactionClassification, NULL_NMAT # type: ignore
 import pySubnetSB.util as util  # type: ignore
+from pySubnetSB.constraint_option_collection import SpeciesConstraintOptionCollection # type: ignore
 
 import numpy as np
 from typing import List
 
-
-class SpeciesConstraintOptions(ConstraintOptions): 
-
-    def __init__(self, is_reactant_product_count_constraint_matrix:bool=True,
-                 is_autocatalysis_constraint:bool=True,
-                 is_reactant_product_constraint_matrix:bool=True,
-                 is_successor_predecessor_constraint_matrix:bool=True,
-                 is_n_step_constraint_matrix:bool=True):
-        super().__init__(
-              is_reactant_product_count_constraint_matrix=is_reactant_product_count_constraint_matrix,
-              is_autocatalysis_constraint=is_autocatalysis_constraint,
-              is_reactant_product_constraint_matrix=is_reactant_product_constraint_matrix,
-              is_successor_predecessor_constraint_matrix=is_successor_predecessor_constraint_matrix,
-              is_n_step_constraint_matrix=is_n_step_constraint_matrix)
 
 
 #####################################
 class SpeciesConstraint(Constraint):
 
     def __init__(self, reactant_nmat:NamedMatrix, product_nmat:NamedMatrix, is_subnet:bool=True,
-              species_constraint_options:SpeciesConstraintOptions=SpeciesConstraintOptions()):  
+              species_constraint_option_collection:SpeciesConstraintOptionCollection=SpeciesConstraintOptionCollection()):  
         """
         Args:
             reactant_nmat (NamedMatrix)
@@ -48,7 +35,7 @@ class SpeciesConstraint(Constraint):
         self._categorical_nmat = NULL_NMAT
         self._bitwise_enumerated_nmat = NULL_NMAT
         self._one_step_nmat = NULL_NMAT
-        self.species_constraint_options = species_constraint_options
+        self.species_constraint_options = species_constraint_option_collection
 
     ################# OVERLOADED PARENT CLASS METHODS #################
     @property

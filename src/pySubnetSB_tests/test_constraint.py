@@ -1,9 +1,8 @@
 from pySubnetSB.constraint import Constraint, ReactionClassification, CompatibilityCollection    # type: ignore
-from pySubnetSB.species_constraint import SpeciesConstraintOptions  # type: ignore
 from pySubnetSB.named_matrix import NamedMatrix   # type: ignore
 from pySubnetSB.network import Network  # type: ignore
-from pySubnetSB.reaction_constraint import ReactionConstraint, ReactionConstraintOptions  # type: ignore
-from pySubnetSB.species_constraint import SpeciesConstraint  # type: ignore
+from pySubnetSB.reaction_constraint import ReactionConstraint  # type: ignore
+from pySubnetSB.constraint_option_collection import ReactionConstraintOptionCollection  # type: ignore
 
 import itertools
 import numpy as np
@@ -11,7 +10,7 @@ from scipy.special import factorial  # type: ignore
 import unittest
 
 
-IGNORE_TEST = True
+IGNORE_TEST = False
 IS_PLOT = False
 reactant_arr = np.array([[1, 0], [0, 1], [0, 0]]) # Must have 3 rows to be consistent with DummyConstraint
 product_arr = np.array([[0, 1], [1, 0], [0, 0]])
@@ -143,97 +142,6 @@ class ScalableDummyConstraint(Constraint):
         return NamedMatrix(arr,
                 row_names='rows', column_names='columns')
     
-
-#############################
-# Tests
-#############################
-class TestConstraintiOptions(unittest.TestCase):
-
-    def setUp(self):
-        self.constraint_options = SpeciesConstraintOptions()
-
-    def testConstructor(self):
-        if IGNORE_TEST:
-            return
-        self.assertTrue(all(self.constraint_options.__dict__.values()))
-
-    def testIterator(self):
-        if IGNORE_TEST:
-            return
-        options = list(self.constraint_options.iterator())
-        self.assertGreater(len(options), 1)
-        trues = [isinstance(opt, SpeciesConstraintOptions) for opt in options]
-        self.assertTrue(all(trues))
-
-    def testConstraintOptionsEffect(self):
-        # Test if add constraints reduces number of assignments
-        if IGNORE_TEST:
-            return
-        all_reference_constraint = SpeciesConstraint(NETWORK1.reactant_nmat, NETWORK1.product_nmat)
-        all_target_constraint = SpeciesConstraint(NETWORK2.reactant_nmat, NETWORK2.product_nmat)
-        all_compatibility_collection = all_reference_constraint.makeCompatibilityCollection(
-            all_target_constraint).compatibility_collection
-        constraint_options = SpeciesConstraintOptions()
-        constraint_options.setAllFalse()
-        no_reference_constraint = SpeciesConstraint(NETWORK1.reactant_nmat, NETWORK1.product_nmat,
-              species_constraint_options=constraint_options)
-        no_constraint = SpeciesConstraint(NETWORK2.reactant_nmat, NETWORK2.product_nmat,
-              species_constraint_options=constraint_options)
-        no_compatibility_collection = no_reference_constraint.makeCompatibilityCollection(
-            no_constraint).compatibility_collection
-        # The compatibility set should be larger with no constraints
-        trues = [len(x) > len(y) for x, y in zip(no_compatibility_collection.compatibilities,
-                                                 all_compatibility_collection.compatibilities)]
-        self.assertTrue(all(trues))
-
-    def testConstraintOptionsEffectScale(self):
-        #if IGNORE_TEST:
-        #    return
-        def test(reference_size, target_size, num_iteration=5, constraint_cls=SpeciesConstraint):
-            for _ in range(num_iteration):
-                reference_network = Network.makeRandomNetworkByReactionType(reference_size, reference_size)
-                delta_size = target_size - reference_size
-                target_network = Network.fill(reference_network, num_fill_reaction=delta_size,
-                        num_fill_species=delta_size)
-                #
-                all_reference_constraint = constraint_cls(
-                    reference_network.reactant_nmat, reference_network.product_nmat)
-                all_target_constraint = constraint_cls(target_network.reactant_nmat,
-                    target_network.product_nmat)
-                all_compatibility_collection = all_reference_constraint.makeCompatibilityCollection(
-                    all_target_constraint).compatibility_collection
-                #
-                if constraint_cls == SpeciesConstraint:
-                    kwarg='species_constraint_options'
-                    option_cls = SpeciesConstraintOptions
-                else:
-                    option_cls = ReactionConstraintOptions
-                    kwarg='reaction_constraint_options'
-                for one_constraint_option in option_cls().iterator():
-                    one_reference_constraint = constraint_cls(reference_network.reactant_nmat,
-                        reference_network.product_nmat,
-                        **{kwarg: one_constraint_option})
-                    one_constraint = constraint_cls(target_network.reactant_nmat,
-                        target_network.product_nmat,
-                        **{kwarg: one_constraint_option})
-                    one_compatibility_collection = one_reference_constraint.makeCompatibilityCollection(
-                        one_constraint).compatibility_collection
-                    #
-                    if one_compatibility_collection == all_compatibility_collection:
-                        continue
-                    # The compatibility set should be larger with no constraints
-                    all_is_lessequal = all_compatibility_collection <= one_compatibility_collection
-                    one_is_lessequal = one_compatibility_collection <= all_compatibility_collection
-                    if all_is_lessequal and one_is_lessequal:
-                        continue
-                    if not all_is_lessequal:
-                        import pdb; pdb.set_trace()
-                    self.assertTrue(all_is_lessequal)
-        #
-        for constraint_cls in [SpeciesConstraint, ReactionConstraint]:
-            test(3, 5, constraint_cls=constraint_cls)
-            test(10, 20, constraint_cls=constraint_cls)
-
 
 #############################
 class TestReactionClassification(unittest.TestCase):

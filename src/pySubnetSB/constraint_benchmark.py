@@ -14,11 +14,13 @@ Key data structures:
 To do
    1. Construct bar plots where x-axis indicates the constraints, and y-axis is log10 of num_assignments
    2. Do (1) for 3 network sizes and species, reactions. 6 plots total.  
+   3. Should I consider all combinations of options?
 """
 
-from pySubnetSB.reaction_constraint import ReactionConstraint  # type: ignore
-from pySubnetSB.species_constraint import SpeciesConstraint    # type: ignore
-from pySubnetSB.network import Network                         # type: ignore
+from pySubnetSB.reaction_constraint import ReactionConstraint, ReactionConstraintOptions  # type: ignore
+from pySubnetSB.species_constraint import SpeciesConstraint, SpeciesConstraintOptions    # type: ignore
+from pySubnetSB.constants import ALL, NONE  # type: ignore
+from pySubnetSB.network import Network      # type: ignore
 
 import collections
 import numpy as np
@@ -217,6 +219,56 @@ class ConstraintBenchmark(object):
         if is_plot:
             plt.show()
         #
+        return df
+    
+    def evaluateConstraints(self, reference_size:int, target_size:int, is_species:bool=True,
+          num_iteration:int=1000)->pd.DataFrame:
+        """
+        Selects random reference networks and random targets with the reference network embedded.
+
+        Args:
+            reference_size (int): _description_
+            target_size (int): _description_
+            is_species (bool, optional): _description_. Defaults to True.
+            num_iteration (int, optional): _description_. Defaults to 1000.
+
+        Returns:
+            pd.DataFrame
+                Columns are names of constraints plus 'all' and 'none'
+                index: index of the network simulated
+        """
+        # Initializations for species, reaction. Defaults are that all options are True
+        if is_species:
+            constraint_cls = SpeciesConstraint
+            constraint_options_cls = SpeciesConstraintOptions
+            kwarg = 'species_constraint_options'
+        else:
+            constraint_cls = ReactionConstraint
+            constraint_options_cls = ReactionConstraintOptions
+            kwarg = 'reaction_constraint_options'
+        constraint_names = constraint_options_cls().getTrueNames()
+        constraint_names.extend([ALL, NONE])
+        # Other initializations
+        result_dct:dict = {n: [] for n in constraint_names}
+        delta_size = target_size - reference_size
+        # Run the simulation
+        for _ in range(num_iteration):
+            reference_network = Network.makeRandomNetworkByReactionType(reference_size, reference_size)
+            target_network = Network.fill(reference_network, num_fill_reaction=delta_size,
+                    num_fill_species=delta_size)
+            #
+            for constraint_options in constraint_options_cls().iterator():
+                reference_constraint = constraint_cls(
+                     reference_network.reactant_nmat, reference_network.product_nmat,
+                     **{kwarg: constraint_options})
+                target_constraint = constraint_cls(
+                      target_network.reactant_nmat, target_network.product_nmat,
+                      **{kwarg: constraint_options})
+                compatibility_collection = reference_constraint.makeCompatibilityCollection(
+                      target_constraint).compatibility_collection
+                result_dct[constraint_options.name].append(compatibility_collection.log10_num_assignment)
+        # Construct the dataframe
+        df = pd.DataFrame(result_dct)
         return df
     
 

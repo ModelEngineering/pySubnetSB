@@ -1,5 +1,5 @@
 from pySubnetSB.constraint import NULL_NMAT  # type: ignore
-from pySubnetSB.species_constraint import SpeciesConstraint, SpeciesConstraintOptions # type: ignore
+from pySubnetSB.species_constraint import SpeciesConstraint  # type: ignore
 from pySubnetSB.named_matrix import NamedMatrix # type: ignore
 from pySubnetSB.network import Network # type: ignore
 

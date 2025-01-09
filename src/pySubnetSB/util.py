@@ -1,7 +1,7 @@
 '''Utility functions for the SIRN package.'''
 import collections
 from functools import wraps, cmp_to_key
-import inspect
+import itertools
 import json
 import numpy as np
 import time
@@ -397,20 +397,21 @@ def decodeIntPair(encoded_int:Union[np.int64, np.ndarray],
         int1 = int(int1)  # type: ignore
     return int1, int2  # type: ignore
 
-def getKeywordNames(func)->List[str]:
-    """
-    Finds the names of keyword paramters of a function.
+def getAllSubsets(a_list)->list:
+    """Generates all subsets of a list.
 
     Args:
-        func (Function)
+        a_list (list): A list.
 
     Returns:
-        List[str]
+        list: A list of all subsets.
     """
-    signature = inspect.signature(func)
-    params = signature.parameters
-    result = []
-    for name, param in params.items():
-        if param.default != inspect._empty:
-            result.append(name)
+    result:list = [[]]
+    if len(a_list) == 0:
+        return result
+    #
+    for size in range(1, len(a_list)+1):
+        for subset in itertools.combinations(a_list, size):
+            result.append(list(subset))
+    # 
     return result

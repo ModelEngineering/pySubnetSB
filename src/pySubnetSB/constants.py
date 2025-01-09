@@ -31,6 +31,7 @@ for _ in range(3):
     OSCILLATOR_PROJECT = os.path.dirname(OSCILLATOR_PROJECT)
 OSCILLATOR_PROJECT = os.path.join(OSCILLATOR_PROJECT, 'OscillatorDatabase')
 # Constants
+NONE = "none"
 MAX_NUM_ASSIGNMENT = 1e7  # Maximum number of permutations to search
 MAX_BATCH_SIZE = int(1e7)  # Matrix memory in bytes used in a comparison batch in AssignmentEvaluator
 STRUCTURAL_IDENTITY = "structural_identity"

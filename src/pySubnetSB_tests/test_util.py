@@ -245,19 +245,12 @@ class TestFunctions(unittest.TestCase):
             self.assertTrue(np.all(int1 == decoded_int1))
             self.assertTrue(np.all(int2 == decoded_int2))
 
-    def testGetKeywordNames(self):
+    def testGetAllSubsets(self):
         if IGNORE_TEST:
             return
-        # Functions to test
-        def func1(a=1, b=2):
-            pass
-        def func2(a=True, b='str'):
-            pass
-        def func3(a, b='str'):
-            pass
-        self.assertTrue(np.all(util.getKeywordNames(func1) == ['a', 'b']))
-        self.assertTrue(np.all(util.getKeywordNames(func2) == ['a', 'b']))
-        self.assertTrue(np.all(util.getKeywordNames(func3) == ['b']))
+        arr = [1, 2, 3, 4]
+        subsets = util.getAllSubsets(arr)
+        self.assertEqual(len(subsets), 2**len(arr))
 
 
 

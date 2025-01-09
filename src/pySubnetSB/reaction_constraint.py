@@ -9,32 +9,18 @@ Enumerated constraints.
 
 import pySubnetSB.constants as cn # type: ignore
 from pySubnetSB.named_matrix import NamedMatrix # type: ignore
-from pySubnetSB.constraint import ConstraintOptions, Constraint, NULL_NMAT # type: ignore
+from pySubnetSB.constraint import Constraint, NULL_NMAT # type: ignore
+from pySubnetSB.constraint_option_collection import ReactionConstraintOptionCollection # type: ignore
 
 import numpy as np
 from typing import List
 
 
 #####################################
-class ReactionConstraintOptions(ConstraintOptions): 
-
-    def __init__(self,
-                 is_make_successor_predecessor_constraint_matrix:bool=True,
-                 is_make_n_step_constraint_matrix:bool=True,
-                 is_make_classification_constraint_matrix:bool=True,
-                 is_make_autocatalysis_constraint_matrix:bool=True):
-        super().__init__(
-            is_make_successor_predecessor_constraint_matrix=is_make_successor_predecessor_constraint_matrix,
-            is_make_n_step_constraint_matrix=is_make_n_step_constraint_matrix,
-            is_make_classification_constraint_matrix=is_make_classification_constraint_matrix,
-            is_make_autocatalysis_constraint_matrix=is_make_autocatalysis_constraint_matrix)
-
-
-#####################################
 class ReactionConstraint(Constraint):
 
     def __init__(self, reactant_nmat:NamedMatrix, product_nmat:NamedMatrix,
-                 reaction_constraint_options:ReactionConstraintOptions=ReactionConstraintOptions(),
+                 reaction_constraint_option_collection:ReactionConstraintOptionCollection=ReactionConstraintOptionCollection(),
                  is_subnet:bool=True):
         """
         Args:
@@ -49,7 +35,7 @@ class ReactionConstraint(Constraint):
         self._bitwise_categorical_nmat = NULL_NMAT
         self._one_step_nmat = NULL_NMAT
         self._to_reaction_arr = np.eye(self.num_reaction)
-        self.options = reaction_constraint_options
+        self.option_collection = reaction_constraint_option_collection
 
     def _initialize(self):
         """
@@ -58,15 +44,15 @@ class ReactionConstraint(Constraint):
         if self._is_initialized:
             return
         numerical_enumerated_nmats = []
-        if self.options.is_make_successor_predecessor_constraint_matrix:
+        if self.option_collection.is_make_successor_predecessor_constraint_matrix:
             numerical_enumerated_nmats.append(self.makeSuccessorPredecessorConstraintMatrix())
-        if self.options.is_make_n_step_constraint_matrix:
+        if self.option_collection.is_make_n_step_constraint_matrix:
             numerical_enumerated_nmats.append(self.makeNStepConstraintMatrix(num_step=2))
         #
         numerical_categorical_nmats = []
-        if self.options.is_make_classification_constraint_matrix:
+        if self.option_collection.is_make_classification_constraint_matrix:
             numerical_categorical_nmats.append(self._makeClassificationConstraintMatrix())
-        if self.options.is_make_autocatalysis_constraint_matrix:
+        if self.option_collection.is_make_autocatalysis_constraint_matrix:
             numerical_categorical_nmats.append(self._makeAutocatalysisConstraintMatrix())
         #
         if len(numerical_enumerated_nmats) > 0:
