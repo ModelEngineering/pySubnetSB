@@ -73,6 +73,15 @@ class TestBenchmark(unittest.TestCase):
                                         num_iteration=300)
         self.assertTrue(isinstance(df, pd.DataFrame))
 
+    def testEvaluateConstraints(self):
+        if IGNORE_TEST:
+            return
+        reference_size = 3
+        target_size = 8
+        for is_species in [True, False]:
+            self.benchmark.evaluateConstraints(reference_size:int, target_size:int, is_species:bool=True,
+          num_iteration:int=1000)
+
 
 if __name__ == '__main__':
     unittest.main(failfast=True)

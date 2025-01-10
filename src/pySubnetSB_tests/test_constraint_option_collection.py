@@ -44,14 +44,21 @@ class TestConstraintOptionCollection(unittest.TestCase):
             return
         self.assertTrue(all(self.option_collection.__dict__.values()))
 
+    def testMakeFromShortName(self):
+        if IGNORE_TEST:
+            return
+        collection_short_name = self.option_collection.collection_short_name
+        new_option = self.option_collection.makeFromCollectionShortName(collection_short_name)
+        self.assertEqual(self.option_collection, new_option)
+
     def test_sort_names(self):
         #if IGNORE_TEST:
         #    return
-        short_name = self.option_collection.short_name
+        short_name = self.option_collection.collection_short_name
         self.assertTrue("+" in short_name)
         #
         self.option_collection.setAllFalse()
-        short_name = self.option_collection.short_name
+        short_name = self.option_collection.collection_short_name
         self.assertEqual(short_name, cn.NONE)
 
     def testGetTrueNames(self):

@@ -17,8 +17,10 @@ To do
    3. Should I consider all combinations of options?
 """
 
-from pySubnetSB.reaction_constraint import ReactionConstraint, ReactionConstraintOptions  # type: ignore
-from pySubnetSB.species_constraint import SpeciesConstraint, SpeciesConstraintOptions    # type: ignore
+from pySubnetSB.reaction_constraint import ReactionConstraint  # type: ignore
+from pySubnetSB.constraint_option_collection import SpeciesConstraintOptionCollection  # type: ignore
+from pySubnetSB.constraint_option_collection import ReactionConstraintOptionCollection  # type: ignore
+from pySubnetSB.species_constraint import SpeciesConstraint    # type: ignore
 from pySubnetSB.constants import ALL, NONE  # type: ignore
 from pySubnetSB.network import Network      # type: ignore
 
@@ -35,6 +37,9 @@ C_TIME = 'time'
 C_LOG10_NUM_PERMUTATION = 'log10num_permutation'
 C_NUM_REFERENCE = 'num_reference'
 C_NUM_TARGET = 'num_target'
+
+EvaluateConstraintsResult = collections.namedtuple('EvaluateConstraintsResult',
+      ['reference_size', 'target_size', 'is_species', 'dataframe', 'short_to_long_dct'])
 
 
 # A study result is a container of the results of multiple benchmarks
@@ -222,7 +227,7 @@ class ConstraintBenchmark(object):
         return df
     
     def evaluateConstraints(self, reference_size:int, target_size:int, is_species:bool=True,
-          num_iteration:int=1000)->pd.DataFrame:
+          num_iteration:int=1000)->EvaluateConstraintsResult:
         """
         Selects random reference networks and random targets with the reference network embedded.
 
@@ -233,43 +238,50 @@ class ConstraintBenchmark(object):
             num_iteration (int, optional): _description_. Defaults to 1000.
 
         Returns:
-            pd.DataFrame
-                Columns are names of constraints plus 'all' and 'none'
-                index: index of the network simulated
+            EvaluateConstraintsResult
+                is_species: True if species constraint
+                reference_size: size of the reference network
+                target_size: size of the target network
+                dataframe: dataframe of the results
+                short_to_long_dct: mapping of short names to long names
         """
         # Initializations for species, reaction. Defaults are that all options are True
         if is_species:
             constraint_cls = SpeciesConstraint
-            constraint_options_cls = SpeciesConstraintOptions
-            kwarg = 'species_constraint_options'
+            collection_cls = SpeciesConstraintOptionCollection
+            kwarg = 'species_constraint_option_collection'
         else:
             constraint_cls = ReactionConstraint
-            constraint_options_cls = ReactionConstraintOptions
-            kwarg = 'reaction_constraint_options'
-        constraint_names = constraint_options_cls().getTrueNames()
-        constraint_names.extend([ALL, NONE])
+            collection_cls = ReactionConstraintOptionCollection
+            kwarg = 'reaction_constraint_option_collection'
+        option_collection = collection_cls()
         # Other initializations
-        result_dct:dict = {n: [] for n in constraint_names}
         delta_size = target_size - reference_size
+        result_dct:dict = {o.collection_short_name: [] for o in option_collection.iterator()}
         # Run the simulation
         for _ in range(num_iteration):
             reference_network = Network.makeRandomNetworkByReactionType(reference_size, reference_size)
             target_network = Network.fill(reference_network, num_fill_reaction=delta_size,
                     num_fill_species=delta_size)
             #
-            for constraint_options in constraint_options_cls().iterator():
+            for option_collection in collection_cls().iterator():
                 reference_constraint = constraint_cls(
                      reference_network.reactant_nmat, reference_network.product_nmat,
-                     **{kwarg: constraint_options})
+                     **{kwarg: option_collection})
                 target_constraint = constraint_cls(
                       target_network.reactant_nmat, target_network.product_nmat,
-                      **{kwarg: constraint_options})
+                      **{kwarg: option_collection})
                 compatibility_collection = reference_constraint.makeCompatibilityCollection(
                       target_constraint).compatibility_collection
-                result_dct[constraint_options.name].append(compatibility_collection.log10_num_assignment)
+                result_dct[option_collection.collection_short_name].append(compatibility_collection.log10_num_assignment)
         # Construct the dataframe
         df = pd.DataFrame(result_dct)
-        return df
+        return EvaluateConstraintsResult(
+              reference_size=reference_size, 
+              target_size=target_size,
+              is_species=is_species,
+              dataframe=df,
+              short_to_long_dct=option_collection.short_to_long_dct)  
     
 
 if __name__ == '__main__':

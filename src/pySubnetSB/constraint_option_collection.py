@@ -32,6 +32,13 @@ class ConstraintOptionCollection(object):
         dct = {k: self.__dict__[k] for k in self.option_names}
         new_option = self.__class__(**dct)
         return new_option
+    
+    def __eq__(self, other)->bool:
+        # Returns True if all constraint options are the same.
+        for option_name in self.option_names:
+            if self.__dict__[option_name] != other.__dict__[option_name]:
+                return False
+        return True
 
     def __repr__(self)->str:
         return str(self.__class__) + ": " + ', '.join(self.getTrueNames())
@@ -44,8 +51,8 @@ class ConstraintOptionCollection(object):
         return results
 
     @property 
-    def short_name(self)->str:
-        # Returns a combination of short names to describe the current state
+    def collection_short_name(self)->str:
+        # Creates a short name for the collection based on the options that are True.
         names = self.getTrueNames()
         if len(names) == 0:
             return cn.NONE
@@ -79,6 +86,23 @@ class ConstraintOptionCollection(object):
         for name in long_names:
             new_option.__dict__[name] = True
         return new_option
+    
+    def makeFromCollectionShortName(self, collection_short_name:str)->'ConstraintOptionCollection':
+        """
+        Returns a new ConstraintOptionCollection with the options specified by the collection short name.
+
+        Args:
+            collection_short_name (str): _description_
+
+        Returns:
+            ConstraintOptionCollection: _description_
+        """
+        option_collection = self.copy()
+        short_names = collection_short_name.split('+')
+        option_collection.setAllFalse()
+        for short_name in short_names:
+            option_collection.__dict__[self.short_to_long_dct[short_name]] = True
+        return option_collection
 
     def iterator(self):
         """
