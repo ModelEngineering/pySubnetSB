@@ -77,8 +77,8 @@ class TestConstraintOptionCollection(unittest.TestCase):
         if IGNORE_TEST:
             return
         options = list(self.option_collection.iterator())
-        self.assertGreater(len(options), len(self.option_collection.option_names)**2)
-        trues = [isinstance(opt, SpeciesConstraintOptionCollection) for opt in options]
+        self.assertEqual(len(options), 2**len(self.option_collection.option_names))
+        trues = [isinstance(opt, self.option_collection.__class__) for opt in options]
         self.assertTrue(all(trues))
 
     def testConstraintOptionEffect(self):

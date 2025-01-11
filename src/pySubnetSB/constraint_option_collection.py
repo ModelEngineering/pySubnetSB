@@ -20,9 +20,8 @@ class ConstraintOptionCollection(object):
         """
         self.__dict__.update(kwargs)
         self.option_names = list(kwargs.keys())
-        self.long_to_short_dct = {n: string.ascii_letters[i] for i, n in enumerate(self.option_names)}
+        self.long_to_short_dct = {n: self.short_names[i] for i, n in enumerate(self.option_names)}
         self.short_to_long_dct = {v: k for k, v in self.long_to_short_dct.items()}
-        self.short_names = list(self.long_to_short_dct.values())
         self.num_option = len(self.option_names)
 
     def copy(self)->'ConstraintOptionCollection':
@@ -122,6 +121,9 @@ class ReactionConstraintOptionCollection(ConstraintOptionCollection):
                  is_make_n_step_constraint_matrix:bool=True,
                  is_make_classification_constraint_matrix:bool=True,
                  is_make_autocatalysis_constraint_matrix:bool=True):
+        self.short_names = list(string.ascii_letters[:26])
+        self.short_names.reverse()
+        self.short_names = self.short_names[:4]
         super().__init__(
             is_make_successor_predecessor_constraint_matrix=is_make_successor_predecessor_constraint_matrix,
             is_make_n_step_constraint_matrix=is_make_n_step_constraint_matrix,
@@ -132,11 +134,13 @@ class ReactionConstraintOptionCollection(ConstraintOptionCollection):
 #####################################
 class SpeciesConstraintOptionCollection(ConstraintOptionCollection): 
 
+
     def __init__(self, is_reactant_product_count_constraint_matrix:bool=True,
                  is_autocatalysis_constraint:bool=True,
                  is_reactant_product_constraint_matrix:bool=True,
                  is_successor_predecessor_constraint_matrix:bool=True,
                  is_n_step_constraint_matrix:bool=True):
+        self.short_names = list(string.ascii_letters[:5])
         super().__init__(
               is_reactant_product_count_constraint_matrix=is_reactant_product_count_constraint_matrix,
               is_autocatalysis_constraint=is_autocatalysis_constraint,
