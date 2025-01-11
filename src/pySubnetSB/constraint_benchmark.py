@@ -17,17 +17,20 @@ To do
    3. Should I consider all combinations of options?
 """
 
+import scipy.special  # type: ignore
 from pySubnetSB.reaction_constraint import ReactionConstraint  # type: ignore
 from pySubnetSB.constraint_option_collection import SpeciesConstraintOptionCollection  # type: ignore
 from pySubnetSB.constraint_option_collection import ReactionConstraintOptionCollection  # type: ignore
 from pySubnetSB.species_constraint import SpeciesConstraint    # type: ignore
-from pySubnetSB.constants import ALL, NONE  # type: ignore
 from pySubnetSB.network import Network      # type: ignore
+import pySubnetSB.constants as cn # type: ignore
 
 import collections
+import math
 import numpy as np
 import pandas as pd  # type: ignore
 import matplotlib.pyplot as plt
+import scipy
 import seaborn as sns  # type: ignore
 import time
 from typing import List
@@ -38,8 +41,9 @@ C_LOG10_NUM_PERMUTATION = 'log10num_permutation'
 C_NUM_REFERENCE = 'num_reference'
 C_NUM_TARGET = 'num_target'
 
+DimensionResult = collections.namedtuple('DimensionResult', ['dataframe', 'short_to_long_dct'])
 EvaluateConstraintsResult = collections.namedtuple('EvaluateConstraintsResult',
-      ['reference_size', 'target_size', 'is_species', 'dataframe', 'short_to_long_dct'])
+      ['reference_size', 'target_size', 'species_dimension_result', 'reaction_dimension_result'])
 
 
 # A study result is a container of the results of multiple benchmarks
@@ -55,7 +59,7 @@ class ConstraintBenchmark(object):
         """
         Args:
             reference_size (int): size of the reference network (species, reaction)
-            filler_size (int): size of the filler network (species, reaction) used in subsets
+            fill_size (int): size of the filler network (species, reaction) used in subsets
             is_contains_reference (bool, optional): target network contains reference network. Defaults to True.
         """
         self.num_reaction = reference_size
@@ -226,62 +230,92 @@ class ConstraintBenchmark(object):
         #
         return df
     
-    def evaluateConstraints(self, reference_size:int, target_size:int, is_species:bool=True,
-          num_iteration:int=1000)->EvaluateConstraintsResult:
+    def compareConstraints(self)->EvaluateConstraintsResult:
         """
         Selects random reference networks and random targets with the reference network embedded.
-
-        Args:
-            reference_size (int): _description_
-            target_size (int): _description_
-            is_species (bool, optional): _description_. Defaults to True.
-            num_iteration (int, optional): _description_. Defaults to 1000.
 
         Returns:
             EvaluateConstraintsResult
                 is_species: True if species constraint
                 reference_size: size of the reference network
                 target_size: size of the target network
-                dataframe: dataframe of the results
+                reaction_df: dataframe of the results
+                species_df: dataframe of the results
                 short_to_long_dct: mapping of short names to long names
         """
-        # Initializations for species, reaction. Defaults are that all options are True
-        if is_species:
-            constraint_cls = SpeciesConstraint
-            collection_cls = SpeciesConstraintOptionCollection
-            kwarg = 'species_constraint_option_collection'
-        else:
-            constraint_cls = ReactionConstraint
-            collection_cls = ReactionConstraintOptionCollection
-            kwarg = 'reaction_constraint_option_collection'
-        option_collection = collection_cls()
-        # Other initializations
-        delta_size = target_size - reference_size
-        result_dct:dict = {o.collection_short_name: [] for o in option_collection.iterator()}
+        # Initialize result dictionaries
+        species_result_dct:dict = {o.collection_short_name: []
+              for o in SpeciesConstraintOptionCollection().iterator()}
+        reaction_result_dct:dict = {o.collection_short_name: []
+              for o in ReactionConstraintOptionCollection().iterator()}
+        # Calculate the number of assignments if no constraints are applied
+        # Handle no constraint
+        reference_size = self.num_species
+        target_size = reference_size + self.fill_size
+        count = math.comb(target_size, reference_size)*scipy.special.factorial(reference_size)
+        none_log10_count = np.log10(count)
         # Run the simulation
-        for _ in range(num_iteration):
-            reference_network = Network.makeRandomNetworkByReactionType(reference_size, reference_size)
-            target_network = Network.fill(reference_network, num_fill_reaction=delta_size,
-                    num_fill_species=delta_size)
-            #
-            for option_collection in collection_cls().iterator():
-                reference_constraint = constraint_cls(
-                     reference_network.reactant_nmat, reference_network.product_nmat,
-                     **{kwarg: option_collection})
-                target_constraint = constraint_cls(
-                      target_network.reactant_nmat, target_network.product_nmat,
-                      **{kwarg: option_collection})
-                compatibility_collection = reference_constraint.makeCompatibilityCollection(
-                      target_constraint).compatibility_collection
-                result_dct[option_collection.collection_short_name].append(compatibility_collection.log10_num_assignment)
+        for _ in range(self.num_iteration):
+            reference_network = Network.makeRandomNetworkByReactionType(self.num_reaction,
+                self.num_species)
+            target_network = Network.fill(reference_network, num_fill_reaction=self.fill_size,
+                    num_fill_species=self.fill_size)
+            for is_species in [True, False]:
+                # Initialize for species or reaction
+                if is_species:
+                    constraint_cls = SpeciesConstraint
+                    default_option_collection = SpeciesConstraintOptionCollection()
+                    kwarg = 'species_constraint_option_collection'
+                    result_dct = species_result_dct
+                else:
+                    constraint_cls = ReactionConstraint
+                    default_option_collection = ReactionConstraintOptionCollection()
+                    kwarg = 'reaction_constraint_option_collection'
+                    result_dct = reaction_result_dct
+                # Iterate on the options
+                for option_collection in default_option_collection.iterator():
+                    if option_collection.collection_short_name == cn.NONE:
+                        result_dct[option_collection.collection_short_name].append(none_log10_count)
+                        continue
+                    # Evaluate the constraint on the networks provided
+                    reference_constraint = constraint_cls(
+                          reference_network.reactant_nmat, reference_network.product_nmat,
+                          **{kwarg: option_collection})
+                    target_constraint = constraint_cls(
+                          target_network.reactant_nmat, target_network.product_nmat,
+                          **{kwarg: option_collection})
+                    compatibility_collection = reference_constraint.makeCompatibilityCollection(
+                          target_constraint).compatibility_collection
+                    result_dct[option_collection.collection_short_name].append(
+                          compatibility_collection.log10_num_assignment)
         # Construct the dataframe
-        df = pd.DataFrame(result_dct)
+        species_dimension_result = DimensionResult(dataframe=pd.DataFrame(species_result_dct),
+              short_to_long_dct=SpeciesConstraintOptionCollection().short_to_long_dct)
+        reaction_dimension_result = DimensionResult(dataframe=pd.DataFrame(reaction_result_dct),
+                short_to_long_dct=ReactionConstraintOptionCollection().short_to_long_dct)
         return EvaluateConstraintsResult(
               reference_size=reference_size, 
               target_size=target_size,
-              is_species=is_species,
-              dataframe=df,
-              short_to_long_dct=option_collection.short_to_long_dct)  
+              species_dimension_result=species_dimension_result,
+              reaction_dimension_result=reaction_dimension_result)
+    
+    def plotConstraintComparison(self, ax=None, is_plot:bool=True):
+        """Bar plot the results of the comparison of constraints.
+
+        Args:
+            is_species (bool, optional): is species constraint. Defaults to True.
+            is_plot (bool, optional): plot the results. Defaults to True.
+        """
+        if ax is None:
+            _, ax = plt.subplots(1, 1)
+        result = self.compareConstraints()
+        # Construct the plot
+        fig, ax = plt.subplots(1, 1)
+        ax.legend()
+        if is_plot:
+            plt.show()
+        return result
+    
     
 
 if __name__ == '__main__':

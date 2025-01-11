@@ -1,4 +1,5 @@
 '''Calculates the reactant, product, net stoichiometry matrices.'''
+# Originally developed by Herbert M Sauro, University of Washington.
 
 import tellurium as te  # type: ignore
 import simplesbml  # type: ignore

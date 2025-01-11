@@ -49,7 +49,6 @@ class SignificanceCalculator(object):
         self.num_target_reaction = num_target_reaction
         self.num_target_species = num_target_species
         self.identity = identity
-        import pdb; pdb.set_trace()
 
     def calculate(self, num_iteration:int, is_report:bool=True, is_exact:bool=True,
           max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT)->SignificanceCalculatorResult:

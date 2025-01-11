@@ -11,6 +11,7 @@ IGNORE_TEST = False
 IS_PLOT = False
 NUM_REACTION = 5
 NUM_SPECIES = 5
+FILL_SIZE = 5
 NUM_ITERATION = 10
 
 
@@ -20,12 +21,13 @@ NUM_ITERATION = 10
 class TestBenchmark(unittest.TestCase):
 
     def setUp(self):
-        self.benchmark = ConstraintBenchmark(NUM_REACTION, NUM_SPECIES, NUM_ITERATION)
+        self.benchmark = ConstraintBenchmark(NUM_REACTION, fill_size=FILL_SIZE,
+              num_iteration=NUM_ITERATION)
 
     def testConstructor(self):
         if IGNORE_TEST:
             return
-        self.assertEqual(self.benchmark.num_reaction, 5)
+        self.assertEqual(self.benchmark.num_reaction, NUM_REACTION)
         self.assertEqual(len(self.benchmark.reference_networks), NUM_ITERATION)
         self.assertEqual(len(self.benchmark.target_networks), NUM_ITERATION)
 
@@ -74,13 +76,19 @@ class TestBenchmark(unittest.TestCase):
         self.assertTrue(isinstance(df, pd.DataFrame))
 
     def testEvaluateConstraints(self):
-        if IGNORE_TEST:
-            return
+        #if IGNORE_TEST:
+        #    return
         reference_size = 3
         target_size = 8
-        for is_species in [True, False]:
-            self.benchmark.evaluateConstraints(reference_size:int, target_size:int, is_species:bool=True,
-          num_iteration:int=1000)
+        fill_size = target_size - reference_size
+        benchmark = ConstraintBenchmark(reference_size, fill_size=fill_size,
+                num_iteration=NUM_ITERATION)
+        result = benchmark.compareConstraints()
+        for dimension_result in [result.species_dimension_result, result.reaction_dimension_result]:
+            self.assertTrue(isinstance(dimension_result.dataframe, pd.DataFrame))
+            self.assertGreater(len(dimension_result.dataframe), 0)
+        self.assertEqual(result.reference_size, reference_size)
+        self.assertEqual(result.target_size, target_size)
 
 
 if __name__ == '__main__':
