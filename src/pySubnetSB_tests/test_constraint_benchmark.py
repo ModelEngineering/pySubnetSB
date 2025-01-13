@@ -7,8 +7,8 @@ import pandas as pd # type: ignore
 import unittest
 
 
-IGNORE_TEST = False
-IS_PLOT = False
+IGNORE_TEST = True
+IS_PLOT = True
 NUM_REACTION = 5
 NUM_SPECIES = 5
 FILL_SIZE = 5
@@ -75,20 +75,31 @@ class TestBenchmark(unittest.TestCase):
                                         num_iteration=300)
         self.assertTrue(isinstance(df, pd.DataFrame))
 
-    def testEvaluateConstraints(self):
-        #if IGNORE_TEST:
-        #    return
+    def testCompareConstraints(self):
+        if IGNORE_TEST:
+            return
         reference_size = 3
         target_size = 8
         fill_size = target_size - reference_size
         benchmark = ConstraintBenchmark(reference_size, fill_size=fill_size,
                 num_iteration=NUM_ITERATION)
-        result = benchmark.compareConstraints()
-        for dimension_result in [result.species_dimension_result, result.reaction_dimension_result]:
-            self.assertTrue(isinstance(dimension_result.dataframe, pd.DataFrame))
-            self.assertGreater(len(dimension_result.dataframe), 0)
-        self.assertEqual(result.reference_size, reference_size)
-        self.assertEqual(result.target_size, target_size)
+        for is_subnet in [True, False]:
+            result = benchmark.compareConstraints(is_subnet=is_subnet)
+            for dimension_result in [result.species_dimension_result, result.reaction_dimension_result]:
+                self.assertTrue(isinstance(dimension_result.dataframe, pd.DataFrame))
+                self.assertGreater(len(dimension_result.dataframe), 0)
+            self.assertEqual(result.reference_size, reference_size)
+            self.assertEqual(result.target_size, target_size)
+
+    def testPlotCompareConstraints(self):
+        #if IGNORE_TEST:
+        #    return
+        reference_size = 20
+        target_size = 100
+        fill_size = target_size - reference_size
+        benchmark = ConstraintBenchmark(reference_size, fill_size=fill_size,
+                num_iteration=1000)
+        benchmark.plotCompareConstraints(is_plot=IS_PLOT, is_subnet=True)
 
 
 if __name__ == '__main__':

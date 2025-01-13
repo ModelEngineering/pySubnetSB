@@ -44,15 +44,15 @@ class ReactionConstraint(Constraint):
         if self._is_initialized:
             return
         numerical_enumerated_nmats = []
-        if self.option_collection.is_make_successor_predecessor_constraint_matrix:
+        if self.option_collection.isTrue("is_make_successor_predecessor_constraint_matrix"):
             numerical_enumerated_nmats.append(self.makeSuccessorPredecessorConstraintMatrix())
-        if self.option_collection.is_make_n_step_constraint_matrix:
+        if self.option_collection.isTrue("is_make_n_step_constraint_matrix"):
             numerical_enumerated_nmats.append(self.makeNStepConstraintMatrix(num_step=2))
         #
         numerical_categorical_nmats = []
-        if self.option_collection.is_make_classification_constraint_matrix:
+        if self.option_collection.isTrue("is_make_classification_constraint_matrix"):
             numerical_categorical_nmats.append(self._makeClassificationConstraintMatrix())
-        if self.option_collection.is_make_autocatalysis_constraint_matrix:
+        if self.option_collection.isTrue("is_make_autocatalysis_constraint_matrix"):
             numerical_categorical_nmats.append(self._makeAutocatalysisConstraintMatrix())
         #
         if len(numerical_enumerated_nmats) > 0:

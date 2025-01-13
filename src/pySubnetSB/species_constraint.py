@@ -50,15 +50,15 @@ class SpeciesConstraint(Constraint):
     def numerical_enumerated_nmat(self)->NamedMatrix:
         if not self._is_initialized:
             matrices = []
-            if self.species_constraint_options.is_reactant_product_count_constraint_matrix:
+            if self.species_constraint_options.isTrue("is_reactant_product_count_constraint_matrix"):
                 matrices.append(self._makeReactantProductCountConstraintMatrix())
-            if self.species_constraint_options.is_autocatalysis_constraint:
+            if self.species_constraint_options.isTrue("is_autocatalysis_constraint"):
                 matrices.append(self._makeAutocatalysisConstraint())
-            if self.species_constraint_options.is_reactant_product_constraint_matrix:
+            if self.species_constraint_options.isTrue("is_reactant_product_constraint_matrix"):
                 matrices.append(self._makeReactantProductConstraintMatrix())
-            if self.species_constraint_options.is_successor_predecessor_constraint_matrix:
+            if self.species_constraint_options.isTrue("is_successor_predecessor_constraint_matrix"):
                 matrices.append(self.makeSuccessorPredecessorConstraintMatrix())
-            if self.species_constraint_options.is_n_step_constraint_matrix:
+            if self.species_constraint_options.isTrue("is_n_step_constraint_matrix"):
                 matrices.append(self.makeNStepConstraintMatrix(num_step=2))
             #
             if len(matrices) == 0:

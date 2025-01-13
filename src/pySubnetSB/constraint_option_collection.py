@@ -102,6 +102,20 @@ class ConstraintOptionCollection(object):
         for short_name in short_names:
             option_collection.__dict__[self.short_to_long_dct[short_name]] = True
         return option_collection
+    
+    def isTrue(self, option_name:str)->bool:
+        """
+        Returns True if the option is True.
+
+        Args:
+            option_name (str): _description_
+
+        Returns:
+            bool: _description_
+        """
+        if not option_name in self.__dict__.keys():
+            return False
+        return self.__dict__[option_name]
 
     def iterator(self):
         """
@@ -117,33 +131,38 @@ class ConstraintOptionCollection(object):
 class ReactionConstraintOptionCollection(ConstraintOptionCollection): 
 
     def __init__(self,
-                 is_make_successor_predecessor_constraint_matrix:bool=True,
+                 #is_make_successor_predecessor_constraint_matrix:bool=True,
                  is_make_n_step_constraint_matrix:bool=True,
                  is_make_classification_constraint_matrix:bool=True,
-                 is_make_autocatalysis_constraint_matrix:bool=True):
+                 #is_make_autocatalysis_constraint_matrix:bool=True,
+                 ):
         self.short_names = list(string.ascii_letters[:26])
         self.short_names.reverse()
-        self.short_names = self.short_names[:4]
+        self.short_names = self.short_names[:2]
+        self.short_names.reverse()
         super().__init__(
-            is_make_successor_predecessor_constraint_matrix=is_make_successor_predecessor_constraint_matrix,
+            #is_make_successor_predecessor_constraint_matrix=is_make_successor_predecessor_constraint_matrix,
             is_make_n_step_constraint_matrix=is_make_n_step_constraint_matrix,
             is_make_classification_constraint_matrix=is_make_classification_constraint_matrix,
-            is_make_autocatalysis_constraint_matrix=is_make_autocatalysis_constraint_matrix)
+            #is_make_autocatalysis_constraint_matrix=is_make_autocatalysis_constraint_matrix,
+            )
         
 
 #####################################
 class SpeciesConstraintOptionCollection(ConstraintOptionCollection): 
 
 
-    def __init__(self, is_reactant_product_count_constraint_matrix:bool=True,
-                 is_autocatalysis_constraint:bool=True,
+    def __init__(self, 
+                 #is_reactant_product_count_constraint_matrix:bool=True,
+                 #is_autocatalysis_constraint:bool=True,
                  is_reactant_product_constraint_matrix:bool=True,
-                 is_successor_predecessor_constraint_matrix:bool=True,
+                 #is_successor_predecessor_constraint_matrix:bool=True,
                  is_n_step_constraint_matrix:bool=True):
-        self.short_names = list(string.ascii_letters[:5])
+        self.short_names = list(string.ascii_letters[:2])
         super().__init__(
-              is_reactant_product_count_constraint_matrix=is_reactant_product_count_constraint_matrix,
-              is_autocatalysis_constraint=is_autocatalysis_constraint,
+              #is_reactant_product_count_constraint_matrix=is_reactant_product_count_constraint_matrix,
+              #is_autocatalysis_constraint=is_autocatalysis_constraint,
+              #is_successor_predecessor_constraint_matrix=is_successor_predecessor_constraint_matrix,
+              is_n_step_constraint_matrix=is_n_step_constraint_matrix,
               is_reactant_product_constraint_matrix=is_reactant_product_constraint_matrix,
-              is_successor_predecessor_constraint_matrix=is_successor_predecessor_constraint_matrix,
-              is_n_step_constraint_matrix=is_n_step_constraint_matrix)
+        )

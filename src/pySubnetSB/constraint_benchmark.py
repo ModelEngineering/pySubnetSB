@@ -33,7 +33,7 @@ import matplotlib.pyplot as plt
 import scipy
 import seaborn as sns  # type: ignore
 import time
-from typing import List
+from typing import List, Tuple
 
 NULL_DF = pd.DataFrame()
 C_TIME = 'time'
@@ -230,9 +230,12 @@ class ConstraintBenchmark(object):
         #
         return df
     
-    def compareConstraints(self)->EvaluateConstraintsResult:
+    def compareConstraints(self, is_subnet:bool=True)->EvaluateConstraintsResult:
         """
         Selects random reference networks and random targets with the reference network embedded.
+
+        Args:
+            is_subnet (bool, optional): reference is a subnet of target if True. Defaults to True.
 
         Returns:
             EvaluateConstraintsResult
@@ -258,8 +261,11 @@ class ConstraintBenchmark(object):
         for _ in range(self.num_iteration):
             reference_network = Network.makeRandomNetworkByReactionType(self.num_reaction,
                 self.num_species)
-            target_network = Network.fill(reference_network, num_fill_reaction=self.fill_size,
-                    num_fill_species=self.fill_size)
+            if is_subnet:
+                target_network = Network.fill(reference_network, num_fill_reaction=self.fill_size,
+                      num_fill_species=self.fill_size)
+            else:
+                target_network = Network.makeRandomNetworkByReactionType(target_size, target_size)
             for is_species in [True, False]:
                 # Initialize for species or reaction
                 if is_species:
@@ -299,19 +305,41 @@ class ConstraintBenchmark(object):
               species_dimension_result=species_dimension_result,
               reaction_dimension_result=reaction_dimension_result)
     
-    def plotConstraintComparison(self, ax=None, is_plot:bool=True):
+    def plotCompareConstraints(self, axs=None, is_plot:bool=True,
+              **kwargs)->EvaluateConstraintsResult:
         """Bar plot the results of the comparison of constraints.
 
         Args:
-            is_species (bool, optional): is species constraint. Defaults to True.
+            axs (list, optional): pair of axes. Defaults to None.
             is_plot (bool, optional): plot the results. Defaults to True.
         """
-        if ax is None:
-            _, ax = plt.subplots(1, 1)
-        result = self.compareConstraints()
+        if axs is None:
+            _, axs = plt.subplots(1, 2, figsize=(10, 5))
+        result = self.compareConstraints(**kwargs)
         # Construct the plot
-        fig, ax = plt.subplots(1, 1)
-        ax.legend()
+        titles = ['Species', 'Reactions']
+        for idx, dimension in enumerate(
+              [result.species_dimension_result, result.reaction_dimension_result]):
+            ax = axs[idx]
+            df = dimension.dataframe
+            mean_ser = df.mean(axis=0)
+            std_ser = df.std(axis=0)
+            mean_ser.plot(kind='bar', ax=ax, legend=False, yerr=std_ser)    
+            ax.set_title(titles[idx])
+            ax.set_ylabel('log10 number of permutations')
+            ax.set_xlabel('constraints')
+            label_dct = {k: v[3:].replace("_", " ") for k, v in dimension.short_to_long_dct.items()}
+            label_dct[cn.NONE] = 'None'
+            label_dct['+'.join(dimension.short_to_long_dct.keys())] = 'All'
+            labels = [f"{c}: {label_dct[c]}" for c in df.columns]
+            pos_arr = [.99, 0.9]
+            for label in labels[1:-1]:
+                new_label = label.replace("make ", "")
+                new_label = new_label.replace(" matrix", "")
+                new_label = new_label.replace("n step", "2 step")
+                xpos = pos_arr[0] - 1.01*len(new_label)/100
+                ax.text(xpos, pos_arr[1], new_label, transform=ax.transAxes, fontsize=10, ha='center')
+                pos_arr[1] -= 0.05
         if is_plot:
             plt.show()
         return result
