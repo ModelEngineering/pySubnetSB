@@ -69,11 +69,11 @@ class TestBenchmark(unittest.TestCase):
             self.benchmark.plotConstraintStudy(size, size, 10, is_plot=IS_PLOT)
 
     def testPlotHeatmap(self):
-        if IGNORE_TEST:
-            return
-        df = self.benchmark.plotHeatmap(range(5, 15, 5), range(10, 30, 10), percentile=50, is_plot=IS_PLOT,
-                                        num_iteration=300)
-        self.assertTrue(isinstance(df, pd.DataFrame))
+        #if IGNORE_TEST:
+        #    return
+        ax = self.benchmark.plotHeatmap(range(5, 10, 2), range(10, 30, 3), percentile=50, is_plot=IS_PLOT,
+                                        num_iteration=10)
+        self.assertTrue("Axes" in str(type(ax)))
 
     def testCompareConstraints(self):
         if IGNORE_TEST:
@@ -92,8 +92,8 @@ class TestBenchmark(unittest.TestCase):
             self.assertEqual(result.target_size, target_size)
 
     def testPlotCompareConstraints(self):
-        #if IGNORE_TEST:
-        #    return
+        if IGNORE_TEST:
+            return
         reference_size = 20
         target_size = 100
         fill_size = target_size - reference_size

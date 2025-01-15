@@ -1,28 +1,17 @@
-Setup to use repetitions of summary data
-Extend script to merge new data
-script to calculate null distribution for subset inclusions
-
-1.1 Better repo
-2.1 Create jupyter example
+1. Better repo
+2. Create jupyter example
 3. Create samples for command line
-5.1 Evaluation of the effectiveness of constraints
-Analysis
-  1. Evaluate significance of biomodels induced models.
-    a. Compare appproximate significance level with simulations
-    b. Scatter plot with greyed out points for low significance level (or different size? <0.01, <0.05, >0.05)
-      (1) CSV file summarizing biomodels - num_species, num_reaction, probability of occurrence
-      (2) Subnet.csv reports on pairs where subnet is found
-  3. Detailed analysis of
-     a. Characterize weak structural identical
-     b. Are strong structural identical multitone?
-  4. Validations
-     weak is cluster superset of strong
-     sirn is cluster superset of naive
-  5. Statistics for clusters: cluster_size, clustereq1, clustergt1_size
-  6. Examine strong clusters to see differences. Simulate.
-  7. Plot 10 histograms of POC for 10 num_reaction networks.
 
-Create mk_plots
+Figures
+1. Example of subnet discovery. 1035 (ref), 351 (tgt), induced. assignment pair.
+2. Calculating a compatibility collection for the example and the assignment pairs.
+3. In-memory iteration of assignment pairs.
+
+Plots
+1. Script or notebook?
+2. Heatmaps for BioModels
+
+Data
 Data - mk_data
 1. Data in data/README.md
 2. Starts from full_biomodels<weak | strong>.csv, biomodels_serialized.txt, oscillators_serialized.txt

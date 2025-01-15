@@ -26,6 +26,7 @@ from pySubnetSB.network import Network      # type: ignore
 import pySubnetSB.constants as cn # type: ignore
 
 import collections
+import matplotlib.pyplot as plt # type: ignore
 import math
 import numpy as np
 import pandas as pd  # type: ignore
@@ -184,8 +185,9 @@ class ConstraintBenchmark(object):
         if is_plot:
             plt.show()
 
-    def plotHeatmap(self, num_references:List[int], num_targets:List[int], percentile:int=50,
-                    num_iteration:int=20, is_contains_reference=True, is_plot:bool=True)->pd.DataFrame:
+    @classmethod
+    def plotHeatmap(cls, num_references:List[int], num_targets:List[int], percentile:int=50,
+                    num_iteration:int=20, is_contains_reference=True, is_plot:bool=True):
         """Plot a heatmap of the log10 of number of permutations.
 
         Args:
@@ -194,10 +196,14 @@ class ConstraintBenchmark(object):
             percentile (int): percentile of distribution of the log number of permutation
 
         Returns:
-            pd.DataFrame: _description_
+            matplotlib.axes._axes.Axes: _description_
         """
         # Construct the dataj
-        data_dct:dict = {C_NUM_REFERENCE: [], C_NUM_TARGET: [], C_LOG10_NUM_PERMUTATION: []}
+        C_LOG10_P10 = 'log10_num_permutation_p10'
+        C_LOG10_P90 = 'log10_num_permutation_p90'
+        C_LABEL = 'label'
+        data_dct:dict = {C_NUM_REFERENCE: [], C_NUM_TARGET: [], C_LOG10_NUM_PERMUTATION: [],
+              C_LOG10_P10: [], C_LOG10_P90: [], C_LABEL: []}
         for reference_size in num_references:
             for target_size in num_targets:
                 fill_size = target_size - reference_size
@@ -206,29 +212,46 @@ class ConstraintBenchmark(object):
                 is_subnet = fill_size > 0
                 if fill_size < 0:
                     result = np.nan
+                    percentile_10 = np.nan
+                    percentile_90 = np.nan
                 else:
                     fill_size = max(1, fill_size)
-                    benchmark = ConstraintBenchmark(reference_size, fill_size=fill_size,
+                    benchmark = cls(reference_size, fill_size=fill_size,
                           is_contains_reference=is_contains_reference, num_iteration=num_iteration)
                     df_species = benchmark.run(is_species=True, is_subnet=is_subnet)
                     df_reaction = benchmark.run(is_species=False, is_subnet=is_subnet)
                     df = df_species + df_reaction
                     result = np.percentile(df[C_LOG10_NUM_PERMUTATION].values, percentile)
-                data_dct[C_LOG10_NUM_PERMUTATION].append(result)
+                    # Calculate multiple percentiles
+                    percentile_10 = np.percentile(df[C_LOG10_NUM_PERMUTATION].values, 10)
+                    percentile_90 = np.percentile(df[C_LOG10_NUM_PERMUTATION].values, 90)
+                data_dct[C_LOG10_NUM_PERMUTATION].append(np.round(result, 1))
+                if np.isnan(percentile_10):
+                    data_dct[C_LABEL].append("")
+                else:
+                    data_dct[C_LABEL].append(
+                          f"{np.round(result, 1)}\n({np.round(percentile_10, 1)}, {np.round(percentile_90, 1)})")
+                data_dct[C_LOG10_P10].append(np.round(percentile_10, 1))
+                data_dct[C_LOG10_P90].append(np.round(percentile_90, 1))
         # Construct the dataframe
         df = pd.DataFrame(data_dct)
         df = df.rename(columns={C_NUM_REFERENCE: 'Reference', C_NUM_TARGET: 'Target'})
-        df[C_LOG10_NUM_PERMUTATION] = np.round(df[C_LOG10_NUM_PERMUTATION].astype(float), 1)
+        if percentile > 0:
+            df[C_LOG10_NUM_PERMUTATION] = np.round(df[C_LOG10_NUM_PERMUTATION].astype(float), 1)
+        else:
+            df[C_LOG10_NUM_PERMUTATION] = [np.round(v, 1) for v in df[C_LOG10_NUM_PERMUTATION].astype(float)]
         pivot_df = df.pivot(columns='Reference', index='Target', values=C_LOG10_NUM_PERMUTATION)
         pivot_df = pivot_df.sort_index(ascending=False)
+        label_df = df.pivot(columns='Reference', index='Target', values=C_LABEL)
+        label_df = label_df.sort_index(ascending=False)
         # Plot
-        ax = sns.heatmap(pivot_df, annot=True, fmt="g", cmap='Reds', vmin=0, vmax=25,
+        ax = sns.heatmap(pivot_df, annot=label_df.values, fmt="", cmap='Reds', vmin=0, vmax=15,
                           cbar_kws={'label': 'log10 number of permutations'})
-        ax.set_title(f'percentile: {percentile}')
+        ax.set_title(f'percentile: {percentile}th (10th, 90th)')
         if is_plot:
             plt.show()
         #
-        return df
+        return ax
     
     def compareConstraints(self, is_subnet:bool=True)->EvaluateConstraintsResult:
         """
