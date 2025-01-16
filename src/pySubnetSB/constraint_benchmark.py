@@ -34,7 +34,7 @@ import matplotlib.pyplot as plt
 import scipy
 import seaborn as sns  # type: ignore
 import time
-from typing import List, Tuple
+from typing import List, Optional
 
 NULL_DF = pd.DataFrame()
 C_TIME = 'time'
@@ -61,7 +61,7 @@ class ConstraintBenchmark(object):
         Args:
             reference_size (int): size of the reference network (species, reaction)
             fill_size (int): size of the filler network (species, reaction) used in subsets
-            is_contains_reference (bool, optional): target network contains reference network. Defaults to True.
+            is_contains_reference (bool, Optional): target network contains reference network. Defaults to True.
         """
         self.num_reaction = reference_size
         self.num_species = reference_size
@@ -187,17 +187,27 @@ class ConstraintBenchmark(object):
 
     @classmethod
     def plotHeatmap(cls, num_references:List[int], num_targets:List[int], percentile:int=50,
-                    num_iteration:int=20, is_contains_reference=True, is_plot:bool=True):
+          num_iteration:int=20, is_contains_reference=True, is_plot:bool=True,
+          is_no_constraint:bool=False, title:Optional[str]=None)->plt.Axes:
         """Plot a heatmap of the log10 of number of permutations.
 
         Args:
             num_references (List[int]): number of reference networks
             num_targets (List[int]): number of target networks
             percentile (int): percentile of distribution of the log number of permutation
+            is_plot (bool, optional): plot the heatmap. Defaults to True.
+            is_not_constraint (bool, optional): True if no constraints are applied. Defaults to False.  
+            title (str, optional): title of the plot. Defaults to None.
 
         Returns:
             matplotlib.axes._axes.Axes: _description_
         """
+        #####
+        def calculate(is_species:bool)->pd.DataFrame:
+            df = benchmark.run(is_species=is_species, is_subnet=is_subnet)
+            df[C_LOG10_NUM_PERMUTATION] = [max(v, 0) for v in df[C_LOG10_NUM_PERMUTATION]]
+            return df
+        #####
         # Construct the dataj
         C_LOG10_P10 = 'log10_num_permutation_p10'
         C_LOG10_P90 = 'log10_num_permutation_p90'
@@ -216,21 +226,29 @@ class ConstraintBenchmark(object):
                     percentile_90 = np.nan
                 else:
                     fill_size = max(1, fill_size)
-                    benchmark = cls(reference_size, fill_size=fill_size,
-                          is_contains_reference=is_contains_reference, num_iteration=num_iteration)
-                    df_species = benchmark.run(is_species=True, is_subnet=is_subnet)
-                    df_reaction = benchmark.run(is_species=False, is_subnet=is_subnet)
-                    df = df_species + df_reaction
-                    result = np.percentile(df[C_LOG10_NUM_PERMUTATION].values, percentile)
-                    # Calculate multiple percentiles
-                    percentile_10 = np.percentile(df[C_LOG10_NUM_PERMUTATION].values, 10)
-                    percentile_90 = np.percentile(df[C_LOG10_NUM_PERMUTATION].values, 90)
+                    if is_no_constraint:
+                        result = 2*cls.calculateNoconstraintLog10NumAssignment(reference_size, target_size)
+                        percentile_10 = result
+                        percentile_90 = result
+                    else:
+                        benchmark = cls(reference_size, fill_size=fill_size,
+                            is_contains_reference=is_contains_reference, num_iteration=num_iteration)
+                        df_species = calculate(is_species=True)
+                        df_reaction = calculate(is_species=False)
+                        df = df_species + df_reaction
+                        result = np.percentile(df[C_LOG10_NUM_PERMUTATION].values, percentile)
+                        # Calculate multiple percentiles
+                        percentile_10 = np.percentile(df[C_LOG10_NUM_PERMUTATION].values, 10)
+                        percentile_90 = np.percentile(df[C_LOG10_NUM_PERMUTATION].values, 90)
                 data_dct[C_LOG10_NUM_PERMUTATION].append(np.round(result, 1))
                 if np.isnan(percentile_10):
                     data_dct[C_LABEL].append("")
                 else:
-                    data_dct[C_LABEL].append(
-                          f"{np.round(result, 1)}\n({np.round(percentile_10, 1)}, {np.round(percentile_90, 1)})")
+                    if is_no_constraint:
+                        data_dct[C_LABEL].append(f"{np.round(result, 1)}")
+                    else:
+                        data_dct[C_LABEL].append(
+                            f"{np.round(result, 1)}\n({np.round(percentile_10, 1)}, {np.round(percentile_90, 1)})")
                 data_dct[C_LOG10_P10].append(np.round(percentile_10, 1))
                 data_dct[C_LOG10_P90].append(np.round(percentile_90, 1))
         # Construct the dataframe
@@ -247,11 +265,29 @@ class ConstraintBenchmark(object):
         # Plot
         ax = sns.heatmap(pivot_df, annot=label_df.values, fmt="", cmap='Reds', vmin=0, vmax=15,
                           cbar_kws={'label': 'log10 number of permutations'})
-        ax.set_title(f'percentile: {percentile}th (10th, 90th)')
+        if title is not None:
+            ax.set_title(title)
+        else:
+            ax.set_title(f'percentile: {percentile}th (10th, 90th)')
         if is_plot:
             plt.show()
         #
         return ax
+    
+    @staticmethod
+    def calculateNoconstraintLog10NumAssignment(reference_size:int, target_size:int)->float:
+        """
+        Calculate the log10 of the number of assignments when no constraints are applied.
+
+        Args:
+            reference_size (int): _description_
+            target_size (int): _description_
+
+        Returns:
+            float: _description_
+        """
+        count = math.comb(target_size, reference_size)*scipy.special.factorial(reference_size)
+        return np.log10(count)
     
     def compareConstraints(self, is_subnet:bool=True)->EvaluateConstraintsResult:
         """
@@ -278,8 +314,7 @@ class ConstraintBenchmark(object):
         # Handle no constraint
         reference_size = self.num_species
         target_size = reference_size + self.fill_size
-        count = math.comb(target_size, reference_size)*scipy.special.factorial(reference_size)
-        none_log10_count = np.log10(count)
+        none_log10_count = self.calculateNoconstraintLog10NumAssignment(reference_size, target_size)
         # Run the simulation
         for _ in range(self.num_iteration):
             reference_network = Network.makeRandomNetworkByReactionType(self.num_reaction,

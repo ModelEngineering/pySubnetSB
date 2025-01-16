@@ -69,10 +69,24 @@ class TestBenchmark(unittest.TestCase):
             self.benchmark.plotConstraintStudy(size, size, 10, is_plot=IS_PLOT)
 
     def testPlotHeatmap(self):
+        if IGNORE_TEST:
+            return
+        ax = self.benchmark.plotHeatmap(range(5, 10, 2), range(10, 30, 3), percentile=50, is_plot=IS_PLOT,
+                                        num_iteration=10)
+        self.assertTrue("Axes" in str(type(ax)))
+
+    def testPlotHeatmapIscontainsFalse(self):
+        if IGNORE_TEST:
+            return
+        ax = self.benchmark.plotHeatmap(range(5, 10, 2), range(10, 30, 3), percentile=50, is_plot=IS_PLOT,
+              num_iteration=10, is_contains_reference=False)
+        self.assertTrue("Axes" in str(type(ax)))
+
+    def testPlotHeatmapNoConstraint(self):
         #if IGNORE_TEST:
         #    return
         ax = self.benchmark.plotHeatmap(range(5, 10, 2), range(10, 30, 3), percentile=50, is_plot=IS_PLOT,
-                                        num_iteration=10)
+              is_no_constraint=True, num_iteration=10, title="No Constraint")
         self.assertTrue("Axes" in str(type(ax)))
 
     def testCompareConstraints(self):
