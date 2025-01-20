@@ -7,8 +7,8 @@ import pandas as pd # type: ignore
 import unittest
 
 
-IGNORE_TEST = True
-IS_PLOT = True
+IGNORE_TEST = False
+IS_PLOT = False
 NUM_REACTION = 5
 NUM_SPECIES = 5
 FILL_SIZE = 5
@@ -83,10 +83,11 @@ class TestBenchmark(unittest.TestCase):
         self.assertTrue("Axes" in str(type(ax)))
 
     def testPlotHeatmapNoConstraint(self):
-        #if IGNORE_TEST:
-        #    return
+        if IGNORE_TEST:
+            return
         ax = self.benchmark.plotHeatmap(range(5, 10, 2), range(10, 30, 3), percentile=50, is_plot=IS_PLOT,
-              is_no_constraint=True, num_iteration=10, title="No Constraint")
+              is_no_constraint=True, num_iteration=10, title="No Constraint", num_digit=0,
+              font_size=14)
         self.assertTrue("Axes" in str(type(ax)))
 
     def testCompareConstraints(self):
@@ -106,13 +107,13 @@ class TestBenchmark(unittest.TestCase):
             self.assertEqual(result.target_size, target_size)
 
     def testPlotCompareConstraints(self):
-        if IGNORE_TEST:
-            return
+        #if IGNORE_TEST:
+        #    return
         reference_size = 20
         target_size = 100
         fill_size = target_size - reference_size
         benchmark = ConstraintBenchmark(reference_size, fill_size=fill_size,
-                num_iteration=1000)
+                num_iteration=10)
         benchmark.plotCompareConstraints(is_plot=IS_PLOT, is_subnet=True)
 
 

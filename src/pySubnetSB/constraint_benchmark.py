@@ -10,11 +10,6 @@ Key data structures:
         Columns:
             time - execution time
             num_permutations - number of permutations
-
-To do
-   1. Construct bar plots where x-axis indicates the constraints, and y-axis is log10 of num_assignments
-   2. Do (1) for 3 network sizes and species, reactions. 6 plots total.  
-   3. Should I consider all combinations of options?
 """
 
 import scipy.special  # type: ignore
@@ -41,6 +36,7 @@ C_TIME = 'time'
 C_LOG10_NUM_PERMUTATION = 'log10num_permutation'
 C_NUM_REFERENCE = 'num_reference'
 C_NUM_TARGET = 'num_target'
+TITLE_FONT_SIZE_INCREMENT = 2
 
 DimensionResult = collections.namedtuple('DimensionResult', ['dataframe', 'short_to_long_dct'])
 EvaluateConstraintsResult = collections.namedtuple('EvaluateConstraintsResult',
@@ -188,7 +184,8 @@ class ConstraintBenchmark(object):
     @classmethod
     def plotHeatmap(cls, num_references:List[int], num_targets:List[int], percentile:int=50,
           num_iteration:int=20, is_contains_reference=True, is_plot:bool=True,
-          is_no_constraint:bool=False, title:Optional[str]=None)->plt.Axes:
+          is_no_constraint:bool=False, title:Optional[str]=None,
+          ax=None, font_size:int=8, is_cbar:bool=True, num_digit:int=1)->plt.Axes:
         """Plot a heatmap of the log10 of number of permutations.
 
         Args:
@@ -198,10 +195,22 @@ class ConstraintBenchmark(object):
             is_plot (bool, optional): plot the heatmap. Defaults to True.
             is_not_constraint (bool, optional): True if no constraints are applied. Defaults to False.  
             title (str, optional): title of the plot. Defaults to None.
+            ax: Matplotlib axes
+            font_size (int, optional): font size of the color bar. Defaults to 8.
+            is_cbar (bool, optional): show the color bar. Defaults to True.
 
         Returns:
             matplotlib.axes._axes.Axes: _description_
         """
+        #####
+        def _round(value:float, num_digit:int)->float:
+            if np.isnan(value):
+                return np.nan
+            if num_digit == 0:
+                result = round(value)
+            else:
+                result = np.round(value, num_digit)
+            return result
         #####
         def calculate(is_species:bool)->pd.DataFrame:
             df = benchmark.run(is_species=is_species, is_subnet=is_subnet)
@@ -236,39 +245,52 @@ class ConstraintBenchmark(object):
                         df_species = calculate(is_species=True)
                         df_reaction = calculate(is_species=False)
                         df = df_species + df_reaction
-                        result = np.percentile(df[C_LOG10_NUM_PERMUTATION].values, percentile)
+                        result = _round(np.percentile(df[C_LOG10_NUM_PERMUTATION].values, percentile),
+                                num_digit)
                         # Calculate multiple percentiles
-                        percentile_10 = np.percentile(df[C_LOG10_NUM_PERMUTATION].values, 10)
-                        percentile_90 = np.percentile(df[C_LOG10_NUM_PERMUTATION].values, 90)
-                data_dct[C_LOG10_NUM_PERMUTATION].append(np.round(result, 1))
+                        percentile_10 = _round(np.percentile(df[C_LOG10_NUM_PERMUTATION].values, 10),
+                              num_digit)
+                        percentile_90 = _round(np.percentile(df[C_LOG10_NUM_PERMUTATION].values, 90),
+                              num_digit)
+                data_dct[C_LOG10_NUM_PERMUTATION].append(_round(result, num_digit))
                 if np.isnan(percentile_10):
                     data_dct[C_LABEL].append("")
                 else:
                     if is_no_constraint:
-                        data_dct[C_LABEL].append(f"{np.round(result, 1)}")
+                        data_dct[C_LABEL].append(f"{_round(result, num_digit)}")
                     else:
-                        data_dct[C_LABEL].append(
-                            f"{np.round(result, 1)}\n({np.round(percentile_10, 1)}, {np.round(percentile_90, 1)})")
-                data_dct[C_LOG10_P10].append(np.round(percentile_10, 1))
-                data_dct[C_LOG10_P90].append(np.round(percentile_90, 1))
+                        annot = f"{_round(result, 1)}\n({np.round(percentile_10, num_digit)}, "
+                        annot += f"{_round(percentile_90, num_digit)})"
+                        data_dct[C_LABEL].append(annot)
+                data_dct[C_LOG10_P10].append(_round(percentile_10, num_digit))
+                data_dct[C_LOG10_P90].append(_round(percentile_90, num_digit))
         # Construct the dataframe
         df = pd.DataFrame(data_dct)
         df = df.rename(columns={C_NUM_REFERENCE: 'Reference', C_NUM_TARGET: 'Target'})
         if percentile > 0:
-            df[C_LOG10_NUM_PERMUTATION] = np.round(df[C_LOG10_NUM_PERMUTATION].astype(float), 1)
+            df[C_LOG10_NUM_PERMUTATION] = [_round(v, num_digit) for v in df[C_LOG10_NUM_PERMUTATION]]
         else:
-            df[C_LOG10_NUM_PERMUTATION] = [np.round(v, 1) for v in df[C_LOG10_NUM_PERMUTATION].astype(float)]
+            df[C_LOG10_NUM_PERMUTATION] = [_round(v, num_digit)
+                  for v in df[C_LOG10_NUM_PERMUTATION].astype(float)]
         pivot_df = df.pivot(columns='Reference', index='Target', values=C_LOG10_NUM_PERMUTATION)
         pivot_df = pivot_df.sort_index(ascending=False)
         label_df = df.pivot(columns='Reference', index='Target', values=C_LABEL)
         label_df = label_df.sort_index(ascending=False)
         # Plot
         ax = sns.heatmap(pivot_df, annot=label_df.values, fmt="", cmap='Reds', vmin=0, vmax=15,
+                          annot_kws={'size': font_size}, ax=ax, cbar=is_cbar,
                           cbar_kws={'label': 'log10 number of permutations'})
+        ax.figure.axes[-1].yaxis.label.set_size(font_size)
+        cbar_ticklabels = ax.figure.axes[-1].get_yticklabels()
+        ax.figure.axes[-1].set_yticklabels(cbar_ticklabels, size=font_size)
+        ax.tick_params(axis='both', which='major', labelsize=font_size)
+        ax.set_xlabel('reference size', size=font_size)
+        ax.set_ylabel('target size', size=font_size)
         if title is not None:
-            ax.set_title(title)
+            ax.set_title(title, size=font_size + TITLE_FONT_SIZE_INCREMENT)
         else:
-            ax.set_title(f'percentile: {percentile}th (10th, 90th)')
+            ax.set_title(f'percentile: {percentile}th (10th, 90th)',
+                  size=font_size + TITLE_FONT_SIZE_INCREMENT)
         if is_plot:
             plt.show()
         #
@@ -363,7 +385,7 @@ class ConstraintBenchmark(object):
               species_dimension_result=species_dimension_result,
               reaction_dimension_result=reaction_dimension_result)
     
-    def plotCompareConstraints(self, axs=None, is_plot:bool=True,
+    def plotCompareConstraints(self, axs=None, font_size:int=12, is_plot:bool=True,
               **kwargs)->EvaluateConstraintsResult:
         """Bar plot the results of the comparison of constraints.
 
@@ -383,21 +405,31 @@ class ConstraintBenchmark(object):
             mean_ser = df.mean(axis=0)
             std_ser = df.std(axis=0)
             mean_ser.plot(kind='bar', ax=ax, legend=False, yerr=std_ser)    
-            ax.set_title(titles[idx])
-            ax.set_ylabel('log10 number of permutations')
-            ax.set_xlabel('constraints')
-            label_dct = {k: v[3:].replace("_", " ") for k, v in dimension.short_to_long_dct.items()}
-            label_dct[cn.NONE] = 'None'
-            label_dct['+'.join(dimension.short_to_long_dct.keys())] = 'All'
-            labels = [f"{c}: {label_dct[c]}" for c in df.columns]
-            pos_arr = [.99, 0.9]
-            for label in labels[1:-1]:
-                new_label = label.replace("make ", "")
-                new_label = new_label.replace(" matrix", "")
-                new_label = new_label.replace("n step", "2 step")
-                xpos = pos_arr[0] - 1.01*len(new_label)/100
-                ax.text(xpos, pos_arr[1], new_label, transform=ax.transAxes, fontsize=10, ha='center')
-                pos_arr[1] -= 0.05
+            ax.set_title(titles[idx], size=font_size + TITLE_FONT_SIZE_INCREMENT)
+            yticklabels = ax.get_yticklabels()
+            ax.set_yticklabels(yticklabels, size=font_size)
+            if idx == 0:
+                ax.set_ylabel('log10 number of permutations', size=font_size)
+            ax.set_xlabel('constraints', size=font_size)
+            xticklabels = list(df.columns)
+            ax.set_xticklabels(xticklabels, size=font_size, rotation=0)
+            # Legends
+            if False:
+                label_dct = {k: v[3:].replace("_", " ") for k, v in dimension.short_to_long_dct.items()}
+                label_dct[cn.NONE] = 'None'
+                label_dct['+'.join(dimension.short_to_long_dct.keys())] = 'All'
+                labels = [f"{c}: {label_dct[c]}" for c in df.columns]
+                pos_arr = [.90, 0.9]
+                for label in labels[1:-1]:
+                    new_label = label.replace("make ", "")
+                    new_label = new_label.replace(" matrix", "")
+                    new_label = new_label.replace("n step", "2 step")
+                    xpos = pos_arr[0] - 1.01*len(new_label)/100
+                    ax.text(xpos, pos_arr[1], new_label, transform=ax.transAxes, fontsize=font_size,
+                        ha='center')
+                    pos_arr[1] -= 0.05
+                    ticklabels = ax.get_xticklabels()
+                    ax.set_xticklabels(ticklabels, fontsize=font_size, rotation=0)
         if is_plot:
             plt.show()
         return result

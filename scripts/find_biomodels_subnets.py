@@ -24,11 +24,11 @@ SKIP_NETWORKS = ["BIOMD0000000192", "BIOMD0000000394", "BIOMD0000000433", "BIOMD
               ]
 OUTPUT_CSV = "biomodels_subnet_final.csv"
 
-def main(is_initialize:bool=False)->None:
+def main(is_initialize:bool=False, identity:str=cn.ID_STRONG)->None:
     # Find subnets of the Biomodels database
     initial_df = ParallelSubnetFinder.biomodelsFind(
         reference_network_size=10,
-        identity=cn.ID_STRONG,
+        identity=identity,
         is_report=True,
         serialization_dir=cn.DATA_DIR,
         checkpoint_path=None,
@@ -88,4 +88,4 @@ def _deserializeBiomodels(names:List[str])->List[Network]:
 
 if __name__ == "__main__":
     freeze_support()
-    main(is_initialize=False)
+    main(is_initialize=False, identity=cn.ID_STRONG)
