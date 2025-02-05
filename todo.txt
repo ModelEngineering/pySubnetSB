@@ -1,6 +1,11 @@
 1. Better repo
 2. Create jupyter example
 3. Create samples for command line
+4. Bug
+i/Users/jlheller/home/Technical/repos/pySubnetSB/src/pySubnetSB/identity_hash_benchmark.py:136: UserWarning:
+
+set_ticklabels() should only be used with a fixed number of ticks, i.e. after set_ticks() or using a FixedLocator.
+
 
 Figures
 1. Example of subnet discovery. 1035 (ref), 351 (tgt), induced. assignment pair.

@@ -1,0 +1,40 @@
+[project]
+name = "pySubnetSB"
+version = "0.0.3"
+description = "Python Subnet Discovery for Systems Biology"
+authors = [{ name = "Joseph Hellerstein", email = "joseph.hellerstein@gmail.com" }]
+license = { file = "LICENSE" }
+readme = "README.md"
+requires-python = ">=3.6"
+
+dependencies = [
+"numpy",
+"build",
+"coverage",
+"jupyterlab",
+"matplotlib",
+"nose2",
+"pandas",
+"pip>20",
+"pylint",
+"python-libsbml",
+"pynauty",
+"sbmlnetwork",
+"seaborn",
+"sbbadger",
+"simplesbml",
+"tellurium",
+"tqdm",
+"twine",
+"zipfile36",
+]
+
+[project.urls]
+Homepage = 'https://github.com/ModelEngineering/pySubnetSB'
+
+[options.package_data]
+data = "*.txt, *.csv, *.ant"
+
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"

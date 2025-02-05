@@ -28,7 +28,7 @@ PERCENT_COLLISION = 'percent_collision'
 COLUMNS = [NUM_SPECIES, NUM_REACTION, NUM_NETWORK, NUM_COLLISION, NUM_UNIQUE_HASH, MAX_NETWORK_IN_HASH,
       PERCENT_COLLISION]
 TITLE_FONT_SIZE_INCREMENT = 2
-NAME_DCT = {NUM_SPECIES: 'number species', NUM_REACTION: 'number reaction',
+NAME_DCT = {NUM_SPECIES: 'number of species', NUM_REACTION: 'number of reactions',
             NUM_COLLISION: 'number collision',
       NUM_UNIQUE_HASH: 'number unique hash', MAX_NETWORK_IN_HASH: 'max network in hash',
       PERCENT_COLLISION: 'percent collision'}
@@ -106,19 +106,25 @@ class IdentityHashBenchmark(object):
         return df
     
     def plotHashStatistics(self, statistic_name:str=PERCENT_COLLISION, title:str="",
-          font_size:int=12, is_plot=True)->pd.DataFrame:
+          font_size:int=12, hash_statistics_df:Optional[pd.DataFrame]=None, is_plot=True)->pd.DataFrame:
         """
         Plots the number of collisions in the identity hash.
 
         Args:
+            statistic_name: column name in the dataframe
+            title: title of the plot
+            font_size: font size
+            hash_statistics_df: dataframe for data used
             is_plot: if True, plot the DatFrame
         """
-        df = self.calculateHashStatistics()
+        if hash_statistics_df is None:
+            hash_statistics_df = self.calculateHashStatistics()
         # Create a pivot table
-        plot_df = df.pivot_table(index=NUM_SPECIES, columns=NUM_REACTION, values=statistic_name)
+        plot_df = hash_statistics_df.pivot_table(index=NUM_SPECIES,
+              columns=NUM_REACTION, values=statistic_name)
         plot_df = plot_df.sort_index(ascending=False)
         # Plot the heatmap
-        ax = sns.heatmap(plot_df, cmap='Reds', vmin=0, vmax=1,
+        ax = sns.heatmap(plot_df, cmap='Reds', vmin=0, vmax=100,
                           annot_kws={'size': font_size}, annot=True,
                           cbar_kws={'label': NAME_DCT[statistic_name]})
         ax.tick_params(axis='both', which='major', labelsize=font_size)
@@ -130,4 +136,4 @@ class IdentityHashBenchmark(object):
         ax.figure.axes[-1].set_yticklabels(cbar_ticklabels, size=font_size)
         if is_plot:
             plt.show()
-        return df
+        return hash_statistics_df
