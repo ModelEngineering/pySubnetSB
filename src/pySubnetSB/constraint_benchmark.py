@@ -393,11 +393,20 @@ class ConstraintBenchmark(object):
             axs (list, optional): pair of axes. Defaults to None.
             is_plot (bool, optional): plot the results. Defaults to True.
         """
+        DCT = {
+            'none': 'none',
+            'a': '1',
+            'b': '2,3',
+            'a+b': '1,2,3',
+            'y': '1,2',
+            'z': '3,4',
+            'y+z': '1,2,3,4',
+        }
         if axs is None:
             _, axs = plt.subplots(1, 2, figsize=(10, 5))
         result = self.compareConstraints(**kwargs)
         # Construct the plot
-        titles = ['Species', 'Reactions']
+        titles = ['Reactions', 'Species']
         for idx, dimension in enumerate(
               [result.species_dimension_result, result.reaction_dimension_result]):
             ax = axs[idx]
@@ -409,9 +418,9 @@ class ConstraintBenchmark(object):
             yticklabels = ax.get_yticklabels()
             ax.set_yticklabels(yticklabels, size=font_size)
             if idx == 0:
-                ax.set_ylabel('log10 number of permutations', size=font_size)
-            ax.set_xlabel('constraints', size=font_size)
-            xticklabels = list(df.columns)
+                ax.set_ylabel('log10 number of assignments', size=font_size)
+            ax.set_xlabel('constraints', size=font_size, labelpad=2)
+            xticklabels = [DCT[v] for v in list(df.columns)]
             ax.set_xticklabels(xticklabels, size=font_size, rotation=0)
             # Legends
             if False:

@@ -1,7 +1,7 @@
 '''Builds ProcessedNetworks from a NetworkCollection based on their structural identity.'''
 
 from pySubnetSB import constants as cn  # type: ignore
-from src.pySubnetSB.network import Network  # type: ignore
+from pySubnetSB.network import Network  # type: ignore
 from pySubnetSB.network_collection import NetworkCollection  # type: ignore
 from pySubnetSB.processed_network import ProcessedNetwork # type: ignore
 from pySubnetSB.processed_network_collection import ProcessedNetworkCollection # type: ignore

@@ -1,6 +1,6 @@
 [project]
 name = "pySubnetSB"
-version = "0.0.3"
+version = "0.0.4"
 description = "Python Subnet Discovery for Systems Biology"
 authors = [{ name = "Joseph Hellerstein", email = "joseph.hellerstein@gmail.com" }]
 license = { file = "LICENSE" }
@@ -21,7 +21,6 @@ dependencies = [
 "pynauty",
 "sbmlnetwork",
 "seaborn",
-"sbbadger",
 "simplesbml",
 "tellurium",
 "tqdm",

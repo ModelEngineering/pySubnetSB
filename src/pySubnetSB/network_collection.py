@@ -2,7 +2,7 @@
 
 
 from pySubnetSB import constants as cn   # type: ignore
-from src.pySubnetSB.network import Network   # type: ignore
+from pySubnetSB.network import Network   # type: ignore
 
 import json
 import collections

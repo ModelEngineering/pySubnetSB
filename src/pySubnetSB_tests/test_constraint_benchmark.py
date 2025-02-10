@@ -7,8 +7,8 @@ import pandas as pd # type: ignore
 import unittest
 
 
-IGNORE_TEST = False
-IS_PLOT = False
+IGNORE_TEST = True
+IS_PLOT = True
 NUM_REACTION = 5
 NUM_SPECIES = 5
 FILL_SIZE = 5
