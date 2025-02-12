@@ -60,7 +60,7 @@ class SignificanceCalculator(object):
         """
         core_calculator = SignificanceCalculatorCore(self.num_target_species, self.num_target_reaction,
               num_target_network=num_iteration)
-        return core_calculator.calculate(self.reference_network, identity=self.identity,
+        return core_calculator.calculateSubnet(self.reference_network, identity=self.identity,
                 max_num_assignment=max_num_assignment, is_report=is_report)
     
     @classmethod

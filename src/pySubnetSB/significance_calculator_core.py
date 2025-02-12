@@ -5,6 +5,7 @@ from pySubnetSB.network import Network  # type: ignore
 
 import collections
 import tqdm # type: ignore
+from typing import List, Tuple, Optional
 
 
 NUM_REFERENCE_SPECIES = "num_reference_species"
@@ -31,8 +32,9 @@ class SignificanceCalculatorCore(object):
         self.num_target_network = num_target_network
         self.target_networks = [Network.makeRandomNetworkByReactionType(num_target_reaction,
                 num_target_species, is_exact=True) for _ in range(num_target_network)]
+        self.target_dct:Optional[dict] = None
 
-    def calculate(self, reference_network:Network, identity:str=cn.ID_WEAK, is_subnet:bool=True,
+    def calculateSubnet(self, reference_network:Network, identity:str=cn.ID_WEAK, is_subnet:bool=True,
           max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT, is_report:bool=True
           )->SignificanceCalculatorCoreResult:
         """
@@ -52,11 +54,57 @@ class SignificanceCalculatorCore(object):
         num_truncated = 0
         for target_network in tqdm.tqdm(self.target_networks, desc="iteration", disable=not is_report):
             result = reference_network.isStructurallyIdentical(target_network,
-                  identity=identity, is_subnet=True,
+                  identity=identity, is_subnet=is_subnet,
                     max_num_assignment=max_num_assignment, is_report=False)
             num_induced += 1 if result else 0
             num_truncated += 1 if result.is_truncated else 0
         # Calculate the significance level
+        return SignificanceCalculatorCoreResult(
+            num_reference_species=reference_network.num_species,
+            num_reference_reaction=reference_network.num_reaction,
+            num_target_species=self.num_target_species,
+            num_target_reaction=self.num_target_reaction,
+            num_target_network=self.num_target_network,
+            max_num_assignment=max_num_assignment,
+            identity=identity,
+            num_induced=num_induced,
+            num_truncated=num_truncated,
+            frac_induced=num_induced/self.num_target_network,
+            frac_truncated=num_truncated/self.num_target_network)
+
+    def calculateEqual(self, reference_network:Network, identity:str=cn.ID_WEAK,
+          max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT, is_report:bool=True
+          )->SignificanceCalculatorCoreResult:
+        """
+        Calculates the significance level of finding a structurally identical target network.
+
+        Args:
+            reference_network (Network): Reference network
+            identity (str): Identity type
+            max_num_assignment (int): Maximum number of assignment pairs
+            is_report (bool): If True, report progress
+
+        Returns:
+            SignificanceCalculatorCoreResult
+        """
+        if self.target_dct is None:
+            self.target_dct = {}
+            for target_network in self.target_networks:
+                key = target_network.network_hash
+                if not key in self.target_dct:
+                    self.target_dct[key] = []
+                self.target_dct[key].append(target_network)
+        # Look for structurally identical networks
+        num_induced = 0
+        num_truncated = 0
+        key = reference_network.network_hash
+        if key in self.target_dct:
+            for target_network in tqdm.tqdm(self.target_dct[key], desc="iteration", disable=not is_report):
+                result = reference_network.isStructurallyIdentical(target_network, identity=identity,
+                    max_num_assignment=max_num_assignment, is_report=False)
+                num_induced += 1 if result else 0
+                num_truncated += 1 if result.is_truncated else 0
+        # Return the result
         return SignificanceCalculatorCoreResult(
             num_reference_species=reference_network.num_species,
             num_reference_reaction=reference_network.num_reaction,
