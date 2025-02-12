@@ -138,8 +138,6 @@ D_TRUNCATED_WEAK = "truncated_weak"
 D_PROBABILITY_OF_OCCURRENCE_STRONG = "probability_of_occurrence_strong"
 D_TRUNCATED_STRONG = "truncated_strong"
 D_IS_BOUNDARY_NETWORK = "is_boundary_network"
-D_ESTIMATED_POC_STRONG = "estimated_poc_strong"
-D_ESTIMATED_POC_WEAK = "estimated_poc_weak"
 # Data paths
 BIOMODELS_SERIALIZATION_PATH = os.path.join(DATA_DIR, "biomodels_serialized.txt")   # Serialized BioModels
 OSCILLATORS_SERIALIZATION_PATH = os.path.join(DATA_DIR, "oscillators_serialized.txt")   # Serialized BioModels
