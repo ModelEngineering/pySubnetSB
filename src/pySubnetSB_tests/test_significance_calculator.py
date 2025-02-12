@@ -70,7 +70,6 @@ class TestSignificanceCalculator(unittest.TestCase):
         self.assertTrue(result.num_reference_reaction > 0)
         self.assertEqual(result.num_target_species, NUM_TARGET_SPECIES)
         self.assertEqual(result.num_target_reaction, NUM_TARGET_REACTION)
-        self.assertEqual(result.num_iteration, NUM_ITERATION)
         self.assertEqual(result.max_num_assignment, MAX_NUM_ASSIGNMENT)
         self.assertEqual(result.identity, IDENTITY)
         self.assertTrue(result.num_induced >= 0)

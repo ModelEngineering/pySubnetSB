@@ -10,11 +10,12 @@ TODO:
 """
 
 import pySubnetSB.constants as cn # type: ignore
+from pySubnetSB.significance_calculator_core import  SignificanceCalculatorCore, SignificanceCalculatorCoreResult # type: ignore
 from pySubnetSB.network import Network  # type: ignore
 
 import collections
 import matplotlib.pyplot as plt
-import numpy as np
+import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
 import seaborn as sns # type: ignore
 from typing import List, Optional, Tuple  # type: ignore
@@ -35,12 +36,6 @@ PlotSignificanceResult = collections.namedtuple("PlotSignificanceResult",
       ["target_sizes", "frac_induces", "frac_truncates"])   
 
 
-SignificanceCalculatorResult = collections.namedtuple("SignificanceCalculatorResult", 
-  ["num_reference_species", "num_reference_reaction", "num_target_species", "num_target_reaction",
-   "num_iteration", "max_num_assignment", "identity",
-   "num_induced", "num_truncated", "frac_induced", "frac_truncated"])
-
-
 class SignificanceCalculator(object):
 
     def __init__(self, reference_network:Network, num_target_species:int, num_target_reaction:int,
@@ -49,46 +44,24 @@ class SignificanceCalculator(object):
         self.num_target_reaction = num_target_reaction
         self.num_target_species = num_target_species
         self.identity = identity
-
-    def calculate(self, num_iteration:int, is_report:bool=True, is_exact:bool=True,
-          max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT)->SignificanceCalculatorResult:
+    
+    def calculate(self, num_iteration:int, is_report:bool=True,
+          max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT)->SignificanceCalculatorCoreResult:
         """
         Calculates the significance level of finding an induced subnetwork in a target network.
 
         Args:
             num_iteration (int): Number of iterations
             is_report (bool): If True, report progress
-            is_exact (bool): If True, use exact network generation
             max_num_assignment (int): Maximum number of assignment pairs
 
         Returns:
             SignificanceCalculatorResult
         """
-        num_induced = 0
-        num_truncated = 0
-        for _ in tqdm.tqdm(range(num_iteration), desc="iteration", disable=not is_report):
-            target_network = Network.makeRandomNetworkByReactionType(self.num_target_reaction,
-                  self.num_target_reaction, is_exact=is_exact)
-            if (target_network.num_species < self.num_target_species):
-                continue
-            result = self.reference_network.isStructurallyIdentical(target_network,
-                  identity=self.identity, is_subnet=True,
-                    max_num_assignment=max_num_assignment, is_report=False)
-            num_induced += 1 if result else 0
-            num_truncated += 1 if result.is_truncated else 0
-        # Calculate the significance level
-        return SignificanceCalculatorResult(
-            num_reference_species=self.reference_network.num_species,
-            num_reference_reaction=self.reference_network.num_reaction,
-            num_target_species=self.num_target_species,
-            num_target_reaction=self.num_target_reaction,
-            num_iteration=num_iteration,
-            max_num_assignment=max_num_assignment,
-            identity=self.identity,
-            num_induced=num_induced,
-            num_truncated=num_truncated,
-            frac_induced=num_induced/num_iteration,
-            frac_truncated=num_truncated/num_iteration)
+        core_calculator = SignificanceCalculatorCore(self.num_target_species, self.num_target_reaction,
+              num_target_network=num_iteration)
+        return core_calculator.calculate(self.reference_network, identity=self.identity,
+                max_num_assignment=max_num_assignment, is_report=is_report)
     
     @classmethod
     def generateNullDistribution(cls, num_iteration:int=1000, identity:str=cn.ID_WEAK,
