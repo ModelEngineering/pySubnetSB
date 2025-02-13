@@ -1,4 +1,4 @@
-'''Evaluates the effectiveness of reaction and species constraints.'''
+'''Benchmarks various aspects of pySubnetSB.'''
 
 """
 Evaluates subset detection by seeing if the reference network can be found when it is combined
@@ -13,6 +13,7 @@ Key data structures:
 """
 
 import scipy.special  # type: ignore
+from pySubnetSB.significance_calculator_core import SignificanceCalculatorCore  # type: ignore
 from pySubnetSB.reaction_constraint import ReactionConstraint  # type: ignore
 from pySubnetSB.constraint_option_collection import SpeciesConstraintOptionCollection  # type: ignore
 from pySubnetSB.constraint_option_collection import ReactionConstraintOptionCollection  # type: ignore
@@ -28,8 +29,9 @@ import pandas as pd  # type: ignore
 import matplotlib.pyplot as plt
 import scipy
 import seaborn as sns  # type: ignore
+import tqdm  # type: ignore
 import time
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 NULL_DF = pd.DataFrame()
 C_TIME = 'time'
@@ -37,6 +39,7 @@ C_LOG10_NUM_PERMUTATION = 'log10num_permutation'
 C_NUM_REFERENCE = 'num_reference'
 C_NUM_TARGET = 'num_target'
 TITLE_FONT_SIZE_INCREMENT = 2
+POC_SIGNIFICANCE = "poc_significance"
 
 DimensionResult = collections.namedtuple('DimensionResult', ['dataframe', 'short_to_long_dct'])
 EvaluateConstraintsResult = collections.namedtuple('EvaluateConstraintsResult',
@@ -50,7 +53,7 @@ StudyResult = collections.namedtuple('StudyResult', ['is_categorical_id', 'study
 #  benchmark_results: List[pd.DataFrame]
 
 
-class ConstraintBenchmark(object):
+class Benchmark(object):
     def __init__(self, reference_size:int, fill_size:int=0, num_iteration:int=1000,
           is_contains_reference:bool=True)->None:
         """
@@ -132,7 +135,7 @@ class ConstraintBenchmark(object):
             is_plot (bool, optional): Plot the results. Defaults to True.
             kwargs: constructor options
         """
-        benchmark = ConstraintBenchmark(reference_size, fill_size=fill_size, num_iteration=num_iteration)
+        benchmark = Benchmark(reference_size, fill_size=fill_size, num_iteration=num_iteration)
         def doPlot(df:pd.DataFrame, node_str:str, is_subnet:bool=False, pos:int=0):
             ax = axes.flatten()[pos]
             xv = np.array(range(len(df)))
@@ -443,11 +446,95 @@ class ConstraintBenchmark(object):
             plt.show()
         return result
     
+    @classmethod
+    def calculateOccurrence(cls, species_reaction_sizes:List[Tuple[int, int]],
+          identity:str=cn.ID_WEAK, max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT,
+          num_replication:int=100, num_iteration:int=1000, is_report:bool=True)->pd.DataFrame:
+        """Calculates the probability of occurrence of a reference network in a target network.
+
+        Args:
+            species_reaction_sizes (List[Tuple[int, int]]): list of tuples of species and reaction sizes
+            max_num_assignment (int, optional): _description_. Defaults to cn.MAX_NUM_ASSIGNMENT.
+            num_replication: (int): Number of reference networks evaluated for a single combination
+                                    of num_reaction, num_species
+            num_iteration: (int): Number of target networks compared with a single reference network
+
+        Returns:
+            pd.DataFrame: columns
+                num_species: number of species
+                num_reaction: number of reactions
+                mean probability: probability of occurrence            
+                std probability: probability of occurrence
+                mean_truncated: probability of truncated occurrence
+                poc: -log10(probability of occurrence) rounded to a single digit
+        """
+        COLUMNS = [cn.D_NUM_SPECIES, cn.D_NUM_REACTION, cn.D_MEAN_PROBABILITY, cn.D_STD_PROBABILITY,
+                   cn.D_MEAN_TRUNCATED, POC_SIGNIFICANCE]
+        result_dct:dict = {c: [] for c in COLUMNS}
+        for num_species, num_reaction in species_reaction_sizes:
+            frac_induceds:list = []
+            frac_truncateds:list = []
+            for _ in tqdm.tqdm(range(num_replication), desc="replication", disable=not is_report):
+                reference_network = Network.makeRandomNetworkByReactionType(num_reaction, num_species)
+                calculator = SignificanceCalculatorCore(num_species, num_reaction, num_iteration)
+                result = calculator.calculateEqual(reference_network, identity=identity,
+                        max_num_assignment=max_num_assignment, is_report=False)
+                frac_induceds.append(result.frac_induced)
+                frac_truncateds.append(result.frac_truncated)
+            result_dct[cn.D_NUM_SPECIES].append(num_species)
+            result_dct[cn.D_NUM_REACTION].append(num_reaction)
+            result_dct[cn.D_MEAN_PROBABILITY].append(np.mean(frac_induceds))
+            result_dct[cn.D_STD_PROBABILITY].append(np.std(frac_induceds))
+            result_dct[cn.D_MEAN_TRUNCATED].append(np.mean(frac_truncateds))
+            mean_induced = max(np.mean(frac_induceds), 1/num_iteration)
+            poc = round(-np.log10(mean_induced))
+            result_dct[POC_SIGNIFICANCE].append(poc)
+        return pd.DataFrame(result_dct)
+
+    @classmethod
+    def plotSpeciesReactionHeatmap(cls, 
+            dataframe:pd.DataFrame, value_column:str, cbar_title:str="",
+            plot_title:str="", ax=None, font_size:int=8, is_cbar:bool=True, vmax:Optional[float]=None,
+            is_plot:bool=True)->plt.Axes:
+        """Plots a heatmap with the horizontal axis as the number of species and the vertical axis as
+            the number of reactions.
+
+        Args:
+            dataframe (pd.DataFrame): dataframe with columns num_species, num_reaction, value_column
+            cbar_title (str): title of the color bar
+            value_column (str): column with the values
+            font_size (int, optional): font size of the color bar. Defaults to 8.
+            is_cbar (bool, optional): show the color bar. Defaults to True.
+
+        Returns:
+            matplotlib.axes._axes.Axes: _description_
+        """
+        # Construct the plot dataframe
+        pivot_df = dataframe.pivot(columns=cn.D_NUM_SPECIES, index=cn.D_NUM_REACTION,
+              values=POC_SIGNIFICANCE)
+        pivot_df = pivot_df.sort_index(ascending=False)
+        # Plot
+        if vmax is None:
+            vmax = pivot_df.max().max()
+        ax = sns.heatmap(pivot_df, annot=True, cmap='Reds', vmin=0, vmax=vmax,
+                          annot_kws={'size': font_size}, ax=ax, cbar=is_cbar,
+                          cbar_kws={'label': cbar_title})
+        ax.figure.axes[-1].yaxis.label.set_size(font_size)
+        cbar_ticklabels = ax.figure.axes[-1].get_yticklabels()
+        ax.figure.axes[-1].set_yticklabels(cbar_ticklabels, size=font_size)
+        ax.tick_params(axis='both', which='major', labelsize=font_size)
+        ax.set_xlabel('number of species', size=font_size)
+        ax.set_ylabel('number of reactions', size=font_size)
+        ax.set_title(plot_title, size=font_size + TITLE_FONT_SIZE_INCREMENT)
+        if is_plot:
+            plt.show()
+        #
+        return ax
     
 
 if __name__ == '__main__':
     size = 6
     #ConstraintBenchmark.plotConstraintStudy(size, 9*size, num_iteration=50, is_plot=True)
-    benchmark = ConstraintBenchmark(6, 6, 20)
+    benchmark = Benchmark(6, 6, 20)
     _ = benchmark.plotHeatmap(list(range(4, 22, 2)), list(range(10, 105, 5)), percentile=95,
           is_contains_reference=True, num_iteration=500)

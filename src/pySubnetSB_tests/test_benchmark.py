@@ -1,14 +1,16 @@
-from pySubnetSB.constraint_benchmark import ConstraintBenchmark, C_LOG10_NUM_PERMUTATION, C_TIME  # type: ignore
-from pySubnetSB.network import Network  # type: ignore
+from src.pySubnetSB.benchmark import Benchmark, C_LOG10_NUM_PERMUTATION, C_TIME  # type: ignore
 from pySubnetSB.species_constraint import SpeciesConstraint  # type: ignore
 from pySubnetSB.reaction_constraint import ReactionConstraint  # type: ignore
+import pySubnetSB.constants as cn # type: ignore
 
+import os
 import pandas as pd # type: ignore
+import itertools
 import unittest
 
 
-IGNORE_TEST = True
-IS_PLOT = True
+IGNORE_TEST = False
+IS_PLOT = False
 NUM_REACTION = 5
 NUM_SPECIES = 5
 FILL_SIZE = 5
@@ -21,7 +23,7 @@ NUM_ITERATION = 10
 class TestBenchmark(unittest.TestCase):
 
     def setUp(self):
-        self.benchmark = ConstraintBenchmark(NUM_REACTION, fill_size=FILL_SIZE,
+        self.benchmark = Benchmark(NUM_REACTION, fill_size=FILL_SIZE,
               num_iteration=NUM_ITERATION)
 
     def testConstructor(self):
@@ -55,7 +57,7 @@ class TestBenchmark(unittest.TestCase):
     def testRunIsContainsReferenceFalse(self):
         if IGNORE_TEST:
             return
-        benchmark = ConstraintBenchmark(NUM_REACTION, NUM_SPECIES, NUM_ITERATION,
+        benchmark = Benchmark(NUM_REACTION, NUM_SPECIES, NUM_ITERATION,
               is_contains_reference=False)
         for is_species in [True, False]:
             for is_subnet in [True, False]:
@@ -96,7 +98,7 @@ class TestBenchmark(unittest.TestCase):
         reference_size = 3
         target_size = 8
         fill_size = target_size - reference_size
-        benchmark = ConstraintBenchmark(reference_size, fill_size=fill_size,
+        benchmark = Benchmark(reference_size, fill_size=fill_size,
                 num_iteration=NUM_ITERATION)
         for is_subnet in [True, False]:
             result = benchmark.compareConstraints(is_subnet=is_subnet)
@@ -107,14 +109,40 @@ class TestBenchmark(unittest.TestCase):
             self.assertEqual(result.target_size, target_size)
 
     def testPlotCompareConstraints(self):
-        #if IGNORE_TEST:
-        #    return
+        if IGNORE_TEST:
+            return
         reference_size = 20
         target_size = 100
         fill_size = target_size - reference_size
-        benchmark = ConstraintBenchmark(reference_size, fill_size=fill_size,
+        benchmark = Benchmark(reference_size, fill_size=fill_size,
                 num_iteration=10)
         benchmark.plotCompareConstraints(is_plot=IS_PLOT, is_subnet=True)
+
+    def testCalculateOccurrence(self):
+        if IGNORE_TEST:
+            return
+        pairs = [(3, 3), (3, 10), (10, 10)]
+        df = Benchmark.calculateOccurrence(pairs,
+              num_iteration=1000, num_replication=5, is_report=IS_PLOT)
+        self.assertTrue(isinstance(df, pd.DataFrame))
+        self.assertEqual(len(df), 3)
+        self.assertGreater(df.loc[0, cn.D_MEAN_PROBABILITY], df.loc[1, cn.D_MEAN_PROBABILITY])
+    
+    def testPlotSpeciesReactionHeatmap(self):
+        if IGNORE_TEST:
+            return
+        sizes = list(itertools.product(range(3, 10), range(3, 10)))
+        done = False
+        if os.path.isfile("benchmark.csv"):
+            df = pd.read_csv("benchmark.csv")
+            if len(df) == len(sizes):
+                done = True
+        if not done:
+            df = Benchmark.calculateOccurrence(sizes,
+               num_iteration=1000, num_replication=5)
+            df.to_csv("benchmark.csv", index=False)
+        Benchmark.plotSpeciesReactionHeatmap(df, cn.D_MEAN_PROBABILITY, is_plot=IS_PLOT,
+              font_size=14)
 
 
 if __name__ == '__main__':

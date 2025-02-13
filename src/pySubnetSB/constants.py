@@ -129,13 +129,18 @@ FINDER_DATAFRAME_COLUMNS = [FINDER_REFERENCE_NAME,  FINDER_TARGET_NAME,  FINDER_
       FINDER_INDUCED_NETWORK,  FINDER_NAME_DCT, FINDER_NUM_ASSIGNMENT_PAIR, FINDER_IS_TRUNCATED]
 # Data columns
 D_MODEL_NAME = "model_name"
+D_NUM_ITERATION = "num_iteration"
 D_REFERENCE_MODEL = "reference_model"
 D_TARGET_MODEL = "target_model"
 D_NUM_SPECIES = "num_species"
 D_NUM_REACTION = "num_reaction"
 D_PROBABILITY_OF_OCCURRENCE_WEAK = "probability_of_occurrence_weak"
 D_TRUNCATED_WEAK = "truncated_weak"
+D_MEAN_TRUNCATED = "mean_truncated"
+D_MEAN_PROBABILITY = "mean_probability"
+D_STD_PROBABILITY = "std_probability"
 D_PROBABILITY_OF_OCCURRENCE_STRONG = "probability_of_occurrence_strong"
+D_NUM_REPLICATION = "num_replication"
 D_TRUNCATED_STRONG = "truncated_strong"
 D_IS_BOUNDARY_NETWORK = "is_boundary_network"
 # Data paths
