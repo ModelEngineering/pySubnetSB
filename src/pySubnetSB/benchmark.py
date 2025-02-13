@@ -471,10 +471,11 @@ class Benchmark(object):
         COLUMNS = [cn.D_NUM_SPECIES, cn.D_NUM_REACTION, cn.D_MEAN_PROBABILITY, cn.D_STD_PROBABILITY,
                    cn.D_MEAN_TRUNCATED, POC_SIGNIFICANCE]
         result_dct:dict = {c: [] for c in COLUMNS}
-        for num_species, num_reaction in species_reaction_sizes:
+        for num_species, num_reaction in tqdm.tqdm(species_reaction_sizes,
+              desc="pairs", disable=not is_report):
             frac_induceds:list = []
             frac_truncateds:list = []
-            for _ in tqdm.tqdm(range(num_replication), desc="replication", disable=not is_report):
+            for _ in range(num_replication):
                 reference_network = Network.makeRandomNetworkByReactionType(num_reaction, num_species)
                 calculator = SignificanceCalculatorCore(num_species, num_reaction, num_iteration)
                 result = calculator.calculateEqual(reference_network, identity=identity,

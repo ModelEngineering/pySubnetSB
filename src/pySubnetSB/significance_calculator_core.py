@@ -31,7 +31,8 @@ class SignificanceCalculatorCore(object):
         self.num_target_species = num_target_species
         self.num_target_network = num_target_network
         self.target_networks = [Network.makeRandomNetworkByReactionType(num_target_reaction,
-                num_target_species, is_exact=True) for _ in range(num_target_network)]
+                num_target_species, is_exact=False) for _ in range(num_target_network)]
+        self.count_target_network = len(self.target_networks)
         self.target_dct:Optional[dict] = None
 
     def calculateSubnet(self, reference_network:Network, identity:str=cn.ID_WEAK, is_subnet:bool=True,
@@ -64,13 +65,13 @@ class SignificanceCalculatorCore(object):
             num_reference_reaction=reference_network.num_reaction,
             num_target_species=self.num_target_species,
             num_target_reaction=self.num_target_reaction,
-            num_target_network=self.num_target_network,
+            num_target_network=self.count_target_network,
             max_num_assignment=max_num_assignment,
             identity=identity,
             num_induced=num_induced,
             num_truncated=num_truncated,
-            frac_induced=num_induced/self.num_target_network,
-            frac_truncated=num_truncated/self.num_target_network)
+            frac_induced=num_induced/self.count_target_network,
+            frac_truncated=num_truncated/self.count_target_network)
 
     def calculateEqual(self, reference_network:Network, identity:str=cn.ID_WEAK,
           max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT, is_report:bool=True
@@ -101,6 +102,7 @@ class SignificanceCalculatorCore(object):
         if key in self.target_dct:
             for target_network in tqdm.tqdm(self.target_dct[key], desc="iteration", disable=not is_report):
                 result = reference_network.isStructurallyIdentical(target_network, identity=identity,
+                    is_subnet=False,
                     max_num_assignment=max_num_assignment, is_report=False)
                 num_induced += 1 if result else 0
                 num_truncated += 1 if result.is_truncated else 0
@@ -110,10 +112,10 @@ class SignificanceCalculatorCore(object):
             num_reference_reaction=reference_network.num_reaction,
             num_target_species=self.num_target_species,
             num_target_reaction=self.num_target_reaction,
-            num_target_network=self.num_target_network,
+            num_target_network=self.count_target_network,
             max_num_assignment=max_num_assignment,
             identity=identity,
             num_induced=num_induced,
             num_truncated=num_truncated,
-            frac_induced=num_induced/self.num_target_network,
-            frac_truncated=num_truncated/self.num_target_network)
+            frac_induced=num_induced/self.count_target_network,
+            frac_truncated=num_truncated/self.count_target_network)
