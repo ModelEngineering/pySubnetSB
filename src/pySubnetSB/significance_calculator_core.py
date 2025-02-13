@@ -4,6 +4,7 @@ import pySubnetSB.constants as cn # type: ignore
 from pySubnetSB.network import Network  # type: ignore
 
 import collections
+import numpy as np
 import tqdm # type: ignore
 from typing import List, Tuple, Optional
 
@@ -30,8 +31,10 @@ class SignificanceCalculatorCore(object):
         self.num_target_reaction = num_target_reaction
         self.num_target_species = num_target_species
         self.num_target_network = num_target_network
-        self.target_networks = [Network.makeRandomNetworkByReactionType(num_target_reaction,
+        target_networks = [Network.makeRandomNetworkByReactionType(num_target_reaction,
                 num_target_species, is_exact=False) for _ in range(num_target_network)]
+        self.target_networks = [n for n in target_networks
+                if (n.num_species == num_target_species) and (n.num_reaction == num_target_reaction)]
         self.count_target_network = len(self.target_networks)
         self.target_dct:Optional[dict] = None
 
@@ -70,8 +73,8 @@ class SignificanceCalculatorCore(object):
             identity=identity,
             num_induced=num_induced,
             num_truncated=num_truncated,
-            frac_induced=num_induced/self.count_target_network,
-            frac_truncated=num_truncated/self.count_target_network)
+            frac_induced=num_induced/self.count_target_network if self.count_target_network > 0 else np.nan,
+            frac_truncated=num_truncated/self.count_target_network if self.count_target_network > 0 else np.nan)
 
     def calculateEqual(self, reference_network:Network, identity:str=cn.ID_WEAK,
           max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT, is_report:bool=True

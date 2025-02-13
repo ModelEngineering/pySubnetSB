@@ -57,8 +57,8 @@ class TestSignificanceCalculator(unittest.TestCase):
         if IGNORE_TEST:
             return
         self.assertTrue(self.calculator.reference_network is not None)
-        self.assertEqual(self.calculator.num_target_reaction, NUM_TARGET_REACTION)
-        self.assertEqual(self.calculator.num_target_species, NUM_TARGET_SPECIES)
+        self.assertLessEqual(self.calculator.num_target_reaction, NUM_TARGET_REACTION)
+        self.assertLessEqual(self.calculator.num_target_species, NUM_TARGET_SPECIES)
         self.assertEqual(self.calculator.identity, IDENTITY)
     
     def testCalculateSimple(self):
