@@ -110,6 +110,12 @@ class SignificanceCalculatorCore(object):
                 num_induced += 1 if result else 0
                 num_truncated += 1 if result.is_truncated else 0
         # Return the result
+        if self.count_target_network > 0:
+            frac_induced = num_induced/self.count_target_network
+            frac_truncated = num_truncated/self.count_target_network
+        else:
+            frac_induced = np.nan
+            frac_truncated = np.nan
         return SignificanceCalculatorCoreResult(
             num_reference_species=reference_network.num_species,
             num_reference_reaction=reference_network.num_reaction,
@@ -120,5 +126,6 @@ class SignificanceCalculatorCore(object):
             identity=identity,
             num_induced=num_induced,
             num_truncated=num_truncated,
-            frac_induced=num_induced/self.count_target_network,
-            frac_truncated=num_truncated/self.count_target_network)
+            frac_induced=frac_induced,
+            frac_truncated=frac_truncated,
+        )

@@ -469,7 +469,8 @@ class Benchmark(object):
                 poc: -log10(probability of occurrence) rounded to a single digit
         """
         COLUMNS = [cn.D_NUM_SPECIES, cn.D_NUM_REACTION, cn.D_MEAN_PROBABILITY, cn.D_STD_PROBABILITY,
-                   cn.D_MEAN_TRUNCATED, POC_SIGNIFICANCE]
+                   cn.D_MEAN_TRUNCATED, POC_SIGNIFICANCE, cn.D_NUM_ITERATION]
+        MIN_SIGNIFICANCE = 1e-5
         result_dct:dict = {c: [] for c in COLUMNS}
         for num_species, num_reaction in tqdm.tqdm(species_reaction_sizes,
               desc="pairs", disable=not is_report):
@@ -482,15 +483,20 @@ class Benchmark(object):
                         max_num_assignment=max_num_assignment, is_report=False)
                 frac_induceds.append(result.frac_induced)
                 frac_truncateds.append(result.frac_truncated)
+            result_dct[cn.D_NUM_ITERATION].append(result.num_target_network)
             result_dct[cn.D_NUM_SPECIES].append(num_species)
             result_dct[cn.D_NUM_REACTION].append(num_reaction)
             result_dct[cn.D_MEAN_PROBABILITY].append(np.mean(frac_induceds))
             result_dct[cn.D_STD_PROBABILITY].append(np.std(frac_induceds))
             result_dct[cn.D_MEAN_TRUNCATED].append(np.mean(frac_truncateds))
-            mean_induced = max(np.mean(frac_induceds), 1/num_iteration)
-            poc = round(-np.log10(mean_induced))
+            mean_induced = max(np.nanmean(frac_induceds), MIN_SIGNIFICANCE)
+            if not np.isnan(mean_induced):
+                poc = round(-np.log10(mean_induced))
+            else:
+                poc = np.nan
             result_dct[POC_SIGNIFICANCE].append(poc)
-        return pd.DataFrame(result_dct)
+        df = pd.DataFrame(result_dct)
+        return df
 
     @classmethod
     def plotSpeciesReactionHeatmap(cls, 

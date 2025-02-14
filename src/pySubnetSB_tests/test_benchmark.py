@@ -125,8 +125,17 @@ class TestBenchmark(unittest.TestCase):
         df = Benchmark.calculateOccurrence(pairs,
               num_iteration=1000, num_replication=5, is_report=IS_PLOT)
         self.assertTrue(isinstance(df, pd.DataFrame))
-        self.assertEqual(len(df), 3)
+        self.assertEqual(len(df), len(pairs))
         self.assertGreater(df.loc[0, cn.D_MEAN_PROBABILITY], df.loc[1, cn.D_MEAN_PROBABILITY])
+
+    def testCalculateOccurrenceEdgeCases(self):
+        if IGNORE_TEST:
+            return
+        pairs = [(6, 2), (2, 6), (2, 10), (10, 2)]
+        df = Benchmark.calculateOccurrence(pairs,
+              num_iteration=10, num_replication=5, is_report=IS_PLOT)
+        self.assertTrue(isinstance(df, pd.DataFrame))
+        self.assertEqual(len(df), len(pairs))
     
     def testPlotSpeciesReactionHeatmap(self):
         if IGNORE_TEST:
