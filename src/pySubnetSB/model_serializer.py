@@ -35,7 +35,10 @@ class ModelSerializer(object):
             else:
                 raise ValueError("model_directory should be set if serialization_file is not a txt file.")
         else:
-            self.serialization_path = os.path.join(model_directory, serialization_path)
+            if "/" in serialization_path:
+                self.serialization_path = serialization_path
+            else:
+                self.serialization_path = os.path.join(model_directory, serialization_path)
 
     def remove(self)->None:
         """Removes the serialization file."""
@@ -73,7 +76,8 @@ class ModelSerializer(object):
         return cls(model_directory, DEFAULT_SERIALIZATION_FILENAME)
 
     def serialize(self, batch_size:int=BATCHSIZE, num_batch:Optional[int]=None,
-                           report_interval:Optional[int]=10)->None:
+                           report_interval:Optional[int]=10,
+                           serialization_strs:Optional[List[str]]=None)->None:
         """
         Serializes Antimony models in a directory.
 
@@ -84,13 +88,16 @@ class ModelSerializer(object):
         """
         # Check if there is an existing output file
         processed_network_names:list = []
-        if os.path.exists(self.serialization_path):
-            with open(self.serialization_path, 'r') as f:
-                serialization_strs = f.readlines()
-            processed_network_names = []
-            for serialization_str in serialization_strs:
-                network = Network.deserialize(serialization_str)
-                processed_network_names.append(network.network_name)
+        if serialization_strs is None:
+            if os.path.exists(self.serialization_path):
+                with open(self.serialization_path, 'r') as f:
+                    serialization_strs = f.readlines()
+            else:
+                serialization_strs = []
+        processed_network_names = []
+        for serialization_str in serialization_strs:
+            network = Network.deserialize(serialization_str)
+            processed_network_names.append(network.network_name)
         batch_count = 0
         while True:
             batch_count += 1
