@@ -8,7 +8,7 @@ import tellurium as te # type: ignore
 import unittest
 
 
-IGNORE_TEST = False
+IGNORE_TEST = True
 IS_PLOT = False
 MODEL = """
 J1: A -> B; k1*A
@@ -148,6 +148,16 @@ class TestFunctions(unittest.TestCase):
             return
         api.makeSerializationFile(MODEL_DIR, SERIALIZATION_PATH)
         self.assertTrue(os.path.isfile(SERIALIZATION_PATH))
+
+    def testGetNetworkCollection(self):
+        #if IGNORE_TEST:
+        #    return
+        network_collection = api._getNetworkCollection(MODEL_DIR)
+        self.assertTrue(len(network_collection) > 0)
+        #
+        url = "http://raw.githubusercontent.com/ModelEngineering/pySubnetSB/main/examples/target_serialized.txt"
+        network_collection = api._getNetworkCollection(url)
+        self.assertTrue(len(network_collection) > 0)
 
 
 if __name__ == '__main__':

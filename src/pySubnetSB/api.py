@@ -6,6 +6,7 @@ from pySubnetSB.model_serializer import ModelSerializer  # type: ignore
 from pySubnetSB.network import Network, StructuralAnalysisResult  # type: ignore
 from pySubnetSB.network_collection import NetworkCollection  # type: ignore
 from pySubnetSB.subnet_finder import SubnetFinder  # type: ignore
+import pySubnetSB.util as util # type: ignore
 
 import os
 import pandas as pd  # type: ignore
@@ -31,7 +32,13 @@ def _getNetworkCollection(directory:str, is_report:bool=True)->Tuple[NetworkColl
         Optional[str]: Path to the serialization file
     """
     if directory.endswith(".txt"):
-        serialization_path = directory
+        if "http" in directory:
+            strings = util.getStringsFromURL(directory)
+            networks = ModelSerializer.deserializeFromStrings(strings)
+            network_collection = NetworkCollection(networks)
+            return network_collection, None
+        else:
+            serialization_path = directory
         serializer = ModelSerializer(None, serialization_path)
         filename = None
     else:

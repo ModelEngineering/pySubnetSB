@@ -4,9 +4,13 @@ from functools import wraps, cmp_to_key
 import itertools
 import json
 import numpy as np
+import tempfile
 import time
 import pandas as pd # type: ignore
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Optional
+import warnings
+warnings.filterwarnings("ignore")  # Ignore warnings from urllib3
+import urllib3  # type: ignore
 
 IS_TIMEIT = False
 ArrayContext = collections.namedtuple('ArrayContext', "string, num_row, num_column")
@@ -415,3 +419,44 @@ def getAllSubsets(a_list)->list:
             result.append(list(subset))
     # 
     return result
+
+def getStringsFromURL(url:str)->List[str]:
+    """Downloads a file from a URL and convert to list of strings.
+
+    Args:
+        url (str): URL of the file.
+
+    Returns:
+        List[str]: List of strings.
+    """
+    http = urllib3.PoolManager()
+    resp = http.request("GET", url)
+    if resp.status != 200:
+        raise ValueError(f"Failed to download file from {url}")
+    return resp.data.decode("utf-8").split("\n")
+
+def makeLocalFileFromURL(url:str, local_file:Optional[str]=None)->str:
+    """Downloads a file from a URL and saves it locally.
+
+    Args:
+        url (str): URL of the file.
+        local_file (str): Local file name.
+
+    Returns:
+        str: Local file name.
+    """
+    http = urllib3.PoolManager()
+    resp = http.request("GET", url)
+    if resp.status != 200:
+        raise ValueError(f"Failed to download file from {url}")
+    strings = getStringsFromURL(url)
+    if local_file is None:
+        fp = tempfile.NamedTemporaryFile(delete=False)
+        bytes = '\n'.join(strings).encode("utf-8")
+        fp.write(bytes)
+        local_file = fp.name
+        fp.close()
+    else:
+        with open(local_file, "w") as fp:  # type: ignore
+            fp.write(resp.data)
+    return local_file

@@ -125,6 +125,26 @@ class ModelSerializer(object):
             for network in networks:
                 f.write(f'{network.serialize()}\n')
 
+    @classmethod
+    def deserializeFromStrings(cls, strings:List[str],
+          model_names:Optional[List[str]]=None)->List[Network]:
+        """Deserializes the network collection from a list of strings.
+        Args:
+            List of strings
+            model_names (List[str]): If set, only networks with these names are deserialized.
+        Returns:
+            List[Network]: List of networks
+        """
+        networks = []
+        for serialization_str in strings:
+            if len(serialization_str) == 0:
+                continue
+            network = Network.deserialize(serialization_str)
+            if network.num_species > 0:
+                if (model_names is None) or (network.network_name in model_names):
+                    networks.append(network)
+        return networks
+
     def deserialize(self, model_names:Optional[List[str]]=None)->NetworkCollection:
         """Deserializes the network collection.
         Args:
@@ -134,12 +154,7 @@ class ModelSerializer(object):
         """
         with open(self.serialization_path, 'r') as f:
             serialization_strs = f.readlines()
-        networks = []
-        for serialization_str in serialization_strs:
-            network = Network.deserialize(serialization_str)
-            if network.num_species > 0:
-                if (model_names is None) or (network.network_name in model_names):
-                    networks.append(network)
+        networks = self.deserializeFromStrings(serialization_strs, model_names=model_names)
         return NetworkCollection(networks, directory=self.model_directory)
 
 # Run as a main program

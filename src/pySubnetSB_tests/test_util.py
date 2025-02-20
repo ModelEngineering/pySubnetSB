@@ -1,5 +1,6 @@
 import pySubnetSB.util as util # type: ignore
 
+import os
 import time
 import numpy as np
 import unittest
@@ -252,6 +253,22 @@ class TestFunctions(unittest.TestCase):
         subsets = util.getAllSubsets(arr)
         self.assertEqual(len(subsets), 2**len(arr))
 
+    def testMakeLocalFileFromURL(self):
+        if IGNORE_TEST:
+            return
+        url = "http://raw.githubusercontent.com/ModelEngineering/pySubnetSB/main/examples/target_serialized.txt"
+        local_file = util.makeLocalFileFromURL(url)
+        self.assertTrue(os.path.isfile(local_file))
+        with open(local_file, "r") as f:
+            lines = f.readlines()
+        self.assertGreater(len(lines), 1)
+
+    def testGetStringsFromURL(self):
+        if IGNORE_TEST:
+            return
+        url = "http://raw.githubusercontent.com/ModelEngineering/pySubnetSB/main/examples/target_serialized.txt"
+        strings = util.getStringsFromURL(url)
+        self.assertGreater(len(strings), 1)
 
 
 if __name__ == '__main__':
