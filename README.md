@@ -1,3 +1,5 @@
+[![Continous integration](https://github.com/ModelEngineering/pySubnetSB/actions/workflows/github-actions.yml/badge.svg)](https://github.com/ModelEngineering/pySubnetSB/actions/workflows/github-actions.yml)
+
 # DETECTING STRUCTURALLY IDENTICAL REACTION NETWORKS
 
 Two **chemical reaction networks (CRNs)** are structurally identical if they have the same stoichiometry for reactants (reactant stoichiometry matrix) and products (product stoichiometry matrix), regardless of their rate laws. Because of renamings of chemical species and reactions, testing for structurally
