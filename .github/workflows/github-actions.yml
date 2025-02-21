@@ -18,5 +18,6 @@ jobs:
     - name: Run tests
       run: |
         #cd src; nose2 pySubnetSB_tests
+        ls
         python scripts/make_example_script.py
         cd examples; ipython api_basics.py
