@@ -1,4 +1,5 @@
-[![Continous integration](https://github.com/ModelEngineering/pySubnetSB/actions/workflows/github-actions.yml/badge.svg)](https://github.com/ModelEngineering/pySubnetSB/actions/workflows/github-actions.yml)
+[![Build](https://github.com/ModelEngineering/pySubnetSB/actions/workflows/github-actions.yml/badge.svg)](https://github.com/ModelEngineering/pySubnetSB/actions/workflows/github-actions.yml)
+[![Coverage](https://github.com/ModelEngineering/pySubnetSB/actions/workflows/github-actions.yml/coverage.svg)](https://github.com/ModelEngineering/pySubnetSB/actions/workflows/github-actions.yml)
 
 # SUBNET DISCOVERY FOR SBML MODELS
 

@@ -18,5 +18,6 @@ jobs:
     - name: Run tests
       run: |
         cd src; nose2 --with-coverage pySubnetSB_tests
-        cd ..; python scripts/make_example_script.py
+        coverage-badge -o coverage.svg
+        cd ..; ls; python scripts/make_example_script.py
         cd examples; ipython api_basics.py

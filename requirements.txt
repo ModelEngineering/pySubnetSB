@@ -1,6 +1,7 @@
 numpy
 build
 coverage
+coverage-badge
 jupyterlab
 matplotlib
 nose2
