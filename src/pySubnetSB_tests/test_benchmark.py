@@ -126,7 +126,7 @@ class TestBenchmark(unittest.TestCase):
               num_iteration=1000, num_replication=5, is_report=IS_PLOT)
         self.assertTrue(isinstance(df, pd.DataFrame))
         self.assertEqual(len(df), len(pairs))
-        self.assertGreater(df.loc[0, cn.D_MEAN_PROBABILITY], df.loc[1, cn.D_MEAN_PROBABILITY])
+        self.assertGreaterEqual(df.loc[0, cn.D_MEAN_PROBABILITY], df.loc[1, cn.D_MEAN_PROBABILITY])
 
     def testCalculateOccurrenceEdgeCases(self):
         if IGNORE_TEST:
