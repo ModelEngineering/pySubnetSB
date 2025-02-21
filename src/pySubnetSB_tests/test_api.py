@@ -146,7 +146,7 @@ class TestFunctions(unittest.TestCase):
     def testMakeSerializationFile(self):
         if IGNORE_TEST:
             return
-        api.makeSerializationFile(MODEL_DIR, SERIALIZATION_PATH)
+        api.makeSerializationFile(MODEL_DIR, SERIALIZATION_PATH, is_report=IS_PLOT)
         self.assertTrue(os.path.isfile(SERIALIZATION_PATH))
 
     def testGetNetworkCollection(self):

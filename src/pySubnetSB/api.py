@@ -233,7 +233,8 @@ def findReferencesInTargets(
             os.remove(target_tempfile)
     return df
 
-def makeSerializationFile(directory:str, serialization_path:str, report_interval:int=10)->None:
+def makeSerializationFile(directory:str, serialization_path:str, report_interval:int=10,
+      is_report:bool=True)->None:
     """
     Serializes the models in the directory to a serialization file.
 
@@ -241,9 +242,12 @@ def makeSerializationFile(directory:str, serialization_path:str, report_interval
         directory (str): Directory with Antimony models or SBML models
         serialization_path (str): Path to the serialization file to create (or overwrite)
         report_interval (int): Interval to report progress
+        is_report (bool): If True, report progress
     """
     if not os.path.isdir(directory):
         raise ValueError(f"{directory} is not a directory")
+    if not is_report:
+        report_interval = int(1e6)
     #
     serializer = ModelSerializer(directory, serialization_path)
     serializer.serialize(report_interval=report_interval)

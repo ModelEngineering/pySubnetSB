@@ -5,6 +5,7 @@ PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 for _ in range(2):
     PROJECT_DIR = os.path.dirname(PROJECT_DIR)
 MODEL_DIR = os.path.join(PROJECT_DIR, 'models')
+EXAMPLE_DIR = os.path.join(PROJECT_DIR, 'examples')
 DATA_DIR = os.path.join(PROJECT_DIR, 'data')
 AUXILIARY_DATA_DIR = os.path.join(PROJECT_DIR, 'auxiliary_data')
 SCRIPT_DIR = os.path.join(PROJECT_DIR, 'scripts')
