@@ -1,5 +1,5 @@
 import pySubnetSB.constants as cn  # type: ignore
-from src.pySubnetSB.subnet_finder import SubnetFinder  # type: ignore
+from pySubnetSB.subnet_finder import SubnetFinder  # type: ignore
 from pySubnetSB.network import Network  # type: ignore
 from pySubnetSB.worker_checkpoint_manager import WorkerCheckpointManager # type: ignore
 

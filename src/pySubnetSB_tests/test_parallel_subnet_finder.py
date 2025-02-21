@@ -5,7 +5,7 @@
 '''
 
 import pySubnetSB.constants as cn  # type: ignore
-from src.pySubnetSB.parallel_subnet_finder import ParallelSubnetFinder # type: ignore
+from pySubnetSB.parallel_subnet_finder import ParallelSubnetFinder # type: ignore
 from pySubnetSB.network import Network  # type: ignore
 from pySubnetSB.model_serializer import ModelSerializer  # type: ignore
 from pySubnetSB.parallel_subnet_finder_worker import WorkerCheckpointManager  # type: ignore
