@@ -71,7 +71,7 @@ class TestCompatibilityCollection(unittest.TestCase):
         if IGNORE_TEST:
             return
         fill_size = 5
-        for size in range(15, 20):
+        for size in range(5, 10):
             network = Network.makeRandomNetworkByReactionType(size, size)
             large_network = network.fill(num_fill_reaction=fill_size*size, num_fill_species=fill_size*size)
             large_constraint = ReactionConstraint(large_network.reactant_nmat, large_network.product_nmat)

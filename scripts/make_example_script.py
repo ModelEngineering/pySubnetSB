@@ -1,5 +1,5 @@
 '''Makes the example notebook into a script.'''
-import pySubnetSB.constants as cn  # type: ignore
+import src.pySubnetSB.constants as cn  # type: ignore
 
 import os
 import nbformat
