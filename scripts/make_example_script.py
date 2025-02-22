@@ -1,9 +1,9 @@
 '''Makes the example notebook into a script.'''
-import src.pySubnetSB.constants as cn  # type: ignore
+import constants as cn  # type: ignore
 
 import os
-import nbformat
-from nbconvert import PythonExporter
+import nbformat # type: ignore
+from nbconvert import PythonExporter # type: ignore
 
 NOTEBOOK_NAME = "api_basics"
 NOTEBOOK_PATH = os.path.join(cn.EXAMPLE_DIR, NOTEBOOK_NAME + ".ipynb")
