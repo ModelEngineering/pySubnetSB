@@ -5,6 +5,8 @@ import os
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 for _ in range(2):
     PROJECT_DIR = os.path.dirname(PROJECT_DIR)
+    if "pySubnetSB" in PROJECT_DIR:
+        break
 MODEL_DIR = os.path.join(PROJECT_DIR, 'models')
 EXAMPLE_DIR = os.path.join(PROJECT_DIR, 'examples')
 DATA_DIR = os.path.join(PROJECT_DIR, 'data')
