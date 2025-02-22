@@ -11,6 +11,7 @@ jobs:
           python-version: '3.9'
       env:
           AGENT_TOOLSDIRECTORY: /opt/hostedtoolcache
+          PYTHONPATH: ${{ github.workspace }}/src
     - name: Install
       run: |
         pip install --upgrade pip
