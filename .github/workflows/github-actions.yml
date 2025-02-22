@@ -21,6 +21,10 @@ jobs:
         #cd src; nose2 --with-coverage pySubnetSB_tests
         #coverage-badge -o coverage.svg
         #cd ..
-        ls
+    - name: Install package
+      run: |
+        pip install pySubnetSB
+    - name: Run notebook
+      run: |
         python scripts/make_example_script.py
-        cd examples; ipython api_basics.py
+        ipython examples/api_basics.py
