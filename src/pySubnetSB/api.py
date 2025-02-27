@@ -212,6 +212,15 @@ def findReferencesInTargets(
 
     Returns:
         pd.DataFrame: DataFrame with the subnets
+                reference_name (str): Reference model name
+                target_name (str): Target model name
+                reference_network (str): string representation of the reference network
+                induced_network (str): string representation of the induced network in the target
+                name_dct (dict): Dictionary of mapping of target names to reference names for species and reactions
+                                 as a JSON string.
+                num_assignment_pair (int): Number of assignment pairs returned
+                                            for matching target to subnet
+                is_trucated (bool): True if the search is truncated
     """
     # Process the request
     reference_tempfile, target_tempfile = None, None

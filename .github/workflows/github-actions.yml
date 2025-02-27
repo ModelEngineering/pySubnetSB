@@ -17,7 +17,7 @@ jobs:
         pip install -r requirements.txt
     - name: Run tests
       run: |
-        cd src; nose2 --with-coverage pySubnetSB_tests
+        cd src; nose2 --with-coverage --reporter=json-summary pySubnetSB_tests
         coverage-badge -o coverage.svg
         cd ..
     - name: Install package
@@ -27,3 +27,9 @@ jobs:
       run: |
         python scripts/make_example_script.py
         ipython examples/api_basics.py
+
+    - name: Update Coverage Badge
+            # GitHub actions: default branch variable
+            # https://stackoverflow.com/questions/64781462/github-actions-default-branch-variable
+            if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+            uses: we-cli/coverage-badge-action@main
