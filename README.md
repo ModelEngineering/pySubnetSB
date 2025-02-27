@@ -1,5 +1,4 @@
 [![Build](https://github.com/ModelEngineering/pySubnetSB/actions/workflows/github-actions.yml/badge.svg)](https://github.com/ModelEngineering/pySubnetSB/actions/workflows/github-actions.yml)
-[![cov](https://https://github.com/ModelEngineering/pySubnetSB/badges/coverage.svg)](https://github.com/ModelEngineering/pySubnetSB/actions)
 
 # SUBNET DISCOVERY FOR SBML MODELS
 
