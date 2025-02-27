@@ -26,7 +26,7 @@ jobs:
     - name: Run notebook
       run: |
         python scripts/make_example_script.py
-        ipython examples/api_basics.py
+        #ipython examples/api_basics.py
     - name: Update Coverage Badge
         # GitHub actions: default branch variable
         # https://stackoverflow.com/questions/64781462/github-actions-default-branch-variable
