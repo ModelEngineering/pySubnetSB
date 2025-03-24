@@ -23,6 +23,8 @@ from typing import Optional, Tuple, Any, Union
 Edge = collections.namedtuple('Edge', ['source', 'destination'])
 GraphDescriptor = collections.namedtuple('GraphDescriptor', ['vertex_dct', 'label_dct'])
 ConstraintPair = collections.namedtuple('ConstraintPair', ['reaction', 'species'])
+ReferenceAndTargetResult = collections.namedtuple('ReferenceAndTargetResult',
+      ['reference_network', 'target_network'])
 
 
 class NetworkBase(object):
@@ -59,15 +61,23 @@ class NetworkBase(object):
             self.num_species = 0
             self.num_reaction = 0
             return
-        self.reactant_nmat = NamedMatrix(reactant_arr, row_names=species_names, column_names=reaction_names,
+        self.reactant_arr = reactant_arr
+        self.product_arr = product_arr
+        self.current_species_names = species_names
+        self.current_reaction_names = reaction_names
+        #
+        self.reactant_nmat = NamedMatrix(self.reactant_arr,
+              row_names=self.current_species_names, column_names=self.current_reaction_names,
               row_description="species", column_description="reactions")
-        self.product_nmat = NamedMatrix(product_arr, row_names=species_names, column_names=reaction_names,
+        self.product_nmat = NamedMatrix(self.product_arr,
+              row_names=self.current_species_names, column_names=self.current_reaction_names,
               row_description="species", column_description="reactions")
-        self.standard_nmat = NamedMatrix(product_arr - reactant_arr, row_names=species_names,
-              column_names=reaction_names, row_description="species", column_description="reactions")
-        # The following are deferred execution for efficiency considerations
-        self._species_names = species_names
-        self._reaction_names = reaction_names
+        self.standard_nmat = NamedMatrix(self.product_arr - self.reactant_arr,
+              row_names=self.current_species_names,
+              column_names=self.current_reaction_names, row_description="species", column_description="reactions")
+        #
+        self._species_names = self.current_species_names
+        self._reaction_names = self.current_reaction_names
         self._stoichiometry_nmat:Optional[NamedMatrix] = None
         self._network_hash:Optional[int] = None  # Hash for weak identity
         self._constraint_pair_dct:dict = {}  # keys are identity, is_subnet
@@ -373,7 +383,8 @@ class NetworkBase(object):
         return network
     
     @classmethod
-    def makeRandomNetwork(cls, num_species:int=5, num_reaction:int=5)->'NetworkBase':
+    def makeRandomNetwork(cls, num_species:int=5, num_reaction:int=5,
+          )->'NetworkBase':
         """
         Makes a random network.
 
@@ -390,6 +401,7 @@ class NetworkBase(object):
     
     @classmethod
     def makeRandomNetworkByReactionType(cls, num_reaction:int, num_species:int=-1, is_exact:bool=False,
+              species_names:Optional[np.ndarray]=None, reaction_names:Optional[np.ndarray]=None,
               **kwargs)->'NetworkBase':
         """
         Makes a random network based on the type of reaction. Parameers are in the form
@@ -405,6 +417,8 @@ class NetworkBase(object):
             is_unique (bool): Ensure that reactions are unique.
             is_prune_species (bool): Prune species not used in any reaction.
             fractions by number of products and reactants
+            species_names (np.ndarray): Names of the species
+            reaction_names (np.ndarray): Names of the reactions
 
         Returns:
             Network
@@ -412,13 +426,15 @@ class NetworkBase(object):
         if num_reaction <= 0:
             raise ValueError("Number of reactions must be positive.")
         if not is_exact:
-            return cls._makeRandomNetworkByReactionType(num_reaction, num_species=num_species, **kwargs)
+            return cls._makeRandomNetworkByReactionType(num_reaction, num_species=num_species,
+                  species_names=species_names, reaction_names=reaction_names, **kwargs)
         # Get the network consistent with the requirements
         max_attempts =  100000
         if num_species < 0:
             num_species = num_reaction
         for _ in range(max_attempts): 
-            network = cls._makeRandomNetworkByReactionType(num_reaction, num_species=num_species, **kwargs)
+            network = cls._makeRandomNetworkByReactionType(num_reaction, num_species=num_species,
+                  species_names=species_names, reaction_names=reaction_names, **kwargs)
             if network.num_species == num_species:
                 return network
         raise ValueError(
@@ -429,6 +445,8 @@ class NetworkBase(object):
     def _makeRandomNetworkByReactionType(cls, 
               num_reaction:int,
               num_species:int=-1,
+              species_names:Optional[np.ndarray]=None,
+              reaction_names:Optional[np.ndarray]=None,
               is_prune_species:bool=True,
               p0r0_frc:Optional[float]=0.0,
               p0r1_frc:Optional[float]=0.1358,
@@ -461,10 +479,16 @@ class NetworkBase(object):
             is_unique (bool): Ensure that reactions are unique.
             is_prune_species (bool): Prune species not used in any reaction.
             fractions by number of products and reactants
+            species_names (np.ndarray): Names of the species
+            reaction_names (np.ndarray): Names of the reactions
 
         Returns:
             Network
         """
+        if reaction_names is not None:
+            num_reaction = len(reaction_names)
+        if species_names is not None:
+            num_species = len(species_names)
         if num_species < 0:
             num_species = num_reaction
         SUFFIX = "_frc"
@@ -540,8 +564,16 @@ class NetworkBase(object):
             reactant_arr = reactant_arr[keep_idxs, :]
             product_arr = product_arr[keep_idxs, :]
         # Construct the network
-        species_names = util.getDefaultSpeciesNames(reactant_arr.shape[0])
-        reaction_names = util.getDefaultReactionNames(reactant_arr.shape[1])
+        actual_num_species = reactant_arr.shape[0]
+        actual_num_reaction = reactant_arr.shape[1]
+        if species_names is None:
+            species_names = util.getDefaultSpeciesNames(actual_num_species)
+        else:
+            species_names = np.array(species_names[:actual_num_species])
+        if reaction_names is None:
+            reaction_names = util.getDefaultReactionNames(actual_num_reaction)
+        else:
+            reaction_names = np.array(reaction_names[:actual_num_reaction])
         network = cls(reactant_arr, product_arr, reaction_names=reaction_names, species_names=species_names)
         return network
    
@@ -822,6 +854,66 @@ class NetworkBase(object):
         if is_permute:
             target_network, _ = target_network.permute()
         return target_network
+
+    @classmethod
+    def makeRandomReferenceAndTarget(cls,
+              num_reference_species:int=3,
+              num_target_species:int=6,
+              num_reference_reaction:Optional[int]=None,
+              num_target_reaction:Optional[int]=None,
+              )->ReferenceAndTargetResult:
+        """
+        Creates a random reference and target network of the desired size
+        with the reference network as a subnet of the target. The reference uses the species in the target.
+
+        Args:
+            num_reference_species (int): Number of species in the reference network.
+            num_target_species (int): Number of species in the target network.
+            num_reference_reaction (int): Number of reactions in the reference network.
+            num_target_reaction (int): Number of reactions in the target network.
+            species_names (np.ndarray): Species names.
+
+        Returns:
+            ReferenceAndTargetResult: Reference Network, Target Network
+        """
+        # Check options
+        if num_reference_reaction is None:
+            num_reference_reaction = num_reference_species
+        if num_target_reaction is None:
+            num_target_reaction = num_target_species
+        # Error checks
+        if num_reference_species > num_target_species:
+            raise ValueError("Number of reference species must be less than or equal to the number of target species.")
+        if num_reference_reaction >= num_target_reaction:
+            raise ValueError("Number of reference reactions must be less than the number of target reactions.")
+        # Create the networks.
+        partial_target_network = cls.makeRandomNetworkByReactionType(num_target_reaction-num_reference_reaction,
+            num_species=num_target_species, is_exact=True)
+        reference_species_name_arr = np.random.choice(partial_target_network.species_names, num_reference_species,
+              replace=False)
+        reference_reaction_name_arr = np.array(["J" + n for n in partial_target_network.reaction_names[:num_reference_reaction]])
+        reference_network = cls.makeRandomNetworkByReactionType(num_reference_reaction,
+             species_names=reference_species_name_arr, reaction_names=reference_reaction_name_arr,
+             is_exact=True)
+        # Merge the stoichiometry matrices of the reference network with the target
+        target_reactant_nmat = partial_target_network.reactant_nmat.vmerge(reference_network.reactant_nmat)
+        target_product_nmat = partial_target_network.product_nmat.vmerge(reference_network.product_nmat)
+        # Randomize the rows and columns of the target
+        randomized_target_reactant_result = target_reactant_nmat.randomize()
+        randomized_target_reactant_nmat = randomized_target_reactant_result.named_matrix
+        randomized_target_product_nmat = target_product_nmat.randomize(row_perm=randomized_target_reactant_result.row_perm,
+                column_perm=randomized_target_reactant_result.column_perm).named_matrix
+        reaction_names = np.concatenate([partial_target_network.reaction_names, reference_network.reaction_names])
+        reaction_names = reaction_names[randomized_target_reactant_result.column_perm]
+        species_names = partial_target_network.species_names[randomized_target_reactant_result.row_perm]
+        randomized_target_network = cls(randomized_target_reactant_nmat.values, randomized_target_product_nmat.values,
+                reaction_names=reaction_names, species_names=species_names)
+        #
+        return ReferenceAndTargetResult(
+            reference_network=reference_network, 
+            target_network=randomized_target_network
+        )
+
     
     def makeInducedNetwork(self, assignment_pair:AssignmentPair)->'NetworkBase':
         """

@@ -1,5 +1,6 @@
 import pySubnetSB.constants as cn  # type: ignore
 from pySubnetSB.network_base import NetworkBase # type: ignore
+from pySubnetSB.network import Network # type: ignore
 from pySubnetSB.named_matrix import NamedMatrix # type: ignore
 from pySubnetSB import util # type: ignore
 from pySubnetSB.assignment_pair import AssignmentPair # type: ignore
@@ -184,6 +185,36 @@ class TestNetwork(unittest.TestCase):
             # Verify that all reactions have at least one participant
             sum_arr = np.sum(eval_arr, axis=0)
             self.assertTrue(np.all(sum_arr > 0))
+
+    @util.timeit
+    def testMakeRandomNetworkFromReactionType2(self):
+        if IGNORE_TEST:
+            return
+        size = 3
+        species_names = ["S1", "S5", "S10"]
+        reaction_names = ['JJ1', 'JJ2', 'JJ3']
+        network = NetworkBase.makeRandomNetworkByReactionType(size, species_names=species_names,
+              reaction_names=reaction_names, is_exact=True)
+        self.assertEqual(len(species_names), network.num_species)
+        for species_name in species_names:
+            self.assertTrue(species_name in network.species_names)
+        for reaction_name in reaction_names:
+            self.assertTrue(reaction_name in network.reaction_names)
+    
+    @util.timeit
+    def testMakeRandomReferenceAndTarget(self):
+        if IGNORE_TEST:
+            return
+        size = 4
+        for _ in range(10):
+            result = Network.makeRandomReferenceAndTarget(size, 2*size)
+            reference_network = result.reference_network
+            target_network = result.target_network
+            self.assertEqual(reference_network.num_species, size)
+            self.assertEqual(target_network.num_species, 2*size)
+            self.assertEqual(reference_network.num_reaction, size)
+            self.assertEqual(target_network.num_reaction, 2*size)
+            self.assertTrue(reference_network.isStructurallyIdentical(target_network, is_subnet=True))
 
     @util.timeit
     def testToFromSeries(self):

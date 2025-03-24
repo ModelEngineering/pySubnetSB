@@ -8,7 +8,7 @@ import tellurium as te # type: ignore
 import unittest
 
 
-IGNORE_TEST = True
+IGNORE_TEST = False
 IS_PLOT = False
 MODEL = """
 J1: A -> B; k1*A
@@ -150,8 +150,8 @@ class TestFunctions(unittest.TestCase):
         self.assertTrue(os.path.isfile(SERIALIZATION_PATH))
 
     def testGetNetworkCollection(self):
-        #if IGNORE_TEST:
-        #    return
+        if IGNORE_TEST:
+            return
         network_collection = api._getNetworkCollection(MODEL_DIR)
         self.assertTrue(len(network_collection) > 0)
         #

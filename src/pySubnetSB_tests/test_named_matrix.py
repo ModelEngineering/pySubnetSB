@@ -178,6 +178,61 @@ class TestNamedMatrix(unittest.TestCase):
             named_matrix2 = NamedMatrix(np.array([[1], [0], [0]]),
                                         column_names=['x', 'y'])
             _ = NamedMatrix.hstack([named_matrix1, named_matrix2])
+
+    def testVmerge(self):
+        if IGNORE_TEST:
+            return
+        named_matrix1 = NamedMatrix(np.array([[1, 0], [0, 1], [1, 1]]),
+              row_names=['x', 'y', 'z'], column_names=['a', 'b'])
+        named_matrix2 = NamedMatrix(np.array([[1, 0], [0.5, 0.5], [1, 1]]),
+              row_names=['x', 'w', 'z'], column_names=['c', 'd'])
+        named_matrix = named_matrix1.vmerge(named_matrix2)
+        self.assertEqual(named_matrix.num_row, 4)
+        self.assertEqual(named_matrix.num_column, 4)
+    
+    def testVmerge1(self):
+        if IGNORE_TEST:
+            return
+        num_overlap = 5
+        size = 10
+        merge_size = 2*size - num_overlap
+        named_matrix1 = NamedMatrix.makeRandom(size, size)
+        named_matrix2 = NamedMatrix.makeRandom(size, size)
+        column_names = ["C" + n for n in named_matrix1.column_names]
+        row_names = ["R" + n if int(n) < num_overlap else n for n in named_matrix1.row_names]
+        named_matrix2 = NamedMatrix(named_matrix2.values, row_names=row_names, column_names=column_names)
+        named_matrix = named_matrix1.vmerge(named_matrix2)
+        self.assertEqual(named_matrix.num_row, 2*size - num_overlap)
+        self.assertEqual(named_matrix.num_column, 2*size)
+        # Check that the values are correct
+        # There are 3 "bands" of rows: 
+        #  (a) 0's in the matrix2-only columns; 
+        #  (b) all non-zero; 
+        #  (c) 0's in the matrix1-only columns
+        type_a_rows = list(range(0, size-num_overlap))
+        type_b_rows = list(range(size-num_overlap, size))
+        matrix1_columns = list(range(size))
+        matrix2_columns = list(range(size, 2*size))
+        for irow in range(merge_size):
+            if irow in type_a_rows:
+                self.assertTrue(np.all(named_matrix.values[irow, np.array(matrix1_columns)] != 0))
+                self.assertTrue(np.all(named_matrix.values[irow, np.array(matrix2_columns)] == 0))
+            elif irow in type_b_rows:
+                self.assertTrue(np.all(named_matrix.values[irow, np.array(matrix1_columns)] != 0))
+                self.assertTrue(np.all(named_matrix.values[irow, np.array(matrix2_columns)] != 0))
+            else:
+                self.assertTrue(np.all(named_matrix.values[irow, np.array(matrix1_columns)] == 0))
+                self.assertTrue(np.all(named_matrix.values[irow, np.array(matrix2_columns)] != 0))
+
+    def testRandomizeAndSort(self):
+        if IGNORE_TEST:
+            return
+        named_matrix = NamedMatrix.makeRandom(10, 10)
+        sorted_named_matrix = named_matrix.sort()
+        randomized_named_matrix = named_matrix.randomize().named_matrix
+        sorted_randomized_named_matrix = randomized_named_matrix.sort()
+        self.assertEqual(sorted_named_matrix, sorted_randomized_named_matrix)
+
         
 
 if __name__ == '__main__':
