@@ -115,7 +115,7 @@ class TestBenchmark(unittest.TestCase):
         target_size = 100
         fill_size = target_size - reference_size
         benchmark = Benchmark(reference_size, fill_size=fill_size,
-                num_iteration=10)
+                num_iteration=100)
         benchmark.plotCompareConstraints(is_plot=IS_PLOT, is_subnet=True)
 
     def testCalculateOccurrence(self):

@@ -302,7 +302,7 @@ class Benchmark(object):
     @staticmethod
     def calculateNoconstraintLog10NumAssignment(reference_size:int, target_size:int)->float:
         """
-        Calculate the log10 of the number of assignments when no constraints are applied.
+        Calculate the log10 of the number of assignments (mappings) when no constraints are applied.
 
         Args:
             reference_size (int): _description_
@@ -335,19 +335,24 @@ class Benchmark(object):
               for o in SpeciesConstraintOptionCollection().iterator()}
         reaction_result_dct:dict = {o.collection_short_name: []
               for o in ReactionConstraintOptionCollection().iterator()}
-        # Calculate the number of assignments if no constraints are applied
+        # Calculate the number of assignments (mappings) if no constraints are applied
         # Handle no constraint
         reference_size = self.num_species
         target_size = reference_size + self.fill_size
         none_log10_count = self.calculateNoconstraintLog10NumAssignment(reference_size, target_size)
         # Run the simulation
         for _ in range(self.num_iteration):
-            reference_network = Network.makeRandomNetworkByReactionType(self.num_reaction,
-                self.num_species)
             if is_subnet:
-                target_network = Network.fill(reference_network, num_fill_reaction=self.fill_size,
-                      num_fill_species=self.fill_size)
+                num_target_reaction = self.num_reaction + self.fill_size
+                num_target_species = self.num_species + self.fill_size
+                result = Network.makeRandomReferenceAndTarget(
+                      num_reference_reaction=self.num_reaction, num_reference_species=self.num_species,
+                      num_target_reaction=num_target_reaction, num_target_species=num_target_species)
+                target_network = result.target_network
+                reference_network = result.reference_network
             else:
+                reference_network = Network.makeRandomNetworkByReactionType(self.num_reaction,
+                    self.num_species)
                 target_network = Network.makeRandomNetworkByReactionType(target_size, target_size)
             for is_species in [True, False]:
                 # Initialize for species or reaction
@@ -421,7 +426,7 @@ class Benchmark(object):
             yticklabels = ax.get_yticklabels()
             ax.set_yticklabels(yticklabels, size=font_size)
             if idx == 0:
-                ax.set_ylabel('log10 number of assignments', size=font_size)
+                ax.set_ylabel('log10 number of mappings', size=font_size)
             ax.set_xlabel('constraints', size=font_size, labelpad=2)
             xticklabels = [DCT[v] for v in list(df.columns)]
             ax.set_xticklabels(xticklabels, size=font_size, rotation=0)

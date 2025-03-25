@@ -855,6 +855,7 @@ class NetworkBase(object):
             target_network, _ = target_network.permute()
         return target_network
 
+    # TODO: Optionally provided the reference network. Handling ensuring that target has the reference names.
     @classmethod
     def makeRandomReferenceAndTarget(cls,
               num_reference_species:int=3,
@@ -887,14 +888,19 @@ class NetworkBase(object):
         if num_reference_reaction >= num_target_reaction:
             raise ValueError("Number of reference reactions must be less than the number of target reactions.")
         # Create the networks.
+        if num_target_reaction < 10:
+            # Can do exact for smaller networks
+            is_exact = True
+        else:
+            is_exact = False
         partial_target_network = cls.makeRandomNetworkByReactionType(num_target_reaction-num_reference_reaction,
-            num_species=num_target_species, is_exact=True)
+            num_species=num_target_species, is_exact=is_exact)
         reference_species_name_arr = np.random.choice(partial_target_network.species_names, num_reference_species,
               replace=False)
         reference_reaction_name_arr = np.array(["J" + n for n in partial_target_network.reaction_names[:num_reference_reaction]])
         reference_network = cls.makeRandomNetworkByReactionType(num_reference_reaction,
              species_names=reference_species_name_arr, reaction_names=reference_reaction_name_arr,
-             is_exact=True)
+             is_exact=is_exact)
         # Merge the stoichiometry matrices of the reference network with the target
         target_reactant_nmat = partial_target_network.reactant_nmat.vmerge(reference_network.reactant_nmat)
         target_product_nmat = partial_target_network.product_nmat.vmerge(reference_network.product_nmat)
