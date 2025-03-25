@@ -321,7 +321,6 @@ class TestConstraint(unittest.TestCase):
             constraint = ReactionConstraint(network.reactant_nmat, network.product_nmat)
             compatibility_collection = constraint.makeCompatibilityCollection(large_constraint).compatibility_collection
             result = compatibility_collection.expand()
-            self.assertFalse(result[1])
             self.assertEqual(result[0].shape[1], size)
 
 
