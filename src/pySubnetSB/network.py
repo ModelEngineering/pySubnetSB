@@ -7,6 +7,7 @@ from pySubnetSB.reaction_constraint import ReactionConstraint  # type: ignore
 from pySubnetSB.species_constraint import SpeciesConstraint   # type: ignore
 from pySubnetSB.network_base import NetworkBase, AssignmentPair  # type: ignore
 from pySubnetSB.assignment_evaluator import AssignmentEvaluator  # type: ignore
+from pySubnetSB.timer import Timer  # type: ignore
 
 import pynauty  # type: ignore
 import numpy as np
@@ -16,6 +17,7 @@ from typing import Optional, List, Tuple, Union
 NULL_ARRAY = np.array([])  # Null array
 ATTRS = ["reactant_nmat", "product_nmat", "reaction_names", "species_names", "network_name"]
 MAX_PREFIX_LEN = 3   # Maximum length of a prefix in the assignment to do a pairwise analysis
+IS_ENABLE_PERFORANCE_REPORTING = False
 
 
 class StructuralAnalysisResult(object):
@@ -163,6 +165,8 @@ class Network(NetworkBase):
         Returns:
             StructurallyIdenticalResult
         """
+        timer = Timer("isStructurallyIdentical: Start", is_enabled=IS_ENABLE_PERFORANCE_REPORTING)
+        timer.add("isStructurallyIdentical/Initialization: Start")
         if self.num_reaction == 0 or target.num_reaction == 0:
               return StructuralAnalysisResult(assignment_pairs=[], 
                   num_reaction_candidate=0,
@@ -175,17 +179,24 @@ class Network(NetworkBase):
             log10_max_num_assignment = np.log10(max_num_assignment)
         reference_reactant_nmat, reference_product_nmat = self.makeMatricesForIdentity(identity)
         target_reactant_nmat, target_product_nmat = target.makeMatricesForIdentity(identity)
+        timer.add("isStructurallyIdentical/Initialization: End")
         #####
         def makeAssignmentArr(cls:type)->Tuple[np.ndarray[int], bool, bool]:  # type: ignore
+            timer.add("makeAssignmentArr/makeAssignmentArr: Start")
             reference_constraint = cls(reference_reactant_nmat, reference_product_nmat, is_subnet=is_subnet)
             target_constraint = cls(target_reactant_nmat, target_product_nmat, is_subnet=is_subnet)
+            timer.add("makeAssignmentArr/makeAssignmentArr/Make compatibility collection: Start")
             compatibility_collection = reference_constraint.makeCompatibilityCollection(
                   target_constraint).compatibility_collection
             compatibility_collection, prune_is_truncated = compatibility_collection.prune(log10_max_num_assignment)
+            timer.add("makeAssignmentArr/makeAssignmentArr/Make compatibility collection: End")
             is_null = compatibility_collection.log10_num_assignment == -np.inf
             if is_null:
+                timer.add("makeAssignmentArr/makeAssignmentArr/Null return")
                 return NULL_ARRAY, prune_is_truncated, is_null
             else:
+                timer.add("makeAssignmentArr/makeAssignmentArr/Expand: Start")
+                # FIXME: The following takes a long time
                 assignment_arr, expand_is_truncated = compatibility_collection.expand(max_num_assignment=max_num_assignment)
                 if assignment_arr is NULL_ARRAY:
                     return NULL_ARRAY, expand_is_truncated, is_null
@@ -194,13 +205,17 @@ class Network(NetworkBase):
                 if assignment_arr.shape[1] == 0:
                     return NULL_ARRAY, expand_is_truncated, is_null
                 is_truncated = prune_is_truncated or expand_is_truncated
+                timer.add("makeAssignmentArr/makeAssignmentArr/Expand: End")
                 return assignment_arr, is_truncated, is_null
         #####
         # Calculate the compatibility vectors for species and reactions and then construct the assignment arrays
+        timer.add("makeAssignmentArr/Make compatibility vectors: Start")
         species_assignment_arr, is_species_truncated, is_species_null = makeAssignmentArr(SpeciesConstraint)
         reaction_assignment_arr, is_reaction_truncated, is_reaction_null = makeAssignmentArr(ReactionConstraint)
+        timer.add("makeAssignmentArr/Make compatibility vectors: End")
         is_truncated = is_species_truncated or is_reaction_truncated
         # Check if further truncation is required
+        timer.add("makeAssignmentArr/Check further truncation: Start")
         num_species_assignment = species_assignment_arr.shape[0]
         num_reaction_assignment = reaction_assignment_arr.shape[0]
         if num_species_assignment*num_reaction_assignment > max_num_assignment:
@@ -216,14 +231,18 @@ class Network(NetworkBase):
                 reaction_frac = num_reaction_assignment/max_num_assignment
                 species_assignment_arr = util.selectRandom(species_assignment_arr, int(species_frac*max_num_assignment))
                 reaction_assignment_arr = util.selectRandom(reaction_assignment_arr, int(reaction_frac*max_num_assignment))
+        timer.add("makeAssignmentArr/Check further truncation: End")
         # Handle null assignment
+        timer.add("makeAssignmentArr/Null assignment: Start")
         is_null = is_species_null or is_reaction_null
         if len(species_assignment_arr) == 0 or len(reaction_assignment_arr) == 0 or is_null:
             return StructuralAnalysisResult(assignment_pairs=[], 
                   num_reaction_candidate=reaction_assignment_arr.shape[0],
                   num_species_candidate=species_assignment_arr.shape[0],
                   is_truncated=is_truncated)
+        timer.add("makeAssignmentArr/Null assignment: End")
         # Evaluate the assignments
+        timer.add("makeAssignmentArr/Evaluate reactant assignments: Start")
         #   Evaluate on single byte entries
         evaluator = AssignmentEvaluator(reference_reactant_nmat.values.astype(np.int8),
               target_reactant_nmat.values.astype(np.int8), max_batch_size=max_batch_size)
@@ -233,11 +252,15 @@ class Network(NetworkBase):
         evaluator = AssignmentEvaluator(reference_reactant_nmat.values,
               target_reactant_nmat.values, max_batch_size=max_batch_size)
         reactant_assignment_pairs = evaluator.evaluateAssignmentPairs(reactant_assignment_pairs)
+        timer.add("makeAssignmentArr/Evaluate reactant assignments: End")
         #   Evaluate on product matrices
+        timer.add("makeAssignmentArr/Evaluate product assignments: Start")
         evaluator = AssignmentEvaluator(reference_product_nmat.values, target_product_nmat.values,
             max_batch_size=max_batch_size)
         assignment_pairs = evaluator.evaluateAssignmentPairs(reactant_assignment_pairs)
+        timer.add("makeAssignmentArr/Evaluate product assignments: End")
         # Return result
+        timer.report()
         return StructuralAnalysisResult(assignment_pairs=assignment_pairs,
               num_reaction_candidate=reaction_assignment_arr.shape[0],
               num_species_candidate=species_assignment_arr.shape[0],

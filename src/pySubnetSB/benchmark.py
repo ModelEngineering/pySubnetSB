@@ -403,12 +403,12 @@ class Benchmark(object):
         """
         DCT = {
             'none': 'none',
-            'a': '1',
-            'b': '2,3',
-            'a+b': '1,2,3',
-            'y': '1,2',
-            'z': '3,4',
-            'y+z': '1,2,3,4',
+            'a': 'RC1',
+            'b': 'RC2-RC3',
+            'a+b': 'RC1-RC3',
+            'y': 'SC1-SC2',
+            'z': 'SC3-SC4',
+            'y+z': 'SC1-SC4',
         }
         if axs is None:
             _, axs = plt.subplots(1, 2, figsize=(10, 5))
