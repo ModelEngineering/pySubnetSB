@@ -148,6 +148,7 @@ class Network(NetworkBase):
     def isStructurallyIdentical(self, target:'Network', is_subnet:bool=True, num_process:int=-1,
             max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT,
             max_batch_size:int=cn.MAX_BATCH_SIZE, identity:str=cn.ID_WEAK,
+            is_all_valid_assignment:bool=True,
             is_report:bool=True, is_return_if_truncated:bool=True)->StructuralAnalysisResult:
         """
         Determines if the network is structurally identical to another network or subnet of another network.
@@ -160,6 +161,7 @@ class Network(NetworkBase):
             max_batch_size (int, optional): Maximum batch size
             identity (str, optional): cn.ID_WEAK or cn.ID_STRONG
             is_report (bool, optional): Print report
+            is_all_valid_assignment (bool, optional): Return all valid assignments
             is_return_if_truncated (bool, optional): Return if truncation is required
 
         Returns:
@@ -242,12 +244,16 @@ class Network(NetworkBase):
                   is_truncated=is_truncated)
         timer.add("makeAssignmentArr/Null assignment: End")
         # Evaluate the assignments
-        timer.add("makeAssignmentArr/Evaluate reactant assignments: Start")
+        size = species_assignment_arr.shape[0], reaction_assignment_arr.shape[0]
+        msg = f"makeAssignmentArr/Evaluate reactant assignments for {size}: Start"
+        timer.add(msg)
         #   Evaluate on single byte entries
         evaluator = AssignmentEvaluator(reference_reactant_nmat.values.astype(np.int8),
               target_reactant_nmat.values.astype(np.int8), max_batch_size=max_batch_size)
-        reactant_assignment_pairs = evaluator.parallelEvaluate(species_assignment_arr, reaction_assignment_arr,
-                total_process=num_process, is_report=is_report)
+        result = evaluator.parallelEvaluate(species_assignment_arr, reaction_assignment_arr,
+                total_process=num_process, is_report=is_report, max_num_assignment=max_num_assignment)
+        is_truncated = is_truncated or result.is_truncated
+        reactant_assignment_pairs = result.assignment_pairs
         #   Check assignment pairs on single bytes
         evaluator = AssignmentEvaluator(reference_reactant_nmat.values,
               target_reactant_nmat.values, max_batch_size=max_batch_size)
@@ -257,7 +263,9 @@ class Network(NetworkBase):
         timer.add("makeAssignmentArr/Evaluate product assignments: Start")
         evaluator = AssignmentEvaluator(reference_product_nmat.values, target_product_nmat.values,
             max_batch_size=max_batch_size)
-        assignment_pairs = evaluator.evaluateAssignmentPairs(reactant_assignment_pairs)
+        bounded_max_num_assignment = max_num_assignment if is_all_valid_assignment else 1
+        assignment_pairs = evaluator.evaluateAssignmentPairs(reactant_assignment_pairs,
+              max_num_assignment=bounded_max_num_assignment)
         timer.add("makeAssignmentArr/Evaluate product assignments: End")
         # Return result
         timer.report()

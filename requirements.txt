@@ -4,6 +4,7 @@ coverage
 coverage-badge
 jupyterlab
 matplotlib
+memory_profiler
 nose2
 pandas
 pip>20

@@ -27,12 +27,13 @@
 
  """
 from pySubnetSB.assignment_pair import AssignmentPair # type: ignore
-from pySubnetSB.assignment_evaluator_worker import AssignmentEvaluatorWorker # type: ignore
+from pySubnetSB.assignment_evaluator_worker import AssignmentEvaluatorWorker, WorkerResult # type: ignore
 from pySubnetSB import constants as cn # type: ignore
 from pySubnetSB import util # type: ignore
 from pySubnetSB.timer import Timer # type: ignore
 
 from concurrent.futures import ProcessPoolExecutor
+from memory_profiler import profile  # type: ignore
 import numpy as np
 import multiprocessing as mp
 from typing import Union, Tuple, Optional, List
@@ -91,17 +92,22 @@ class AssignmentEvaluator(object):
         column_idx = index%num_column_assignment
         return row_idx, column_idx  # type: ignore
 
-    def evaluateAssignmentPairs(self, assignment_pairs:List[AssignmentPair])->List[AssignmentPair]:
+    #@profile
+    def evaluateAssignmentPairs(self, assignment_pairs:List[AssignmentPair],
+          max_num_assignment:int=-1)->List[AssignmentPair]:
         """Finds the pair of row and column assignments that satsify the comparison criteria.
         Uses np.isclose in comparisons
 
         Args:
             assignment_pairs: List[AssignmentPair] - pairs of row and column assignments
+            max_num_assignment: int - maximum number of assignments (no bound if -1)
 
         Returns:
             List[AssignmentPair]: Assignment pairs that successfully compare
         """
         successful_assignment_pairs = []
+        if max_num_assignment == -1:
+            max_num_assignment = len(assignment_pairs)
         for assignment_pair in assignment_pairs:
             target_arr = self.target_arr[assignment_pair.row_assignment, :]
             target_arr = target_arr[:, assignment_pair.column_assignment]
@@ -109,10 +115,14 @@ class AssignmentEvaluator(object):
                   is_close=True)
             if result:
                 successful_assignment_pairs.append(assignment_pair)
+            if len(successful_assignment_pairs) >= max_num_assignment:
+                break
         return successful_assignment_pairs
 
+    #@profile
     def parallelEvaluate(self, row_assignment_arr:np.ndarray, column_assignment_arr:np.ndarray,
-                 total_process:int=-1, is_report:bool=True)->List[AssignmentPair]:
+                 total_process:int=-1, max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT,
+                 is_report:bool=True)->WorkerResult:
         """Evaluates the assignments for the target matrix using iteration.
 
         Args:
@@ -120,10 +130,13 @@ class AssignmentEvaluator(object):
             column_assignment_arr (np.ndarray): assignments of target columns to reference columns
             num_process (int): number of processes
             total_process (int): number of processes (defaults to the number of CPUs)
+            max_num_assignment (int): maximum number of assignments
             is_report (bool): report progress
 
         Returns:
-            AssignmentPair: Row and column assignments that result in equality
+            WorkerResult: results of the evaluation
+                AssignmentPair: Row and column assignments that result in equality
+                is_truncated: True if the evaluation was truncated
         """
         self.timer.add("parallelEvaluate: Start")
         num_comparison = row_assignment_arr.shape[0]*column_assignment_arr.shape[0]
@@ -143,7 +156,8 @@ class AssignmentEvaluator(object):
             return_dct:dict = {}
             procnum = 0
             AssignmentEvaluatorWorker.do(self.reference_arr, self.target_arr, self.max_batch_size,
-                  row_assignment_arr, column_assignment_arr, procnum, total_process, return_dct,
+                  row_assignment_arr, column_assignment_arr, procnum, total_process,
+                  return_dct, max_num_assignment,
                   is_report=is_report)
             self.timer.add("parallelEvaluate/Single Process: End")
             return return_dct[0]
@@ -173,7 +187,7 @@ class AssignmentEvaluator(object):
                     process_column_assignment_arr = column_assignments[procnum]
                 args.append((self.reference_arr, self.target_arr, self.max_batch_size,
                       process_row_assignment_arr, process_column_assignment_arr,
-                      procnum, total_process, return_dct, is_report))
+                      procnum, total_process, return_dct, max_num_assignment, is_report))
             self.timer.add("parallelEvaluate/Multiple Process/Assignments: End")
             # Run the processes
             self.timer.add("parallelEvaluate/Multiple Process/Run process pool: Start")
@@ -184,11 +198,14 @@ class AssignmentEvaluator(object):
         # Combine the results
         self.timer.add("parallelEvaluate/Multiple Process/Combine results: Start")
         assignment_pairs = []
+        is_truncated = False
         for result in results:
-            assignment_pairs.extend(result)
+            is_truncated = is_truncated or result.is_truncated
+            assignment_pairs.extend(result.assignment_pairs)
+        worker_result = WorkerResult(assignment_pairs=assignment_pairs, is_truncated=is_truncated)
         self.timer.add("parallelEvaluate/Multiple Process/Combine results: End")
         self.timer.report()
-        return assignment_pairs
+        return worker_result
     
     def _manageEvaluation(self, reference_arr:np.ndarray, target_arr:np.ndarray, max_batch_size:int,
            row_assignment_arr:np.ndarray, column_assignment_arr:np.ndarray,

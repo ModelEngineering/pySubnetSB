@@ -2,9 +2,12 @@
 
 from pySubnetSB.assignment_pair import AssignmentPair # type: ignore
 
+import collections
 import numpy as np
 from tqdm import tqdm # type: ignore
 from typing import Union, Tuple, Optional, List
+
+WorkerResult = collections.namedtuple('WorkerResult', ['is_truncated', 'assignment_pairs'])  
 
 
 #########################################################
@@ -39,9 +42,9 @@ class AssignmentEvaluatorWorker(object):
     @classmethod
     def do(cls, reference_arr:np.ndarray, target_arr:np.ndarray, max_batch_size:int,
            row_assignment_arr:np.ndarray, column_assignment_arr:np.ndarray,
-    #      process_idx:int, total_process:int, result_dct:dict)->List[AssignmentPair]:
            process_idx:int, total_process:int, result_dct:dict,
-           is_report:bool=True)->List[AssignmentPair]:
+           max_num_assignment:int=int(1e8),
+           is_report:bool=True)->WorkerResult:
         """
         Evaluates the assignments of rows and columns in the target matrix.
 
@@ -54,16 +57,25 @@ class AssignmentEvaluatorWorker(object):
             process_idx (int): numerical index of this process
             total_process (int): total number of processes
             result_dct (dict): dictionary of results by process index
+            max_num_assignment (int): maximum number of assignments
             is_report (bool): True if reporting progress
 
         Returns:
-            List[AssignmentPair]: pairs of row and column assignments that satisfy the comparison criteria
+            WorkerResult
+                List[AssignmentPair]: pairs of row and column assignments that satisfy the comparison criteria
+                is_truncated (bool): True if the number of assignments exceeds the maximum
         """
         worker = cls(reference_arr, target_arr, max_batch_size)
         assignment_pairs = worker.evaluateAssignmentArrays(process_idx, total_process, row_assignment_arr,
               column_assignment_arr, is_report=is_report)
-        result_dct[process_idx] = assignment_pairs
-        return assignment_pairs
+        if len(assignment_pairs) > max_num_assignment:
+            is_truncated = True
+            assignment_pairs = assignment_pairs[:max_num_assignment]
+        else:
+            is_truncated = False
+        worker_result = WorkerResult(is_truncated=is_truncated, assignment_pairs=assignment_pairs)
+        result_dct[process_idx] = worker_result
+        return worker_result
 
     def vectorToLinear(self, num_column_assignment:int, row_idx:Union[int, np.ndarray[int]],  # type: ignore
           column_idx:Union[int, np.ndarray[int]])->Union[int, np.ndarray[int]]:  # type: ignore
@@ -180,7 +192,7 @@ class AssignmentEvaluatorWorker(object):
         return assignment_satisfy_arr
 
     def evaluateAssignmentArrays(self, process_num:int, total_process:int, row_assignment_arr:np.ndarray,
-          column_assignment_arr:np.ndarray, is_report:bool=True)->List[AssignmentPair]:
+          column_assignment_arr:np.ndarray, max_assignment_pair:int=-1, is_report:bool=True)->List[AssignmentPair]:
         """Finds the row and column assignments that satisfy the comparison criteria.
         Uses equality in comparisons (for speed) since it is expected that array elements
         will be 1 byte integers.
@@ -190,6 +202,7 @@ class AssignmentEvaluatorWorker(object):
             total_process (int): total number of processes
             row_assignment_arr (np.ndarray): assignments of target rows to reference rows
             column_assignment_arr (np.ndarray): assignments of target columns to reference columns
+            max_assignment_pair (int): maximum number of assignment pairs (no limit if -1)
 
         Returns:
             List[AssignmentPair]: pairs of row and column assignments that satisfy the comparison criteria
@@ -210,7 +223,7 @@ class AssignmentEvaluatorWorker(object):
         max_comparison_per_batch = max(self.max_batch_size//bytes_per_comparison, 1)
         num_batch = num_comparison//max_comparison_per_batch + 1
         # Iterative do the assignments
-        assignment_pairs = []
+        assignment_pairs:list = []
         big_reference_arr = None
         #####
         def loop(ibatch:int, big_reference_arr:Optional[np.ndarray]=None):
@@ -240,7 +253,14 @@ class AssignmentEvaluatorWorker(object):
             for ibatch in tqdm(range(num_batch), unit_scale=max_comparison_per_batch*total_process,
                  desc="assignments"):
                 loop(ibatch, big_reference_arr=big_reference_arr)
+                if max_assignment_pair > 0:
+                    import pdb; pdb.set_trace()
+                    if len(assignment_pairs) >= max_assignment_pair:
+                        break
         else:
             for ibatch in range(num_batch):
                 loop(ibatch, big_reference_arr=big_reference_arr)
+                if max_assignment_pair > 0:
+                    if len(assignment_pairs) >= max_assignment_pair:
+                        break
         return assignment_pairs

@@ -905,13 +905,16 @@ class NetworkBase(object):
         target_reactant_nmat = partial_target_network.reactant_nmat.vmerge(reference_network.reactant_nmat)
         target_product_nmat = partial_target_network.product_nmat.vmerge(reference_network.product_nmat)
         # Randomize the rows and columns of the target
-        randomized_target_reactant_result = target_reactant_nmat.randomize()
-        randomized_target_reactant_nmat = randomized_target_reactant_result.named_matrix
-        randomized_target_product_nmat = target_product_nmat.randomize(row_perm=randomized_target_reactant_result.row_perm,
-                column_perm=randomized_target_reactant_result.column_perm).named_matrix
-        reaction_names = np.concatenate([partial_target_network.reaction_names, reference_network.reaction_names])
-        reaction_names = reaction_names[randomized_target_reactant_result.column_perm]
-        species_names = partial_target_network.species_names[randomized_target_reactant_result.row_perm]
+        randomized_target_reactant_nmat_result = target_reactant_nmat.randomize()
+        randomized_target_reactant_nmat = randomized_target_reactant_nmat_result.named_matrix
+        randomized_target_product_nmat = target_product_nmat.randomize(
+              row_perm=randomized_target_reactant_nmat_result.row_perm,
+              column_perm=randomized_target_reactant_nmat_result.column_perm).named_matrix
+        reaction_names = randomized_target_reactant_nmat.column_names
+        species_names = randomized_target_reactant_nmat.row_names
+        """ reaction_names = np.concatenate([partial_target_network.reaction_names, reference_network.reaction_names])
+        reaction_names = reaction_names[randomized_target_reactant_nmat_result.column_perm]
+        species_names = partial_target_network.species_names[randomized_target_reactant_nmat_result.row_perm] """
         randomized_target_network = cls(randomized_target_reactant_nmat.values, randomized_target_product_nmat.values,
                 reaction_names=reaction_names, species_names=species_names)
         #

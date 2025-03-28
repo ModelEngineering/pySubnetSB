@@ -214,6 +214,9 @@ class TestNetwork(unittest.TestCase):
             self.assertEqual(target_network.num_species, 2*size)
             self.assertEqual(reference_network.num_reaction, size)
             self.assertEqual(target_network.num_reaction, 2*size)
+            if not reference_network.isStructurallyIdentical(target_network, is_subnet=True,
+                  is_report=True, num_process=1, max_num_assignment=int(1e18), is_all_valid_assignment=False):
+                import pdb; pdb.set_trace()
             self.assertTrue(reference_network.isStructurallyIdentical(target_network, is_subnet=True))
 
     @util.timeit

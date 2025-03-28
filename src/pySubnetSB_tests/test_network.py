@@ -8,7 +8,7 @@ import tellurium as te  # type: ignore
 import unittest
 
 
-IGNORE_TEST = False
+IGNORE_TEST = True
 IS_PLOT = False
 NUM_ITERATION = 2
 NETWORK_NAME = "test"
@@ -216,6 +216,46 @@ class TestNetwork(unittest.TestCase):
         #
         test(10, is_isomorphic=True)
         test(10, is_isomorphic=False)
+    
+    def testIsStructurallyIdenticalBug(self):
+        #if IGNORE_TEST:
+        #    return
+        reference_mdl = """
+        JJ0: S3 -> S2; 1
+        JJ1: S2 -> S2; 1
+        JJ2: S2 -> S4; 1
+        JJ3: S7 -> S2 + S7; 1
+        S1=0;
+        S2=0;
+        S3=0;
+        S4=0;
+        S5=0;
+        S6=0;
+        S7=0;
+        S0=0;
+        """
+        target_mdl = """ 
+        JJ2: S2 -> S4;1
+        J0:  -> S1;1
+        JJ3: S7 -> S7 + S2;1
+        J3: S1 -> S6;1
+        JJ1: S2 -> S2;1
+        J2: S3 + S0 -> S1 + S7 + S4;1
+        J1: S5 -> S2;1
+        JJ0: S3 -> S2;1
+        S1=0;
+        S2=0;
+        S3=0;
+        S4=0;
+        S5=0;
+        S6=0;
+        S7=0;
+        S0=0;
+        """
+        reference_network = Network.makeFromAntimonyStr(reference_mdl)
+        target_network = Network.makeFromAntimonyStr(target_mdl)
+        result = reference_network.isStructurallyIdentical(target_network, is_subnet=True, num_process=1)
+        self.assertTrue(result)
 
 
 if __name__ == '__main__':

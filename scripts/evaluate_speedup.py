@@ -13,13 +13,22 @@ import time
 
 IGNORE_TEST = False
 IS_PLOT = False
-REFERENCE_SIZE = 20
-TARGET_SIZE =100 
+REFERENCE_SIZE = 10 
+TARGET_SIZE = 50 
 
 def run(network_pairs, num_process: int=1):
+    num_null = 0
     for reference_network, target_network in network_pairs:
-        _ = reference_network.isStructurallyIdentical(target_network, is_subnet=True,
-            is_report=False, num_process=num_process)
+        result = reference_network.isStructurallyIdentical(target_network, is_subnet=True,
+            is_report=True, num_process=num_process,
+            max_num_assignment=int(1e9), is_all_valid_assignment=False)
+        if len(result.assignment_pairs) == 0:
+            import pdb; pdb.set_trace()
+            num_null += 1
+        if not (result or result.is_truncated):
+            import pdb; pdb.set_trace()
+            raise ValueError("Error in the test")
+    print(f"num_process: {num_process}, num_null: {num_null}")
         
 def main(num_iteration:int=10):
     # Do timinings
@@ -29,6 +38,7 @@ def main(num_iteration:int=10):
         result = Network.makeRandomReferenceAndTarget(num_reference_species=REFERENCE_SIZE,
             num_target_species=TARGET_SIZE)
         network_pairs.append([result.reference_network, result.target_network])
+    print("Completed network construction.")
     for num_process in [1, 2, 4, 8]:
         start_time = time.time()
         run(network_pairs, num_process=num_process)
@@ -36,4 +46,4 @@ def main(num_iteration:int=10):
         print(f"num_process: {num_process}, elpased_time: {elapsed_time}")
 
 if __name__ == '__main__':
-    main()
+    main(num_iteration=10)
