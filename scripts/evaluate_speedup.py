@@ -1,6 +1,11 @@
 
 """
 Evaluation is done on a set of randomly chosen networks with embedded subnets.sum
+
+Results for 1, 2, 4, 8 processes on 10 core Mac M1 (max_num_assignment  10^11):
+    100/5: 77, 59, 38, 34
+    100/5: 1363, 1133, 889, 794
+    100/5: 295, 157, 84, 48
 """
 
 import pySubnetSB.constants as cn  # type: ignore
@@ -13,17 +18,18 @@ import time
 
 IGNORE_TEST = False
 IS_PLOT = False
-REFERENCE_SIZE = 10 
-TARGET_SIZE = 50 
+REFERENCE_SIZE = 5 
+TARGET_SIZE = 100 
 
 def run(network_pairs, num_process: int=1):
     num_null = 0
     for reference_network, target_network in network_pairs:
         result = reference_network.isStructurallyIdentical(target_network, is_subnet=True,
-            is_report=True, num_process=num_process,
-            max_num_assignment=int(1e9), is_all_valid_assignment=False)
+            is_report=True,
+            num_process=num_process,
+            max_batch_size=int(1e4),
+            max_num_assignment=int(1e11), is_all_valid_assignment=False)
         if len(result.assignment_pairs) == 0:
-            import pdb; pdb.set_trace()
             num_null += 1
         if not (result or result.is_truncated):
             import pdb; pdb.set_trace()

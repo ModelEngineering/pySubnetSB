@@ -7,8 +7,9 @@ from pySubnetSB.reaction_constraint import ReactionConstraint  # type: ignore
 from pySubnetSB.species_constraint import SpeciesConstraint   # type: ignore
 from pySubnetSB.network_base import NetworkBase, AssignmentPair  # type: ignore
 from pySubnetSB.assignment_evaluator import AssignmentEvaluator  # type: ignore
-from pySubnetSB.timer import Timer  # type: ignore
+from src.pySubnetSB.performance_monitor import PerformanceMonitor  # type: ignore
 
+from memory_profiler import profile  # type: ignore
 import pynauty  # type: ignore
 import numpy as np
 from typing import Optional, List, Tuple, Union
@@ -167,8 +168,9 @@ class Network(NetworkBase):
         Returns:
             StructurallyIdenticalResult
         """
-        timer = Timer("isStructurallyIdentical: Start", is_enabled=IS_ENABLE_PERFORANCE_REPORTING)
-        timer.add("isStructurallyIdentical/Initialization: Start")
+        MIN_ASSIGNMENT_FOR_PARALLELISM = 1e7
+        monitor = PerformanceMonitor("isStructurallyIdentical: Start", is_enabled=IS_ENABLE_PERFORANCE_REPORTING)
+        monitor.add("isStructurallyIdentical/Initialization: Start")
         if self.num_reaction == 0 or target.num_reaction == 0:
               return StructuralAnalysisResult(assignment_pairs=[], 
                   num_reaction_candidate=0,
@@ -181,23 +183,30 @@ class Network(NetworkBase):
             log10_max_num_assignment = np.log10(max_num_assignment)
         reference_reactant_nmat, reference_product_nmat = self.makeMatricesForIdentity(identity)
         target_reactant_nmat, target_product_nmat = target.makeMatricesForIdentity(identity)
-        timer.add("isStructurallyIdentical/Initialization: End")
+        monitor.add("isStructurallyIdentical/Initialization: End")
         #####
         def makeAssignmentArr(cls:type)->Tuple[np.ndarray[int], bool, bool]:  # type: ignore
-            timer.add("makeAssignmentArr/makeAssignmentArr: Start")
+            monitor.add("makeAssignmentArr/makeAssignmentArr: Start")
             reference_constraint = cls(reference_reactant_nmat, reference_product_nmat, is_subnet=is_subnet)
             target_constraint = cls(target_reactant_nmat, target_product_nmat, is_subnet=is_subnet)
-            timer.add("makeAssignmentArr/makeAssignmentArr/Make compatibility collection: Start")
+            monitor.add("makeAssignmentArr/makeAssignmentArr/Make compatibility collection: Start")
             compatibility_collection = reference_constraint.makeCompatibilityCollection(
                   target_constraint).compatibility_collection
+            monitor.add("makeAssignmentArr/makeAssignmentArr/Make compatibility collection: Created")
             compatibility_collection, prune_is_truncated = compatibility_collection.prune(log10_max_num_assignment)
-            timer.add("makeAssignmentArr/makeAssignmentArr/Make compatibility collection: End")
+            monitor.add("makeAssignmentArr/makeAssignmentArr/Make compatibility collection: End")
             is_null = compatibility_collection.log10_num_assignment == -np.inf
             if is_null:
-                timer.add("makeAssignmentArr/makeAssignmentArr/Null return")
+                monitor.add("makeAssignmentArr/makeAssignmentArr/Null return")
                 return NULL_ARRAY, prune_is_truncated, is_null
+            log10_num_assignment = compatibility_collection.log10_num_assignment
+            if log10_num_assignment > 0.5*np.log10(max_num_assignment):
+                msg = f"makeAssignmentArr/makeAssignmentArr/Assignment array too large[{log10_num_assignment}]"
+                monitor.add(msg)
+                return NULL_ARRAY, True, is_null
             else:
-                timer.add("makeAssignmentArr/makeAssignmentArr/Expand: Start")
+                msg = f"makeAssignmentArr/makeAssignmentArr/Expand[{log10_num_assignment}]: Start"
+                monitor.add(msg)
                 # FIXME: The following takes a long time
                 assignment_arr, expand_is_truncated = compatibility_collection.expand(max_num_assignment=max_num_assignment)
                 if assignment_arr is NULL_ARRAY:
@@ -207,17 +216,19 @@ class Network(NetworkBase):
                 if assignment_arr.shape[1] == 0:
                     return NULL_ARRAY, expand_is_truncated, is_null
                 is_truncated = prune_is_truncated or expand_is_truncated
-                timer.add("makeAssignmentArr/makeAssignmentArr/Expand: End")
+                monitor.add("makeAssignmentArr/makeAssignmentArr/Expand: End")
                 return assignment_arr, is_truncated, is_null
         #####
         # Calculate the compatibility vectors for species and reactions and then construct the assignment arrays
-        timer.add("makeAssignmentArr/Make compatibility vectors: Start")
+        monitor.add("makeAssignmentArr/Make compatibility vectors: Start")
         species_assignment_arr, is_species_truncated, is_species_null = makeAssignmentArr(SpeciesConstraint)
         reaction_assignment_arr, is_reaction_truncated, is_reaction_null = makeAssignmentArr(ReactionConstraint)
-        timer.add("makeAssignmentArr/Make compatibility vectors: End")
+        monitor.add("makeAssignmentArr/Make compatibility vectors: End")
         is_truncated = is_species_truncated or is_reaction_truncated
         # Check if further truncation is required
-        timer.add("makeAssignmentArr/Check further truncation: Start")
+        size = species_assignment_arr.shape[0], reaction_assignment_arr.shape[0]
+        msg = f"makeAssignmentArr/Check further truncation {size}: Start"
+        monitor.add(msg)
         num_species_assignment = species_assignment_arr.shape[0]
         num_reaction_assignment = reaction_assignment_arr.shape[0]
         if num_species_assignment*num_reaction_assignment > max_num_assignment:
@@ -233,42 +244,43 @@ class Network(NetworkBase):
                 reaction_frac = num_reaction_assignment/max_num_assignment
                 species_assignment_arr = util.selectRandom(species_assignment_arr, int(species_frac*max_num_assignment))
                 reaction_assignment_arr = util.selectRandom(reaction_assignment_arr, int(reaction_frac*max_num_assignment))
-        timer.add("makeAssignmentArr/Check further truncation: End")
+        monitor.add("makeAssignmentArr/Check further truncation: End")
         # Handle null assignment
-        timer.add("makeAssignmentArr/Null assignment: Start")
+        monitor.add("makeAssignmentArr/Null assignment: Start")
         is_null = is_species_null or is_reaction_null
         if len(species_assignment_arr) == 0 or len(reaction_assignment_arr) == 0 or is_null:
             return StructuralAnalysisResult(assignment_pairs=[], 
                   num_reaction_candidate=reaction_assignment_arr.shape[0],
                   num_species_candidate=species_assignment_arr.shape[0],
                   is_truncated=is_truncated)
-        timer.add("makeAssignmentArr/Null assignment: End")
+        monitor.add("makeAssignmentArr/Null assignment: End")
         # Evaluate the assignments
         size = species_assignment_arr.shape[0], reaction_assignment_arr.shape[0]
         msg = f"makeAssignmentArr/Evaluate reactant assignments for {size}: Start"
-        timer.add(msg)
+        monitor.add(msg)
         #   Evaluate on single byte entries
         evaluator = AssignmentEvaluator(reference_reactant_nmat.values.astype(np.int8),
               target_reactant_nmat.values.astype(np.int8), max_batch_size=max_batch_size)
+        total_num_assignment = species_assignment_arr.shape[0]*reaction_assignment_arr.shape[0]
+        actual_num_process = num_process if total_num_assignment > MIN_ASSIGNMENT_FOR_PARALLELISM else 1
         result = evaluator.parallelEvaluate(species_assignment_arr, reaction_assignment_arr,
-                total_process=num_process, is_report=is_report, max_num_assignment=max_num_assignment)
+                total_process=actual_num_process, is_report=is_report, max_num_assignment=max_num_assignment)
         is_truncated = is_truncated or result.is_truncated
         reactant_assignment_pairs = result.assignment_pairs
         #   Check assignment pairs on single bytes
         evaluator = AssignmentEvaluator(reference_reactant_nmat.values,
               target_reactant_nmat.values, max_batch_size=max_batch_size)
         reactant_assignment_pairs = evaluator.evaluateAssignmentPairs(reactant_assignment_pairs)
-        timer.add("makeAssignmentArr/Evaluate reactant assignments: End")
+        monitor.add("makeAssignmentArr/Evaluate reactant assignments: End")
         #   Evaluate on product matrices
-        timer.add("makeAssignmentArr/Evaluate product assignments: Start")
+        monitor.add("makeAssignmentArr/Evaluate product assignments: Start")
         evaluator = AssignmentEvaluator(reference_product_nmat.values, target_product_nmat.values,
             max_batch_size=max_batch_size)
         bounded_max_num_assignment = max_num_assignment if is_all_valid_assignment else 1
         assignment_pairs = evaluator.evaluateAssignmentPairs(reactant_assignment_pairs,
               max_num_assignment=bounded_max_num_assignment)
-        timer.add("makeAssignmentArr/Evaluate product assignments: End")
+        monitor.add("makeAssignmentArr/Evaluate product assignments: End")
         # Return result
-        timer.report()
         return StructuralAnalysisResult(assignment_pairs=assignment_pairs,
               num_reaction_candidate=reaction_assignment_arr.shape[0],
               num_species_candidate=species_assignment_arr.shape[0],

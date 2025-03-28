@@ -4,12 +4,14 @@ from functools import wraps, cmp_to_key
 import itertools
 import json
 import numpy as np
-import tempfile
-import time
+import os
 import pandas as pd # type: ignore
+import psutil  # type: ignore
 from typing import List, Tuple, Union, Optional
 import warnings
 warnings.filterwarnings("ignore")  # Ignore warnings from urllib3
+import tempfile
+import time
 import urllib3  # type: ignore
 
 IS_TIMEIT = False
@@ -460,3 +462,8 @@ def makeLocalFileFromURL(url:str, local_file:Optional[str]=None)->str:
         with open(local_file, "w") as fp:  # type: ignore
             fp.write(resp.data)
     return local_file
+
+def getMemoryUsage():
+    process = psutil.Process(os.getpid())
+    mem_info = process.memory_info()
+    return mem_info.rss # in bytes

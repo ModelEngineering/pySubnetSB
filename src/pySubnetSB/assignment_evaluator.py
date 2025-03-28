@@ -30,7 +30,7 @@ from pySubnetSB.assignment_pair import AssignmentPair # type: ignore
 from pySubnetSB.assignment_evaluator_worker import AssignmentEvaluatorWorker, WorkerResult # type: ignore
 from pySubnetSB import constants as cn # type: ignore
 from pySubnetSB import util # type: ignore
-from pySubnetSB.timer import Timer # type: ignore
+from src.pySubnetSB.performance_monitor import PerformanceMonitor # type: ignore
 
 from concurrent.futures import ProcessPoolExecutor
 from memory_profiler import profile  # type: ignore
@@ -68,7 +68,7 @@ class AssignmentEvaluator(object):
             comparison_criteria (ComparisonCriteria): comparison criteria
             max_batch_size (int): maximum batch size in units of bytes
         """
-        self.timer = Timer("AssignmentEvaluator", is_enabled=IS_ENABLE_PERFORMANCE_EVALUATION)
+        self.monitor = PerformanceMonitor("AssignmentEvaluator", is_enabled=IS_ENABLE_PERFORMANCE_EVALUATION)
         self.reference_arr = reference_arr
         self.num_reference_row, self.num_reference_column = self.reference_arr.shape
         self.target_arr = target_arr   # Reduce memory usage
@@ -138,7 +138,7 @@ class AssignmentEvaluator(object):
                 AssignmentPair: Row and column assignments that result in equality
                 is_truncated: True if the evaluation was truncated
         """
-        self.timer.add("parallelEvaluate: Start")
+        self.monitor.add("parallelEvaluate: Start")
         num_comparison = row_assignment_arr.shape[0]*column_assignment_arr.shape[0]
         # Initializations
         if total_process == -1:
@@ -148,7 +148,7 @@ class AssignmentEvaluator(object):
             num_process = 1
         # Handle the case of a single process
         if num_process == 1:
-            self.timer.add("parallelEvaluate/Single Process: Start")
+            self.monitor.add("parallelEvaluate/Single Process: Start")
             # Construct the assignments
             row_assignments = [row_assignment_arr]
             column_assignments = [column_assignment_arr]
@@ -159,10 +159,10 @@ class AssignmentEvaluator(object):
                   row_assignment_arr, column_assignment_arr, procnum, total_process,
                   return_dct, max_num_assignment,
                   is_report=is_report)
-            self.timer.add("parallelEvaluate/Single Process: End")
+            self.monitor.add("parallelEvaluate/Single Process: End")
             return return_dct[0]
         else:
-            self.timer.add("parallelEvaluate/Multiple Process: Start")
+            self.monitor.add("parallelEvaluate/Multiple Process: Start")
             # Construct the assignments
             if row_assignment_arr.shape[0] > column_assignment_arr.shape[0]:
                 row_assignments = util.partitionArray(row_assignment_arr, num_process)
@@ -174,7 +174,7 @@ class AssignmentEvaluator(object):
                 column_assignments = util.partitionArray(column_assignment_arr, num_process)
                 actual_num_process = len(column_assignments)
                 is_row_max = False
-            self.timer.add("parallelEvaluate/Multiple Process/Assignments: Start")
+            self.monitor.add("parallelEvaluate/Multiple Process/Assignments: Start")
             # Construct the arguments
             args = []
             return_dct = {}
@@ -188,23 +188,22 @@ class AssignmentEvaluator(object):
                 args.append((self.reference_arr, self.target_arr, self.max_batch_size,
                       process_row_assignment_arr, process_column_assignment_arr,
                       procnum, total_process, return_dct, max_num_assignment, is_report))
-            self.timer.add("parallelEvaluate/Multiple Process/Assignments: End")
+            self.monitor.add("parallelEvaluate/Multiple Process/Assignments: End")
             # Run the processes
-            self.timer.add("parallelEvaluate/Multiple Process/Run process pool: Start")
+            self.monitor.add("parallelEvaluate/Multiple Process/Run process pool: Start")
             with ProcessPoolExecutor(max_workers=total_process) as executor:
                 process_args = zip(*args)
                 results = executor.map(AssignmentEvaluatorWorker.do, *process_args)
-            self.timer.add("parallelEvaluate/Multiple Process/Run process pool: End")
+            self.monitor.add("parallelEvaluate/Multiple Process/Run process pool: End")
         # Combine the results
-        self.timer.add("parallelEvaluate/Multiple Process/Combine results: Start")
+        self.monitor.add("parallelEvaluate/Multiple Process/Combine results: Start")
         assignment_pairs = []
         is_truncated = False
         for result in results:
             is_truncated = is_truncated or result.is_truncated
             assignment_pairs.extend(result.assignment_pairs)
         worker_result = WorkerResult(assignment_pairs=assignment_pairs, is_truncated=is_truncated)
-        self.timer.add("parallelEvaluate/Multiple Process/Combine results: End")
-        self.timer.report()
+        self.monitor.add("parallelEvaluate/Multiple Process/Combine results: End")
         return worker_result
     
     def _manageEvaluation(self, reference_arr:np.ndarray, target_arr:np.ndarray, max_batch_size:int,

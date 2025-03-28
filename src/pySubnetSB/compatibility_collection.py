@@ -5,7 +5,7 @@ import pySubnetSB.constants as cn # type: ignore
 from pySubnetSB.named_matrix import NamedMatrix # type: ignore
 from pySubnetSB import util # type: ignore
 
-import copy
+from memory_profiler import profile  # type: ignore
 import itertools
 import numpy as np
 from typing import List, Tuple
@@ -84,6 +84,9 @@ class CompatibilityCollection(object):
             result = np.array([])
         return result
 
+    # FIXME: (1) Expand by batch. Do not merge batches. 
+    # FIXME: (2) Make a generator
+    #@profile
     def expand(self, max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT)->Tuple[np.ndarray, bool]:
         """Expands the compatibility collection into a two dimensional array of assignments
 
@@ -110,10 +113,10 @@ class CompatibilityCollection(object):
                 return self._selectUnique(assignment1)
             # Merge the assignments
             num_row1, num_row2 = assignment1.shape[0], assignment2.shape[0]
-            big_assignment1 = np.repeat(assignment1, num_row2, axis=0)
+            big_assignment1 = np.repeat(assignment1, num_row2, axis=0)  # FIXME - big memory
             big_assignment2 = np.vstack([assignment2]*num_row1)
-            merged_arr = np.concatenate([big_assignment1, big_assignment2], axis=1)
-            result = self._selectUnique(merged_arr)
+            merged_arr = np.concatenate([big_assignment1, big_assignment2], axis=1)  # FIXME - big memory
+            result = self._selectUnique(merged_arr)  # FIXME - big memory
             return result
         #####
         # Form batches of assignments no more than the maximum size and then merge the batches
