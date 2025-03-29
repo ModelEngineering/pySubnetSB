@@ -41,8 +41,7 @@ def run(network_pairs, num_process: int=1):
         if len(result.assignment_pairs) == 0:
             num_null += 1
         if not (result or result.is_truncated):
-            import pdb; pdb.set_trace()
-            raise ValueError("Error in the test")
+            print("Error in the test. Subnet is absent.")
     print(f"num_process: {num_process}, num_null: {num_null}")
         
 def main(num_iteration:int=10):

@@ -8,7 +8,7 @@ import tellurium as te  # type: ignore
 import unittest
 
 
-IGNORE_TEST = True
+IGNORE_TEST = False
 IS_PLOT = False
 NUM_ITERATION = 2
 NETWORK_NAME = "test"
@@ -218,8 +218,8 @@ class TestNetwork(unittest.TestCase):
         test(10, is_isomorphic=False)
     
     def testIsStructurallyIdenticalBug(self):
-        #if IGNORE_TEST:
-        #    return
+        if IGNORE_TEST:
+            return
         reference_mdl = """
         JJ0: S3 -> S2; 1
         JJ1: S2 -> S2; 1

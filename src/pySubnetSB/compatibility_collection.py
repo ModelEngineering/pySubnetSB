@@ -97,12 +97,7 @@ class CompatibilityCollection(object):
             np.ndarray: two dimensional array of assignments
             bool: is truncated
         """
-        IS_MAKE_DUMMY_RESULT = False
         MAX_BATCH_SIZE = 1000
-        if IS_MAKE_DUMMY_RESULT:
-            result = np.array(range(self.num_self_row))
-            import pdb; pdb.set_trace()
-            return np.reshape(result, (1, self.num_self_row)), False
         #####
         def expandCollection(collection:List[List[int]])->np.ndarray:
             # Expands the compatibilities into a two dimensional array where each row is an assignment
@@ -150,6 +145,10 @@ class CompatibilityCollection(object):
             if expanded_collection.shape[0] == 0:
                 return np.array([]), True
             batches.append(expandCollection(list(batch_collection)))
+        # Estimate if the number of assignments is too large
+        log10_estimate_num_assignment = np.sum([np.log10(len(l)) for l in batches])
+        if log10_estimate_num_assignment > log10_max_num_assignment:
+            return np.array([]), True
         # Merge the batches
         assignment_arr = batches[0]
         for idx in range(1, len(batches)):
