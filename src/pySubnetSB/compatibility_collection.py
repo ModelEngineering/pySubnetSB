@@ -97,7 +97,12 @@ class CompatibilityCollection(object):
             np.ndarray: two dimensional array of assignments
             bool: is truncated
         """
+        IS_MAKE_DUMMY_RESULT = False
         MAX_BATCH_SIZE = 1000
+        if IS_MAKE_DUMMY_RESULT:
+            result = np.array(range(self.num_self_row))
+            import pdb; pdb.set_trace()
+            return np.reshape(result, (1, self.num_self_row)), False
         #####
         def expandCollection(collection:List[List[int]])->np.ndarray:
             # Expands the compatibilities into a two dimensional array where each row is an assignment

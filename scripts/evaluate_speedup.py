@@ -2,10 +2,19 @@
 """
 Evaluation is done on a set of randomly chosen networks with embedded subnets.sum
 
-Results for 1, 2, 4, 8 processes on 10 core Mac M1 (max_num_assignment  10^11):
-    100/5: 77, 59, 38, 34
-    100/5: 1363, 1133, 889, 794
-    100/5: 295, 157, 84, 48
+The experiments are implemented below. They were done with 10 iterations, reference size 5, target size 100.
+Results for 1, 2, 4, 8 processes on 10 core Mac M1 (max_num_assignment  10^11) on Macbook:
+    77, 59, 38, 34
+    1363, 1133, 889, 794
+    295, 157, 84, 48
+    383, 187, 101, 57
+On server 1, 2, 4, 8, 16:
+    7951, 3824, 2021, 1149, 658
+    564, 291, 149, 85, 52
+    82, 49, 25, 17, 13
+    77, 50, 34, 28, 28
+    818, 416, 227, 121, 73
+    240, 138, 79, 50, 41
 """
 
 import pySubnetSB.constants as cn  # type: ignore

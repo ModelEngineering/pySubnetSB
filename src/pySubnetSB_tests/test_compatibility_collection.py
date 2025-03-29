@@ -78,7 +78,7 @@ class TestCompatibilityCollection(unittest.TestCase):
             constraint = ReactionConstraint(network.reactant_nmat, network.product_nmat)
             compatibility_collection = constraint.makeCompatibilityCollection(
                   large_constraint).compatibility_collection
-            arr, _ = compatibility_collection.expand()
+            arr, _ = compatibility_collection.expand(max_num_assignment=1e10)
             for row in arr:
                 for idx in range(len(row)):
                     expected_name = "J" + str(idx)
