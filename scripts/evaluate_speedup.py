@@ -29,7 +29,7 @@ from typing import List, Tuple
 IGNORE_TEST = False
 IS_PLOT = False
 REFERENCE_SIZE = 5 
-TARGET_SIZE = 50 
+TARGET_SIZE = 100
 
 def run(network_pairs:List[Tuple[Network, Network]], num_process: int=1, num_compare: int=1):
     """_Runs subnet discovery
@@ -53,21 +53,34 @@ def run(network_pairs:List[Tuple[Network, Network]], num_process: int=1, num_com
             print("Error in the test. Subnet is absent.")
     print(f"num_process: {num_process}, num_null: {num_null}")
         
-def main(num_iteration:int=10, num_processors:list[int]=[1, 2, 4, 8], num_compares:list[int]=[1, 10, 100, 1000]):
+def main(num_study:int=2,
+      num_iteration:int=10,
+      num_processors:list[int]=[1, 2, 4, 8],
+      num_compares:list[int]=[1, 10, 100, 1000]):
     # Do timinings
     # Make the networks
-    network_pairs:List[Tuple[Network, Network]] = []
-    for _ in range(num_iteration):
-        result = Network.makeRandomReferenceAndTarget(num_reference_species=REFERENCE_SIZE,
-            num_target_species=TARGET_SIZE)
-        network_pairs.append([result.reference_network, result.target_network])  # type: ignore
-    print("Completed network construction.")
-    for num_process in num_processors:
-        for num_compare in num_compares:
-            start_time = time.time()
-            run(network_pairs, num_process=num_process, num_compare=num_compare)
-            elapsed_time = time.time() - start_time
-            print(f"num_process: {num_process}, num_compare: {num_compare}, elpased_time: {elapsed_time}")
+    COLUMNS = ['study_idx', 'num_process', 'num_compare', 'elapsed_time']
+    result_dct: dict = {c: [] for c in COLUMNS}
+    for study_idx in range(num_study):
+        network_pairs:List[Tuple[Network, Network]] = []
+        for _ in range(num_iteration):
+            result = Network.makeRandomReferenceAndTarget(num_reference_species=REFERENCE_SIZE,
+                num_target_species=TARGET_SIZE)
+            network_pairs.append([result.reference_network, result.target_network])  # type: ignore
+        print("Completed network construction.")
+        for num_process in num_processors:
+            for num_compare in num_compares:
+                start_time = time.time()
+                run(network_pairs, num_process=num_process, num_compare=num_compare)
+                elapsed_time = time.time() - start_time
+                result_dct["study_idx"].append(study_idx)
+                result_dct["num_process"].append(num_process)
+                result_dct["num_compare"].append(num_compare)
+                result_dct["elapsed_time"].append(elapsed_time)
+                print(f"study_idx: {study_idx} num_process: {num_process}, num_compare: {num_compare}, elpased_time: {elapsed_time}")
+    result_df = pd.DataFrame(result_dct)
+    result_df.to_csv("evaluate_speedup.csv", index=False)
 
 if __name__ == '__main__':
-    main(num_iteration=10, num_processors=[1], num_compares=[1, 10, 100, 1000, 10000])
+    #main(num_study=2, num_iteration=2, num_processors=[1, 2], num_compares=[10, 100])
+    main(num_study=6, num_iteration=10, num_processors=[1], num_compares=[1, 10, 100, 1000, 10000])
