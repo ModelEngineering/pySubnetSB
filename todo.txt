@@ -1,1 +1,2 @@
 1. Better repo - coverage bade
+2. Bug: Assignments for reaction must check that all of the target species for a reaction are present.

@@ -78,8 +78,8 @@ def main(num_study:int=2,
                 result_dct["num_compare"].append(num_compare)
                 result_dct["elapsed_time"].append(elapsed_time)
                 print(f"study_idx: {study_idx} num_process: {num_process}, num_compare: {num_compare}, elpased_time: {elapsed_time}")
-    result_df = pd.DataFrame(result_dct)
-    result_df.to_csv("evaluate_speedup.csv", index=False)
+                result_df = pd.DataFrame(result_dct)
+                result_df.to_csv("evaluate_speedup.csv", index=False)
 
 if __name__ == '__main__':
     #main(num_study=2, num_iteration=2, num_processors=[1, 2], num_compares=[10, 100])

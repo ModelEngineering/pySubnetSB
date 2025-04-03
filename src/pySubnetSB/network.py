@@ -259,8 +259,10 @@ class Network(NetworkBase):
         msg = f"makeAssignmentArr/Evaluate reactant assignments for {size}: Start"
         monitor.add(msg)
         #   Evaluate on single byte entries
-        evaluator = AssignmentEvaluator(reference_reactant_nmat.values.astype(np.int8),
-              target_reactant_nmat.values.astype(np.int8), max_batch_size=max_batch_size)
+        evaluator = AssignmentEvaluator(reference_reactant_nmat.values,
+              target_reactant_nmat.values, max_batch_size=max_batch_size)
+        #evaluator = AssignmentEvaluator(reference_reactant_nmat.values.astype(np.int8),
+        #      target_reactant_nmat.values.astype(np.int8), max_batch_size=max_batch_size)
         total_num_assignment = species_assignment_arr.shape[0]*reaction_assignment_arr.shape[0]
         actual_num_process = num_process if total_num_assignment > MIN_ASSIGNMENT_FOR_PARALLELISM else 1
         result = evaluator.parallelEvaluate(species_assignment_arr, reaction_assignment_arr,
@@ -268,9 +270,9 @@ class Network(NetworkBase):
         is_truncated = is_truncated or result.is_truncated
         reactant_assignment_pairs = result.assignment_pairs
         #   Check assignment pairs on single bytes
-        evaluator = AssignmentEvaluator(reference_reactant_nmat.values,
-              target_reactant_nmat.values, max_batch_size=max_batch_size)
-        reactant_assignment_pairs = evaluator.evaluateAssignmentPairs(reactant_assignment_pairs)
+        #evaluator = AssignmentEvaluator(reference_reactant_nmat.values,
+        #      target_reactant_nmat.values, max_batch_size=max_batch_size)
+        #reactant_assignment_pairs = evaluator.evaluateAssignmentPairs(reactant_assignment_pairs)
         monitor.add("makeAssignmentArr/Evaluate reactant assignments: End")
         #   Evaluate on product matrices
         monitor.add("makeAssignmentArr/Evaluate product assignments: Start")
