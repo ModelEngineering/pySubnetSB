@@ -258,23 +258,17 @@ class Network(NetworkBase):
         size = species_assignment_arr.shape[0], reaction_assignment_arr.shape[0]
         msg = f"makeAssignmentArr/Evaluate reactant assignments for {size}: Start"
         monitor.add(msg)
-        #   Evaluate on single byte entries
+        #   Evaluate the assignment pairs for the reactant stoichiometry matrix
         evaluator = AssignmentEvaluator(reference_reactant_nmat.values,
               target_reactant_nmat.values, max_batch_size=max_batch_size)
-        #evaluator = AssignmentEvaluator(reference_reactant_nmat.values.astype(np.int8),
-        #      target_reactant_nmat.values.astype(np.int8), max_batch_size=max_batch_size)
         total_num_assignment = species_assignment_arr.shape[0]*reaction_assignment_arr.shape[0]
         actual_num_process = num_process if total_num_assignment > MIN_ASSIGNMENT_FOR_PARALLELISM else 1
         result = evaluator.parallelEvaluate(species_assignment_arr, reaction_assignment_arr,
                 total_process=actual_num_process, is_report=is_report, max_num_assignment=max_num_assignment)
         is_truncated = is_truncated or result.is_truncated
         reactant_assignment_pairs = result.assignment_pairs
-        #   Check assignment pairs on single bytes
-        #evaluator = AssignmentEvaluator(reference_reactant_nmat.values,
-        #      target_reactant_nmat.values, max_batch_size=max_batch_size)
-        #reactant_assignment_pairs = evaluator.evaluateAssignmentPairs(reactant_assignment_pairs)
         monitor.add("makeAssignmentArr/Evaluate reactant assignments: End")
-        #   Evaluate on product matrices
+        #   Evaluate on product matrices for the assignment pairs found for the reactant matrices
         monitor.add("makeAssignmentArr/Evaluate product assignments: Start")
         evaluator = AssignmentEvaluator(reference_product_nmat.values, target_product_nmat.values,
             max_batch_size=max_batch_size)
