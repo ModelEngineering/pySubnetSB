@@ -45,6 +45,11 @@ class StructuralAnalysisResult(object):
         self.network = network
 
     @property
+    def mapping_pairs(self)->List[AssignmentPair]:
+        """Same as assignment pairs."""
+        return self.assignment_pairs
+
+    @property
     def induced_network(self)->'Network':
         """Induced network from the first assignment pair."""
         return self.makeInducedNetwork()

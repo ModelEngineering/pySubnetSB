@@ -92,8 +92,8 @@ class TestFunctions(unittest.TestCase):
                 if not 'num_process' in excludes:
                     dct['num_process'] = num_process
                 for max_num_assignment in [1e10, 1]:
-                    if not 'max_num_assignment' in excludes:
-                        dct['max_num_assignment'] = max_num_assignment
+                    if not 'max_num_mapping_pair' in excludes:
+                        dct['max_num_mapping_pair'] = max_num_assignment
                     for identity in [cn.ID_STRONG, cn.ID_WEAK]:
                         if not 'identity' in excludes:
                             dct['identity'] = identity
@@ -128,6 +128,9 @@ class TestFunctions(unittest.TestCase):
         ffiles = [f for f in os.listdir(MODEL_DIR) if "best" in f]
         iter = self.optionIter(["is_subnet", "num_process"])
         for dct in iter:
+            if "max_num_mapping_pair" in dct:
+                dct["max_num_assignment"] = dct["max_num_mapping_pair"]
+                dct.pop("max_num_mapping_pair")
             df = api.clusterStructurallyIdenticalModelsInDirectory(MODEL_DIR, **dct)
             self.assertEqual(len(df), len(ffiles))
 

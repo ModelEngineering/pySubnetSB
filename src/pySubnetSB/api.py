@@ -114,7 +114,7 @@ def findReferenceInTarget(
       target_model:Union[str, ModelSpecification],
       is_subnet:bool=True,
       num_process:int=-1,
-      max_num_assignment:int=int(1e12),
+      max_num_mapping_pair:int=int(1e12),
       identity:str=cn.ID_STRONG,
       is_report:bool=True)->StructuralAnalysisResult:
     """
@@ -127,7 +127,7 @@ def findReferenceInTarget(
         is_subnet (bool): If True, the reference model is a subnet of the target model;
                           otherwise, the reference model is structurally identical to the target model.
         num_process (int): Number of processes to use. If -1, use all available processors.
-        max_num_assignment (int): Maximum number of assignment pairs
+        max_num_mapping_pair (int): Maximum number of mapping pairs. (Internally, this is the number of assignment pairs)
         identity (str): cn.ID_STRONG (renaming) or cn.ID_WEAK (behavior equivalence)
         is_report (bool): If True, report progress
 
@@ -145,7 +145,7 @@ def findReferenceInTarget(
             is_subnet=is_subnet,
             num_process=num_process,
             identity=identity,
-            max_num_assignment=max_num_assignment,
+            max_num_assignment=max_num_mapping_pair,
             is_report=is_report)
 
 #############################
@@ -193,7 +193,7 @@ def findReferencesInTargets(
       target_dir:str,
       identity:str=cn.ID_STRONG,
       num_process:int=-1,
-      max_num_assignment:int=int(1e12),
+      max_num_mapping_pair:int=int(1e12),
       is_report:bool=True)->pd.DataFrame:
     """
     Searches the target directory to determine if the reference directory contains subnets (if is_subnet is True) or
@@ -206,7 +206,7 @@ def findReferencesInTargets(
         is_subnet (bool): If True, the reference directory contains subnets of the target directory;
                           otherwise, the reference directory contains models that are structurally identical to the target directory.
         num_process (int): Number of processes to use. If -1, use all available processors.
-        max_num_assignment (int): Maximum number of assignment pairs
+        max_num_mapping_pair (int): Maximum number of mapping pairs. (Internally, this is the number of assignment pairs)
         identity (str): cn.ID_STRONG (renaming) or cn.ID_WEAK (behavior equivalence)
         is_report (bool): If True, report progress
 
@@ -232,7 +232,7 @@ def findReferencesInTargets(
               target_collection.networks,
               identity=identity,
               num_process=num_process)
-        df = finder.find(is_report=is_report, max_num_assignment=max_num_assignment)
+        df = finder.find(is_report=is_report, max_num_assignment=max_num_mapping_pair)
     except:
         df = pd.DataFrame()
     finally:

@@ -251,7 +251,7 @@ class AssignmentEvaluatorWorker(object):
         #####
         if (process_num == 0) and is_report:
             for ibatch in tqdm(range(num_batch), unit_scale=max_comparison_per_batch*total_process,
-                 desc="assignments"):
+                 desc=" mapping pairs"):
                 loop(ibatch, big_reference_arr=big_reference_arr)
                 if max_assignment_pair > 0:
                     import pdb; pdb.set_trace()

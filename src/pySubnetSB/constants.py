@@ -37,6 +37,7 @@ OSCILLATOR_PROJECT = os.path.join(OSCILLATOR_PROJECT, 'OscillatorDatabase')
 # Constants
 NONE = "none"
 MAX_NUM_ASSIGNMENT = 1e9  # Maximum number of permutations to search
+MAX_NUM_MAPPING_PAIR = MAX_NUM_ASSIGNMENT
 MAX_BATCH_SIZE = int(1e5)  # Matrix memory in bytes used in a comparison batch in AssignmentEvaluator
 STRUCTURAL_IDENTITY = "structural_identity"
 UNKNOWN_STRUCTURAL_IDENTITY_NAME = "*" # Used for networks whose structural identity cannot be determined
@@ -128,9 +129,11 @@ FINDER_REFERENCE_NETWORK = "reference_network"
 FINDER_INDUCED_NETWORK = "induced_network"
 FINDER_NAME_DCT = "name_dct"  # Dictionary of mapping of target names to reference names for species and reactions
 FINDER_NUM_ASSIGNMENT_PAIR = "num_assignment_pair"
+FINDER_NUM_MAPPING_PAIR = "num_mapping_pair"   # Same as assignment pair
 FINDER_IS_TRUNCATED = "is_truncated"
 FINDER_DATAFRAME_COLUMNS = [FINDER_REFERENCE_NAME,  FINDER_TARGET_NAME,  FINDER_REFERENCE_NETWORK,
-      FINDER_INDUCED_NETWORK,  FINDER_NAME_DCT, FINDER_NUM_ASSIGNMENT_PAIR, FINDER_IS_TRUNCATED]
+      FINDER_INDUCED_NETWORK,  FINDER_NAME_DCT, FINDER_NUM_ASSIGNMENT_PAIR, FINDER_IS_TRUNCATED,
+      FINDER_NUM_MAPPING_PAIR]
 # Data columns
 D_MODEL_NAME = "model_name"
 D_NUM_ITERATION = "num_iteration"

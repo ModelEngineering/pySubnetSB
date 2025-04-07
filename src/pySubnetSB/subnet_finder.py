@@ -91,6 +91,7 @@ class SubnetFinder(object):
                 dct[cn.FINDER_REFERENCE_NETWORK].append(cn.NULL_STR)
                 dct[cn.FINDER_INDUCED_NETWORK].append(cn.NULL_STR)
                 dct[cn.FINDER_NUM_ASSIGNMENT_PAIR].append(cn.NULL_STR)
+                dct[cn.FINDER_NUM_MAPPING_PAIR].append(cn.NULL_STR)
                 dct[cn.FINDER_NAME_DCT].append(cn.NULL_STR)
             else:
                 # Construct the induced subnet
@@ -101,6 +102,7 @@ class SubnetFinder(object):
                 dct[cn.FINDER_REFERENCE_NETWORK].append(str(reference_network))
                 dct[cn.FINDER_INDUCED_NETWORK].append(str(result.induced_network))
                 dct[cn.FINDER_NUM_ASSIGNMENT_PAIR].append(len(result.assignment_pairs))
+                dct[cn.FINDER_NUM_MAPPING_PAIR].append(len(result.assignment_pairs))
                 # Create a more complete assignment pair
                 assignment_pair = AssignmentPair(species_assignment=species_assignment_arr,
                         reaction_assignment=reaction_assignment_arr,
