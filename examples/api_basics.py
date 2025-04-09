@@ -1,9 +1,28 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # API BASICS
+# # API EXAMPLES FOR ``pySubnetSB``
 
-# This notebook demonstrates the API functions
+# **Background**
+# 
+# Many advances in biomedical research are driven by structural analysis, a study of the interconnections
+# between elements in biological systems (e.g., identifying drug target based on the structure of chemical pathways).
+# Structural analysis appeals because such information is generally much easier to obtain than dynamical data such as
+# species concentrations and reaction fluxes. Our focus is on subnet discovery in chemical reaction networks (CRNs);
+# that is, discovering a subset of a target CRN that is structurally identical to a reference CRN. Applications of subnet
+# discovery include the discovery of conserved chemical pathways and the elucidation of the structure of complex CRNs.
+# Although there are theoretical results for finding subgraphs, we are unaware of tools for CRN subnet discovery. This is
+# in part due to the special characteristics of CRN graphs, that they are directed, bipartite, hypergraphs.
+# 
+# ``pySubnetSB``
+# 
+# ``pySubnetSB`` is an open source Python package for discovering subnets represented in the systems
+# biology markup language (SBML) community standard. ``pySubnetSB`` uses a constraint-based approach to discover
+# subgraphs using techniques that work well for CRNs, and provides considerable speed-up through vectorization and
+# process-based parallelism. We provide a methodology for evaluating the statistical significance of subnet discovery, and
+# apply pySubnetSB to discovering subnets in more than 200,000 model pairs in the BioModels curated repository
+
+# This notebook demonstrates the API of ``pySubnetSB``. There are 3 functions.
 # * ``findReferenceInTarget`` to do subnet discovery for a single reference model on a single target model
 # * ``findReferencesInTargets`` to do subnet discovery with multiple reference models on multiple target models
 # * ``makeSerializationFile`` to create a serialization file describing a collection of models
@@ -18,7 +37,7 @@
 #!pip install -q pySubnetSB
 
 
-# In[21]:
+# In[2]:
 
 
 import pySubnetSB
@@ -99,8 +118,7 @@ def main():
     
     # In[8]:
     
-    
-    result.assignment_pairs
+    result.mapping_pairs
     
     
     # In[9]:
@@ -143,9 +161,11 @@ def main():
     # In[12]:
     
     
-    # This takes about 10 minutes to run on Colab
+    # This takes about 10 minutes to run on Colab. If you are in a local environment,
+    #   set num_process=-1 so that parallel processing can be used. Parallel processing causes problems in Colab.
     rr = te.loadSBMLModel(URL)
-    result = findReferenceInTarget(reference_model, ModelSpecification(rr, specification_type="roadrunner"), is_subnet=True,
+    result = findReferenceInTarget(reference_model, ModelSpecification(rr, specification_type="roadrunner"), 
+            max_num_mapping_pair=1e14, is_subnet=True, num_process=-1,
             identity=cn.ID_WEAK, is_report=IS_PLOT)
     
     
@@ -154,7 +174,7 @@ def main():
     # In[13]:
     
     
-    len(result.assignment_pairs)
+    len(result.mapping_pairs)
     
     
     # We can also see the induced network, a subnet of the target network that is (weakly) structurally identical with the reference network. Note that since we use weak identity, some of the bi-uni reactions in the reference network are assigned to uni-null reactions in the target network.
@@ -165,7 +185,25 @@ def main():
     result.makeInducedNetwork(1)
     
     
-    # Note that R_16 is assigned to J3. Note that J3 is a bi-uni reaction, but R_16 is uni-null. This assignment makes sense for weak identity since S4 is a reactant and a product in J3.
+    # Note that R_16 is assigned to J3. Note that J3 is a bi-uni reaction, but R_16 is uni-null. This reaction-mapping makes sense for weak identity since S4 is a reactant and a product in J3.
+    
+    # We illustrate below the use of the keyword parameter ``max_num_mapping_pair``, which controls the maximum number of mapping pairs that will be evaluated. If it is set too small, then ``result.is_truncated`` will be True, indicatilng that mapping pairs exist but were not evaluated.
+    
+    # In[21]:
+    
+    
+    # Runs fast because is_truncated is True
+    rr = te.loadSBMLModel(URL)
+    result = findReferenceInTarget(reference_model, ModelSpecification(rr, specification_type="roadrunner"), 
+            max_num_mapping_pair=1, is_subnet=True, num_process=1,
+            identity=cn.ID_WEAK, is_report=IS_PLOT)
+    
+    
+    # In[22]:
+    
+    
+    result.is_truncated
+    
     
     # # Comparing Directories of Models
     
@@ -187,9 +225,9 @@ def main():
     # * target_name: name of the model in the target directory
     # * reference_network: Antimony representation of the complete reference model
     # * induced_network: Antimony model of the induced network found in the target
-    # * name_dct: dictionary that specifies the species and reaction assignments for the first assignment pair
-    # * num_assignment_pair: number of assignment pairs
-    # * is_truncated: True if the search was truncated because it exceeded the parameter max_num_assignment_pair
+    # * name_dct: dictionary that specifies the species and reaction mappings for the first mapping pair
+    # * num_mapping_pair: number of mapping pairs
+    # * is_truncated: True if the search was truncated because it exceeded the parameter max_num_mapping_pair
     
     # In[16]:
     
@@ -226,10 +264,10 @@ def main():
     with open(serialization_path, "r") as fd:
         lines = fd.readlines()
     if IS_PLOT:
-        lines[0]
+        print(lines[0])
     
     
-    # In[22]:
+    # In[20]:
     
     
     # Clean up the cloned repository

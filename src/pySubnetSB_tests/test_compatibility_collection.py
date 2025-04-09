@@ -71,18 +71,19 @@ class TestCompatibilityCollection(unittest.TestCase):
         if IGNORE_TEST:
             return
         fill_size = 5
-        for size in range(5, 10):
+        sizes = np.random.randint(5, 10, 20)
+        for size in sizes:
             network = Network.makeRandomNetworkByReactionType(size, size)
             large_network = network.fill(num_fill_reaction=fill_size*size, num_fill_species=fill_size*size)
             large_constraint = ReactionConstraint(large_network.reactant_nmat, large_network.product_nmat)
             constraint = ReactionConstraint(network.reactant_nmat, network.product_nmat)
             compatibility_collection = constraint.makeCompatibilityCollection(
                   large_constraint).compatibility_collection
-            arr, _ = compatibility_collection.expand(max_num_assignment=1e10)
+            arr, is_truncated = compatibility_collection.expand(max_num_assignment=1e10)
             for row in arr:
                 for idx in range(len(row)):
                     expected_name = "J" + str(idx)
-                    if expected_name in large_network.reaction_names[row]:
+                    if expected_name in large_network.reaction_names:
                         break
                 else:
                     self.assertTrue(False)
