@@ -91,18 +91,24 @@ class ModelSpecification(object):
     
     def getNetwork(self)->Network:
         """Returns the Antimony model."""
+        if self.specification_type not in SPECIFICATION_TYPES:
+            raise ValueError(f"Invalid model type: {self.specification_type}. Must be one of {SPECIFICATION_TYPES}")
+        # Check for roadrunner
+        if self.specification_type == "roadrunner":
+            network = Network.makeFromAntimonyStr(None, roadrunner=self.model)
+            return network
+        # Check for SBML
+        if self.specification_type in ["sbmlstr", "sbmlfile", "sbmlurl"]:
+            network = Network.makeFromSBMLFile(self.model)
+            return network
+        # Handle Antimony
         if self.specification_type == "antstr":
             antimony_str = self.model
         elif self.specification_type == "antfile":
             with open(self.model, "r") as fd:
                 antimony_str = fd.read()
-        elif self.specification_type == "roadrunner":
-            network = Network.makeFromAntimonyStr(None, roadrunner=self.model)
-            return network
         else:
-            rr = te.loadSBMLModel(self.model)
-            antimony_str = rr.getAntimony()
-            antimony_str = antimony_str.replace("\n", ";\n")
+            raise ValueError(f"Invalid model type: {self.specification_type}. Must be one of {SPECIFICATION_TYPES}")
         #
         network = Network.makeFromAntimonyStr(antimony_str)
         return network
@@ -123,6 +129,15 @@ def findReferenceInTarget(
 
     Args:
         reference_model (str/ModelSpecification): Antimony str or other model reference
+           Use for ModelSpecification:
+               ModelSpecification(model, specification_type)
+               specification_type:
+                   "antstr": Antimony model string
+                   "antfile": Antimony model file
+                   "sbmlstr": SBML model string
+                   "sbmlfile": SBML model file
+                   "sbmlurl": SBML model URL
+                   "roadrunner": RoadRunner model
         target_model (str/ModelSpecification): Antimony str or other model reference
         is_subnet (bool): If True, the reference model is a subnet of the target model;
                           otherwise, the reference model is structurally identical to the target model.

@@ -23,6 +23,7 @@ ANT_PATH = os.path.join(cn.TEST_DIR, "test_api.ant")
 SERIALIZATION_PATH = os.path.join(cn.TEST_DIR, "test_api.txt")
 REMOVE_FILES = [SBML_PATH, ANT_PATH, SERIALIZATION_PATH]
 MODEL_DIR = os.path.join(cn.TEST_DIR, "oscillators")
+URL = "https://www.ebi.ac.uk/biomodels/services/download/get-files/MODEL1701090001/3/BIOMD0000000695_url.xml"
 
 #############################
 # Tests
@@ -41,6 +42,33 @@ class TestModelSpecification(unittest.TestCase):
         for path in REMOVE_FILES:
             if os.path.isfile(path):
                 os.remove(path)
+
+    def testGetNetwork(self):
+        if IGNORE_TEST:
+            return
+        def test(model, specification_type):
+            self.specification = api.ModelSpecification(model, specification_type=specification_type)
+            network = self.specification.getNetwork()
+            self.assertTrue(isinstance(network, Network))
+        #
+        test(URL, "sbmlurl")
+        #
+        path = os.path.join(cn.TEST_DIR, "xml_files/BIOMD0000000033.xml")
+        test(path, "sbmlfile")
+        #
+        rr = te.loadSBMLModel(URL)
+        test(rr, "roadrunner")
+        #
+        rr = te.loadSBMLModel(URL)
+        test(rr.getSBML(), "sbmlstr")
+        #
+        path = os.path.join(cn.TEST_DIR, "oscillators/bestmodel_jJykOfGq0Kgy")
+        test(path, "antfile")
+        #
+        with open(path, "r") as fd:
+            lines = fd.readlines()
+        model = "\n".join(lines)
+        test(model, "antstr")
 
     def testMakeNetworkAntimonyStr(self):
         if IGNORE_TEST:

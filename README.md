@@ -28,5 +28,6 @@ pySubnetSB is installed using
 https://github.com/ModelEngineering/pySubnetSB/blob/main/examples/api_basics.ipynb is a Jupyter notebook that demonstrates pySubsetSB capabilities.
 
 # Version History
-* 1.0.0 2/27/2025. First beta release.
+* 1.0.2 4/10/2025. ModelSpecification API accepts many kinds of model inputs, Antimony, SBML, roadrunner.
 * 1.0.1 4/09/2025. Improved generation of networks with subnets. Use "mapping_pair" in API. Bug fixes.
+* 1.0.0 2/27/2025. First beta release.
