@@ -29,9 +29,6 @@ class AssignmentEvaluatorWorker(object):
         Args:
             reference_arr (np.ndarray): reference matrix
             target_arr (np.ndarray): target matrix
-            row_assignment_arr (np.ndarray): candidate assignments of target rows to reference rows
-            column_assignment_arr (np.ndarray): candidate assignments of target columns to reference columns
-            comparison_criteria (ComparisonCriteria): comparison criteria
             max_batch_size (int): maximum batch size in units of bytes
         """
         self.reference_arr = reference_arr
@@ -263,4 +260,31 @@ class AssignmentEvaluatorWorker(object):
                 if max_assignment_pair > 0:
                     if len(assignment_pairs) >= max_assignment_pair:
                         break
-        return assignment_pairs
+        filtered_assignment_pairs = self.filterColumnConstraintForAssignmentPairs(assignment_pairs)
+        return filtered_assignment_pairs
+    
+    def filterColumnConstraintForAssignmentPairs(self, assignment_pairs:List[AssignmentPair])->List[AssignmentPair]:
+        """
+        Ensures that the sum of column values in the subnet specified by an assignment pair matches the sum
+        of the values in the target matrix.
+
+        Args:
+            assignment_pairs (List[AssignmentPair]): list of assignment pairs
+
+        Returns:
+            List[AssignmentPair]: filtered list of assignment pairs that satisfy the column constraints
+        """
+        # Initializations
+        target_column_sum_arr = np.sum(np.abs(self.target_arr), axis=0)
+        filtered_assignment_pairs:List[AssignmentPair] = []
+        for assignment_pair in assignment_pairs:
+            row_arr = assignment_pair.row_assignment
+            column_arr = assignment_pair.column_assignment
+            subnet_arr = self.target_arr[row_arr, :]
+            subnet_arr = subnet_arr[:, column_arr]
+            subnet_column_sum_arr = np.sum(np.abs(subnet_arr), axis=0)
+            if not np.all(subnet_column_sum_arr == target_column_sum_arr[column_arr]):
+                continue
+            else:
+                filtered_assignment_pairs.append(assignment_pair)
+        return filtered_assignment_pairs
