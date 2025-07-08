@@ -24,7 +24,9 @@ INVALID_ASSIGNMENT_PAIR = AssignmentPair(row_assignment=[0, 1], column_assignmen
 # Tests
 #############################
 class TestAssignmentEvaluatorWorker(unittest.TestCase):
-
+    """
+    Test the constructor of the AssignmentEvaluatorWorker class.
+    """
     def setUp(self):
         self.worker = AssignmentEvaluatorWorker(REFERENCE_ARR, TARGET_ARR, 1000)
 

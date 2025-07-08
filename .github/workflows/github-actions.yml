@@ -2,7 +2,8 @@ name: Continous integration
 on: [push]
 jobs:
   Run-tests:
-    runs-on: ubuntu-latest
+    #runs-on: ubuntu-latest
+    runs-on: windows-latest # Changed from ubuntu-latest to windows-latest
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python 3.9
@@ -10,7 +11,8 @@ jobs:
       with:
           python-version: '3.9'
       env:
-          AGENT_TOOLSDIRECTORY: /opt/hostedtoolcache
+          #AGENT_TOOLSDIRECTORY: /opt/hostedtoolcache
+          AGENT_TOOLSDIRECTORY: C:\hostedtoolcache\ # Updated path for Windows
     - name: Install
       run: |
         pip install --upgrade pip
