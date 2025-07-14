@@ -10,7 +10,6 @@ pandas
 pip>20
 pylint
 python-libsbml
-pynauty
 sbmlnetwork
 seaborn
 simplesbml

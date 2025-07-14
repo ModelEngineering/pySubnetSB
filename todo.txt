@@ -1,2 +1,2 @@
-1. Better repo - coverage bade
-2. Bug: Assignments for reaction must check that all of the target species for a reaction are present. A missing target species means that I'm not looking at the full reaction.
+Eliminate pynauty and test
+Verify on windows

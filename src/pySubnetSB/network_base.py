@@ -15,7 +15,6 @@ import json
 import numpy as np
 import os
 import pandas as pd  # type: ignore
-from pynauty import Graph  # type: ignore
 import tellurium as te  # type: ignore
 from typing import Optional, Tuple, Any, Union
 
@@ -777,6 +776,7 @@ class NetworkBase(object):
         Returns:
             Graph: Pynauty graph
         """
+        from pynauty import Graph  # type: ignore
         graph_descriptor = self.getGraphDescriptor(identity=identity)
         vertex_dct = graph_descriptor.vertex_dct
         graph = Graph(len(vertex_dct.keys()), directed=True)

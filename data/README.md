@@ -34,3 +34,12 @@ Induced network data ("subnet") originate from ``scripts/find_biomodels_subnet.p
   * ``probability_of_occurrence`` (Probability)
 * ``biomodels_serialized.txt``: serialization file for BioModels in format used in APIs. Each line is a serialization for a model. Lines can be added and/or deleted.
 * ``oscillators_serialized.txt``: serialization file for oscillators in same format as ``biomodels_serialized.txt``.
+# Excluded Models
+We attempt to process all 998 SBML models in the BioModels curated branch present on December 15, 2024
+(as listed in the file ``./data/biomodels_serialized.txt``).
+However, some models could not be processed either becauses of difficulties with reproducibility or because the number of mapping pairs for the target exceeded the limit of mapping pairs used in our analysis (10**12). The excluded models are:
+ BIOMD0000000192, BIOMD0000000394, BIOMD0000000433, BIOMD0000000442,BIOMD0000000432, BIOMD0000000441, BIOMD0000000440,
+      BIOMD0000000668, BIOMD0000000690, BIOMD0000000689, BIOMD0000000038, BIOMD0000000639,
+      BIOMD0000000084, BIOMD0000000296, BIOMD0000000719,  BIOMD0000000915,  BIOMD0000001015, BIOMD0000001009, BIOMD0000000464,
+      BIOMD0000000464,  BIOMD0000000979, BIOMD0000000980,
+      BIOMD0000000987, BIOMD0000000284, BIOMD0000000080

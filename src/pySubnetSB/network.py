@@ -135,8 +135,7 @@ class Network(NetworkBase):
         return Network(self.reactant_nmat.values.copy(), self.product_nmat.values.copy(),
                         network_name=self.network_name,
                         reaction_names=self.reaction_names,
-                        species_names=self.species_names,
-                        criteria_vector=self.criteria_vector)
+                        species_names=self.species_names)
     
     def isIsomorphic(self, target:'Network')->bool:
         """Using pynauty to detect isomorphism of reaction networks.
