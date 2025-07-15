@@ -10,7 +10,6 @@ from pySubnetSB.assignment_evaluator import AssignmentEvaluator  # type: ignore
 from src.pySubnetSB.performance_monitor import PerformanceMonitor  # type: ignore
 
 from memory_profiler import profile  # type: ignore
-import pynauty  # type: ignore
 import numpy as np
 from typing import Optional, List, Tuple, Union
 
@@ -146,6 +145,7 @@ class Network(NetworkBase):
         Returns:
             bool
         """
+        import pynauty  # type: ignore
         self_graph = self.makePynautyNetwork()
         target_graph = target.makePynautyNetwork()
         return pynauty.isomorphic(self_graph, target_graph)
