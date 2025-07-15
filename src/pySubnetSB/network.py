@@ -24,12 +24,12 @@ class StructuralAnalysisResult(object):
     # Auxiliary object returned by isStructurallyIdentical
 
     def __init__(self,
-                 assignment_pairs:list[AssignmentPair],
-                 is_truncated:Optional[bool]=False,
-                 num_species_candidate:int=-1,
-                 num_reaction_candidate:int=-1,
-                 network:Optional['Network']=None,
-                 )->None:
+            assignment_pairs:list[AssignmentPair],
+            is_truncated:Optional[bool]=False,
+            num_species_candidate:int=-1,
+            num_reaction_candidate:int=-1,
+            network:Optional['Network']=None,
+            )->None:
         """
         Args:
             assignment_pairs (list[AssignmentPair]): List of assignment pairs.

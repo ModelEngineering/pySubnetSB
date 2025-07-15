@@ -49,7 +49,7 @@ class NetworkBase(object):
         if not np.all(reactant_arr.shape == product_arr.shape):
             raise ValueError("Reactant and product matrices must have the same shape.")
         try:
-            self.num_species, self.num_reaction = np.shape(reactant_arr)
+            self.num_species, self.num_reaction = np.shape(reactant_arr)  # type: ignore
         except:
             # Empty network
             self.num_species = 0
@@ -65,15 +65,15 @@ class NetworkBase(object):
         self.current_species_names = species_names
         self.current_reaction_names = reaction_names
         #
-        self.reactant_nmat = NamedMatrix(self.reactant_arr,
-              row_names=self.current_species_names, column_names=self.current_reaction_names,
-              row_description="species", column_description="reactions")
+        self.reactant_nmat = NamedMatrix(self.reactant_arr,  # type: ignore
+                row_names=self.current_species_names, column_names=self.current_reaction_names,
+                row_description="species", column_description="reactions")
         self.product_nmat = NamedMatrix(self.product_arr,
-              row_names=self.current_species_names, column_names=self.current_reaction_names,
-              row_description="species", column_description="reactions")
+                row_names=self.current_species_names, column_names=self.current_reaction_names,
+                row_description="species", column_description="reactions")
         self.standard_nmat = NamedMatrix(self.product_arr - self.reactant_arr,
-              row_names=self.current_species_names,
-              column_names=self.current_reaction_names, row_description="species", column_description="reactions")
+                row_names=self.current_species_names,
+                column_names=self.current_reaction_names, row_description="species", column_description="reactions")
         #
         self._species_names = self.current_species_names
         self._reaction_names = self.current_reaction_names
@@ -940,5 +940,5 @@ class NetworkBase(object):
         product_arr = self.product_nmat.values[species_assignment, :]
         reactant_arr = reactant_arr[:, reaction_assignment]
         product_arr = product_arr[:, reaction_assignment]
-        return self.__class__(reactant_arr, product_arr, reaction_names=self.reaction_names[reaction_assignment],
+        return self.__class__(reactant_arr, product_arr, reaction_names=self.reaction_names[reaction_assignment],  # type: ignore
                         species_names=self.species_names[species_assignment])

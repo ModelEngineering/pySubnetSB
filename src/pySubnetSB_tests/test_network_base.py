@@ -6,12 +6,13 @@ from pySubnetSB import util # type: ignore
 from pySubnetSB.assignment_pair import AssignmentPair # type: ignore
 
 import os
-from pynauty import Graph  # type: ignore
+#from pynauty import Graph  # type: ignore
 import matplotlib.pyplot as plt
 import numpy as np
 import copy
 import tellurium as te  # type: ignore
 import unittest
+from typing import cast
 
 
 IGNORE_TEST = False
@@ -84,7 +85,7 @@ NETWORK = NetworkBase.makeFromAntimonyStr(NETWORK1, network_name=NETWORK_NAME)
 class TestNetwork(unittest.TestCase):
 
     def setUp(self):
-        self.network = copy.deepcopy(NETWORK)
+        self.network = cast(NetworkBase, copy.deepcopy(NETWORK))
 
     @util.timeit
     def testConstrutor(self):
@@ -107,7 +108,7 @@ class TestNetwork(unittest.TestCase):
     def testIsMatrixEqual(self):
         if IGNORE_TEST:
             return
-        network = NetworkBase.makeFromAntimonyStr(NETWORK1, network_name=NETWORK_NAME)
+        network = cast(NetworkBase, NetworkBase.makeFromAntimonyStr(NETWORK1, network_name=NETWORK_NAME))
         network3 = NetworkBase.makeFromAntimonyStr(NETWORK3, network_name=NETWORK_NAME)
         self.assertTrue(network.isMatrixEqual(network3, identity=cn.ID_WEAK))
         self.assertFalse(network.isMatrixEqual(network3, identity=cn.ID_STRONG))
@@ -121,7 +122,7 @@ class TestNetwork(unittest.TestCase):
         def test(size, num_iteration=500):
             reactant_arr = np.random.randint(0, 3, (size, size))
             product_arr = np.random.randint(0, 3, (size, size))
-            network = NetworkBase(reactant_arr, product_arr)
+            network = NetworkBase(reactant_arr, product_arr)  # type: ignore
             for _ in range(num_iteration):
                 new_network, assignment_pair = network.permute()
                 if network == new_network:
@@ -157,10 +158,10 @@ class TestNetwork(unittest.TestCase):
     def testIsStructurallyCompatible(self):
         if IGNORE_TEST:
             return
-        network1 = NetworkBase.makeFromAntimonyStr(NETWORK1, network_name=NETWORK_NAME)
-        network2 = NetworkBase.makeFromAntimonyStr(NETWORK2, network_name=NETWORK_NAME)
-        network3 = NetworkBase.makeFromAntimonyStr(NETWORK3, network_name=NETWORK_NAME)
-        network4 = NetworkBase.makeFromAntimonyStr(NETWORK4, network_name=NETWORK_NAME)
+        network1 = cast(NetworkBase, NetworkBase.makeFromAntimonyStr(NETWORK1, network_name=NETWORK_NAME))
+        network2 = cast(NetworkBase, NetworkBase.makeFromAntimonyStr(NETWORK2, network_name=NETWORK_NAME))
+        network3 = cast(NetworkBase, NetworkBase.makeFromAntimonyStr(NETWORK3, network_name=NETWORK_NAME))
+        network4 = cast(NetworkBase, NetworkBase.makeFromAntimonyStr(NETWORK4, network_name=NETWORK_NAME))
         self.assertFalse(network1.isStructurallyCompatible(network4))
         self.assertTrue(network1.isStructurallyCompatible(network2))
         self.assertTrue(network1.isStructurallyCompatible(network3, identity=cn.ID_WEAK))
@@ -169,7 +170,7 @@ class TestNetwork(unittest.TestCase):
     def testPrettyPrintReaction(self):
         if IGNORE_TEST:
             return
-        network = NetworkBase.makeFromAntimonyStr(NETWORK3, network_name="Network3")
+        network = cast(NetworkBase, NetworkBase.makeFromAntimonyStr(NETWORK3, network_name="Network3"))
         stg = network.prettyPrintReaction(0)
         self.assertTrue("2.0 S1 -> 2.0 S1 + S2" in stg)
 
@@ -193,8 +194,8 @@ class TestNetwork(unittest.TestCase):
         size = 3
         species_names = ["S1", "S5", "S10"]
         reaction_names = ['JJ1', 'JJ2', 'JJ3']
-        network = NetworkBase.makeRandomNetworkByReactionType(size, species_names=species_names,
-              reaction_names=reaction_names, is_exact=True)
+        network = NetworkBase.makeRandomNetworkByReactionType(size, species_names=species_names,  # type: ignore
+                reaction_names=reaction_names, is_exact=True)  # type: ignore
         self.assertEqual(len(species_names), network.num_species)
         for species_name in species_names:
             self.assertTrue(species_name in network.species_names)
@@ -283,6 +284,7 @@ class TestNetwork(unittest.TestCase):
             self.assertLessEqual(filled_network.num_species, network.num_species + fill_size)
             self.assertEqual(filled_network.num_reaction, network.num_reaction + fill_size)
         #
+        network = NetworkBase.makeRandomNetworkByReactionType(5, 5)
         with self.assertRaises(ValueError):
             network.fill(num_fill_reaction=0, num_fill_species=0)
 
@@ -297,7 +299,7 @@ class TestNetwork(unittest.TestCase):
             k1 = 0.1; k2 = 0.2
             A = 0; B = 0
         """
-        network = NetworkBase.makeFromAntimonyStr(boundary_network)
+        network = cast(NetworkBase, NetworkBase.makeFromAntimonyStr(boundary_network))
         self.assertTrue(network.isBoundaryNetwork())
         #
         boundary_network = """
@@ -307,21 +309,21 @@ class TestNetwork(unittest.TestCase):
             k1 = 0.1; k2 = 0.2
             A = 0; B = 0
         """
-        network = NetworkBase.makeFromAntimonyStr(boundary_network)
+        network = cast(NetworkBase, NetworkBase.makeFromAntimonyStr(boundary_network))
         self.assertFalse(network.isBoundaryNetwork())
 
     def testMakeFromAntimonyStrRoadrunner(self):
         if IGNORE_TEST:
             return
         roadrunner = te.loada(BIG_NETWORK)
-        network = NetworkBase.makeFromAntimonyStr(None, roadrunner=roadrunner)
+        network = cast(NetworkBase, NetworkBase.makeFromAntimonyStr(None, roadrunner=roadrunner))  # type: ignore
         self.assertGreater(network.num_species, 0)
 
     def testMakeFromSBMLFile(self):
         if IGNORE_TEST:
             return
         PATH = os.path.join(cn.TEST_DIR, "xml_files/BIOMD0000000033.xml")
-        network = NetworkBase.makeFromSBMLFile(PATH)
+        network = cast(NetworkBase, NetworkBase.makeFromSBMLFile(PATH))
         self.assertGreater(network.num_species, 0)
 
     def testMakeInducedNetwork(self):
