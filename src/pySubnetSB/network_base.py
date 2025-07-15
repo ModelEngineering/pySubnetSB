@@ -23,7 +23,7 @@ Edge = collections.namedtuple('Edge', ['source', 'destination'])
 GraphDescriptor = collections.namedtuple('GraphDescriptor', ['vertex_dct', 'label_dct'])
 ConstraintPair = collections.namedtuple('ConstraintPair', ['reaction', 'species'])
 ReferenceAndTargetResult = collections.namedtuple('ReferenceAndTargetResult',
-      ['reference_network', 'target_network'])
+        ['reference_network', 'target_network'])
 
 
 class NetworkBase(object):
@@ -765,7 +765,7 @@ class NetworkBase(object):
 
         return GraphDescriptor(vertex_dct=vertex_dct, label_dct=label_dct)
 
-    def makePynautyNetwork(self, identity=cn.ID_STRONG)->Graph:
+    def makePynautyNetwork(self, identity=cn.ID_STRONG):
         """
         Make a pynauty graph from the network. Species are indices 0 to num_species - 1 and reactions are
         indices num_species to num_species + num_reaction - 1.
