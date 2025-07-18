@@ -2,13 +2,15 @@ name: Continous integration
 on: [push]
 jobs:
   Run-tests:
-    runs-on: ubuntu-latest
+    #runs-on: ubuntu-latest
+    runs-on: Ubuntu 22.04
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python 3.9
       uses: actions/setup-python@v4
       with:
-          python-version: '3.9'
+          #python-version: '3.9'
+          python-version: '3.12'
       env:
           AGENT_TOOLSDIRECTORY: /opt/hostedtoolcache
     - name: Install
