@@ -7,7 +7,7 @@ from pySubnetSB.reaction_constraint import ReactionConstraint  # type: ignore
 from pySubnetSB.species_constraint import SpeciesConstraint   # type: ignore
 from pySubnetSB.network_base import NetworkBase, AssignmentPair  # type: ignore
 from pySubnetSB.assignment_evaluator import AssignmentEvaluator  # type: ignore
-from src.pySubnetSB.performance_monitor import PerformanceMonitor  # type: ignore
+from pySubnetSB.performance_monitor import PerformanceMonitor  # type: ignore
 
 import numpy as np # type: ignore
 from typing import Optional, List, Tuple, Union

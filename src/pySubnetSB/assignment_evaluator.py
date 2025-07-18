@@ -30,7 +30,7 @@ from pySubnetSB.assignment_pair import AssignmentPair # type: ignore
 from pySubnetSB.assignment_evaluator_worker import AssignmentEvaluatorWorker, WorkerResult # type: ignore
 from pySubnetSB import constants as cn # type: ignore
 from pySubnetSB import util # type: ignore
-from src.pySubnetSB.performance_monitor import PerformanceMonitor # type: ignore
+from pySubnetSB.performance_monitor import PerformanceMonitor # type: ignore
 
 from concurrent.futures import ProcessPoolExecutor
 import numpy as np
