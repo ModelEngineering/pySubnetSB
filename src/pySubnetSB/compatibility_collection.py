@@ -5,7 +5,6 @@ import pySubnetSB.constants as cn # type: ignore
 from pySubnetSB.named_matrix import NamedMatrix # type: ignore
 from pySubnetSB import util # type: ignore
 
-from memory_profiler import profile  # type: ignore
 import itertools
 import numpy as np
 from typing import List, Tuple

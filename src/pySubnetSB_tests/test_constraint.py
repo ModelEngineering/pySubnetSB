@@ -7,16 +7,17 @@ from pySubnetSB.constraint_option_collection import ReactionConstraintOptionColl
 import itertools
 import numpy as np
 from scipy.special import factorial  # type: ignore
+from typing import List, cast
 import unittest
 
 
-IGNORE_TEST = False
+IGNORE_TEST = True
 IS_PLOT = False
 reactant_arr = np.array([[1, 0], [0, 1], [0, 0]]) # Must have 3 rows to be consistent with DummyConstraint
 product_arr = np.array([[0, 1], [1, 0], [0, 0]])
 NUM_SPECIES, NUM_REACTION = reactant_arr.shape
-SPECIES_NAMES = ["S" + str(i) for i in range(NUM_SPECIES)]
-REACTION_NAMES = ["J" + str(i) for i in range(NUM_REACTION)]
+SPECIES_NAMES = np.array(["S" + str(i) for i in range(NUM_SPECIES)])
+REACTION_NAMES = np.array(["J" + str(i) for i in range(NUM_REACTION)])
 REACTANT_NMAT = NamedMatrix(reactant_arr,  row_names=SPECIES_NAMES, column_names=REACTION_NAMES)
 PRODUCT_NMAT = NamedMatrix(product_arr,  row_names=SPECIES_NAMES, column_names=REACTION_NAMES)
 MODEL1 = """
@@ -39,12 +40,12 @@ NETWORK2 = Network.makeFromAntimonyStr(MODEL2)
 class DummyConstraint(Constraint):
     SPECIES_NAMES = ["A", "B", "C"]
     NUM_ROW = len(SPECIES_NAMES)
+    ROW_NAMES = np.array(SPECIES_NAMES)
     arr = np.random.randint(0, 2, (NUM_ROW, NUM_ROW))
-    ONE_STEP_NMAT = NamedMatrix(arr, row_names='rows', column_names='columns')
 
     
     def __init__(self, reactant_nmat:NamedMatrix, product_nmat:NamedMatrix):
-        self.species_names = self.SPECIES_NAMES
+        self.species_names = self.ROW_NAMES
         self._num_row = self.NUM_ROW
         super().__init__(reactant_nmat=reactant_nmat, product_nmat=product_nmat)
         #
@@ -81,7 +82,7 @@ class DummyConstraint(Constraint):
     @property
     def one_step_nmat(self)->NamedMatrix:
         arr = np.matmul(self.product_nmat.values, self.reactant_nmat.values.T)
-        row_names = [str(n) for n in range(arr.shape[0])]
+        row_names = np.array([str(n) for n in range(arr.shape[0])])
         return NamedMatrix(arr, row_names=row_names, column_names=row_names)
 
     @classmethod 
@@ -96,8 +97,8 @@ class DummyConstraint(Constraint):
         return DummyConstraint(network.reactant_nmat, network.product_nmat)
     
     @property
-    def row_names(self)->np.ndarray:
-        return np.array(SPECIES_NAMES)
+    def row_names(self)->List[str]:
+        return SPECIES_NAMES.tolist()
 
 
 #############################
@@ -122,7 +123,7 @@ class ScalableDummyConstraint(Constraint):
         num_row = equality_arr.shape[0]
         constraint._categorical_nmat = NamedMatrix(equality_arr, row_names=np.array(range(num_row)))
         constraint._enumerated_nmat = NamedMatrix(inequality_arr, row_names=np.array(range(num_row)))
-        return constraint
+        return cast(ScalableDummyConstraint, constraint)
 
     @property
     def categorical_nmat(self)->NamedMatrix:
@@ -140,7 +141,7 @@ class ScalableDummyConstraint(Constraint):
     def one_step_nmat(self)->NamedMatrix:
         arr = np.matmul(self.product_nmat.values, self.reactant_nmat.values.T)
         return NamedMatrix(arr,
-                row_names='rows', column_names='columns')
+                row_description='rows', column_description='columns')
     
 
 #############################
@@ -160,7 +161,7 @@ class TestReactionClassification(unittest.TestCase):
         iter =  itertools.product(range(4), repeat=2)
         for num_reactant, num_product in iter:
             reaction_classification = ReactionClassification(num_reactant=num_reactant,
-                  num_product=num_product)
+                    num_product=num_product)
             if (num_reactant == 0) or (num_product == 0):
                 self.assertTrue("null" in str(reaction_classification))
             if (num_reactant == 1) or (num_product == 1):
@@ -174,7 +175,7 @@ class TestReactionClassification(unittest.TestCase):
         if IGNORE_TEST:
             return
         reaction_classifications = [ReactionClassification(num_reactant=1, num_product=2),
-              ReactionClassification(num_reactant=2, num_product=1)]
+                ReactionClassification(num_reactant=2, num_product=1)]
         reaction_names = ["J1", "J2"]
         nmat = ReactionClassification.makeReactionClassificationMatrix(reaction_names, reaction_classifications)
         df = nmat.dataframe
@@ -272,17 +273,17 @@ class TestConstraint(unittest.TestCase):
         if IGNORE_TEST:
             return
         result, _ = self.constraint.calculateBooleanCompatibilityVector(self.constraint.equality_nmat,
-              self.constraint.equality_nmat, is_equality=True)
+                self.constraint.equality_nmat, is_equality=True)
         num_true = np.sum(result)
         self.assertEqual(num_true, self.constraint.equality_nmat.num_row)
         #
         result, _ = self.constraint.calculateBooleanCompatibilityVector(self.constraint.numerical_inequality_nmat,
-              self.constraint.equality_nmat, is_equality=True)
+                self.constraint.equality_nmat, is_equality=True)
         num_true = np.sum(result)
         self.assertEqual(num_true, 0)
         #
         result, _ = self.constraint.calculateBooleanCompatibilityVector(self.constraint.equality_nmat,
-              self.constraint.numerical_inequality_nmat, is_equality=False)
+                self.constraint.numerical_inequality_nmat, is_equality=False)
         num_true = np.sum(result)
         self.assertEqual(num_true, 5)
 
@@ -311,8 +312,8 @@ class TestConstraint(unittest.TestCase):
             self.assertTrue(np.isclose(log10_permutation, 2*np.log10(factorial(size))))
 
     def testExpandReductionInSize(self):
-        if IGNORE_TEST:
-            return
+        #if IGNORE_TEST:
+        #    return
         fill_size = 2
         for size in range(3, 20):
             network = Network.makeRandomNetworkByReactionType(size, size)

@@ -33,7 +33,6 @@ from pySubnetSB import util # type: ignore
 from src.pySubnetSB.performance_monitor import PerformanceMonitor # type: ignore
 
 from concurrent.futures import ProcessPoolExecutor
-from memory_profiler import profile  # type: ignore
 import numpy as np
 import multiprocessing as mp
 from typing import Union, Tuple, Optional, List

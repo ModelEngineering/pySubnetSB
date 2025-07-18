@@ -158,8 +158,8 @@ class Constraint(object):
         """
         def calculatePermutation(num_reference:int, num_target:int)->int:
             result = scipy.special.factorial(num_target) /  \
-                  scipy.special.factorial(num_target - num_reference, exact=True)
-            return result
+                    scipy.special.factorial(num_target - num_reference, exact=True)
+            return int(result)
         log_permutation = np.log10(calculatePermutation(reference_size, target_size))
         return 2*log_permutation
     

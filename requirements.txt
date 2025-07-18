@@ -1,13 +1,14 @@
 numpy
+brotli
 build
 coverage
 coverage-badge
 jupyterlab
 matplotlib
-memory_profiler
+#memory_profiler
 nose2
 pandas
-pip>20
+pip
 pylint
 python-libsbml
 sbmlnetwork
