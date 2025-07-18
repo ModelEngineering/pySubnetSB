@@ -5,13 +5,13 @@ from pySubnetSB.reaction_constraint import ReactionConstraint  # type: ignore
 from pySubnetSB.constraint_option_collection import ReactionConstraintOptionCollection  # type: ignore
 
 import itertools
-import numpy as np
+import numpy as np  # type: ignore
 from scipy.special import factorial  # type: ignore
 from typing import List, cast
 import unittest
 
 
-IGNORE_TEST = True
+IGNORE_TEST = False
 IS_PLOT = False
 reactant_arr = np.array([[1, 0], [0, 1], [0, 0]]) # Must have 3 rows to be consistent with DummyConstraint
 product_arr = np.array([[0, 1], [1, 0], [0, 0]])
@@ -312,8 +312,8 @@ class TestConstraint(unittest.TestCase):
             self.assertTrue(np.isclose(log10_permutation, 2*np.log10(factorial(size))))
 
     def testExpandReductionInSize(self):
-        #if IGNORE_TEST:
-        #    return
+        if IGNORE_TEST:
+            return
         fill_size = 2
         for size in range(3, 20):
             network = Network.makeRandomNetworkByReactionType(size, size)
