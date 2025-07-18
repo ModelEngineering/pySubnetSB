@@ -84,7 +84,7 @@ class TestClusterBuilder(unittest.TestCase):
             return
         # Construct a collection of two sets of permutably identical matrices
         def test(num_collection=2, num_network=5, num_species=15, num_reaction=15,
-                 identity=cn.ID_STRONG):
+                identity=cn.ID_STRONG):
             is_success = True
             for _ in range(5):  # Do multiple times to handle edge cases
                 # Make disjoint network collections, each of which is structurally identical
@@ -105,7 +105,7 @@ class TestClusterBuilder(unittest.TestCase):
                 builder.cluster()
                 num_builder_collection = len(builder.processed_network_collections)
                 if num_builder_collection >  num_collection:
-                    num_indeterminate = np.sum([b.in_determinate for b in builder.processed_network_collections])
+                    num_indeterminate = np.sum([b.is_indeterminate for b in builder.processed_network_collections])
                     if num_indeterminate == num_builder_collection - num_collection:
                         is_success = True
                 else:
@@ -128,7 +128,7 @@ class TestClusterBuilder(unittest.TestCase):
             return
         ARRAY_SIZE = 5
         network_collection = NetworkCollection.makeRandomCollection(num_species=ARRAY_SIZE,
-              num_reaction=ARRAY_SIZE, num_network=COLLECTION_SIZE)
+                num_reaction=ARRAY_SIZE, num_network=COLLECTION_SIZE)
         processed_networks = [ProcessedNetwork(network) for network in network_collection.networks]
         builder = ClusterBuilder(network_collection, is_report=IS_PLOT)
         for idx, processed_network in enumerate(processed_networks):

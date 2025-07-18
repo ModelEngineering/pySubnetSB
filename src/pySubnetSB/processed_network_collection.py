@@ -22,8 +22,8 @@ class ProcessedNetworkCollection(object):
     # Collection of networks that are structurally identical
 
     def __init__(self, processed_networks:List[ProcessedNetwork],
-                 identity:str=cn.ID_WEAK, hash_val:int=-1,
-                 antimony_directory:Optional[str]=None):
+                identity:str=cn.ID_WEAK, hash_val:int=-1,
+                antimony_directory:Optional[str]=None):
         self.processed_networks = processed_networks  # type: ignore
         self.identity = identity
         self.hash_val = hash_val
