@@ -19,6 +19,7 @@ jobs:
     - name: Run script
       run: |
         ipython examples/api_basics.py
+  #
   Run-310:
     runs-on: ubuntu-latest
     steps:
@@ -32,11 +33,12 @@ jobs:
     - name: Install
       run: |
         pip install --upgrade pip
-        pip install -r requirements.txt
-    - name: Run notebook
+        pip install jupyterlab
+        pip install pySubnetSB
+    - name: Run script
       run: |
-        python scripts/make_example_script.py
         ipython examples/api_basics.py
+  #
   Run-312:
     runs-on: ubuntu-latest
     steps:
@@ -50,8 +52,8 @@ jobs:
     - name: Install
       run: |
         pip install --upgrade pip
-        pip install -r requirements.txt
-    - name: Run notebook
+        pip install jupyterlab
+        pip install pySubnetSB
+    - name: Run script
       run: |
-        python scripts/make_example_script.py
         ipython examples/api_basics.py
