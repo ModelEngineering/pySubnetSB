@@ -32,10 +32,10 @@ jobs:
     - name: Install
       run: |
         pip install --upgrade pip
-        pip install -r requirements.txt
-    - name: Run notebook
+        pip install jupyterlab
+        pip install pySubnetSB
+    - name: Run script
       run: |
-        python scripts/make_example_script.py
         ipython examples/api_basics.py
   Run-312:
     runs-on: ubuntu-latest
@@ -50,8 +50,8 @@ jobs:
     - name: Install
       run: |
         pip install --upgrade pip
-        pip install -r requirements.txt
-    - name: Run notebook
+        pip install jupyterlab
+        pip install pySubnetSB
+    - name: Run script
       run: |
-        python scripts/make_example_script.py
         ipython examples/api_basics.py
