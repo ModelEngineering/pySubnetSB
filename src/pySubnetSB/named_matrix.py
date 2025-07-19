@@ -68,10 +68,10 @@ class NamedMatrix(Matrix):
                 return pd.DataFrame()
             self._dataframe = pd.DataFrame(reduced_named_matrix.values)
             if len(reduced_named_matrix.row_names.shape) == 1:
-                self._dataframe.index = reduced_named_matrix.row_names
+                self._dataframe.index = reduced_named_matrix.row_names  # type: ignore
             if len(reduced_named_matrix.column_names.shape) == 1:
                 self._dataframe.columns = reduced_named_matrix.column_names
-            self._dataframe.index.name = self.row_description
+            self._dataframe.index.name = self.row_description  # type: ignore
             self._dataframe.columns.name = self.column_description
         return self._dataframe
     
@@ -103,14 +103,14 @@ class NamedMatrix(Matrix):
                 return False
         return True
 
-    def _deleteZeroRowsColumns(self)->'NamedMatrix':
+    def _deleteZeroRowsColumns(self)->np.ndarray:
         """
         Delete rows and columns that are all zeros.
 
         Returns:
             NamedMatrix: New NamedMatrix with zero rows and columns removed.
         """
-        def findIndices(matrix: np.ndarray)->np.ndarray[int]:  # type: ignore
+        def findIndices(matrix: np.ndarray)->np.ndarray:
             # Finds inidices of non-zero rows
             indices = []   # Indices to delete
             for idx, array in enumerate(matrix):
@@ -401,7 +401,7 @@ class NamedMatrix(Matrix):
         Returns:
             NamedMatrix
         """
-        def extend(named_matrix:'NamedMatrix', name_arr:List[str])->'NamedMatrix':
+        def extend(named_matrix:'NamedMatrix', name_arr:np.ndarray)->'NamedMatrix':
             # Add missing rows; sort in order by row names
             row_names = list(name_arr)
             missing_row_names = list(set(row_names) - set(named_matrix.row_names))
@@ -416,7 +416,7 @@ class NamedMatrix(Matrix):
             permutation = [current_row_names.index(n) for n in row_names]
             permuted_arr = arr[permutation, :]
             return NamedMatrix(permuted_arr, row_names=np.array(row_names), column_names=named_matrix.column_names,
-                  row_description=named_matrix.row_description, column_description=named_matrix.column_description)
+                    row_description=named_matrix.row_description, column_description=named_matrix.column_description)
         #
         if self.row_description != other.row_description:
             raise ValueError("Row descriptions must be the same!")
@@ -444,7 +444,7 @@ class NamedMatrix(Matrix):
         arr = arr[row_perm, :]
         arr = arr[:, column_perm]
         nmat = NamedMatrix(arr, self.row_names[row_perm], self.column_names[column_perm],
-                           row_description=self.row_description, column_description=self.column_description)
+                row_description=self.row_description, column_description=self.column_description)
         return RandomizeResult(named_matrix=nmat, row_perm=row_perm, column_perm=column_perm)
     
     def sort(self)->'NamedMatrix':

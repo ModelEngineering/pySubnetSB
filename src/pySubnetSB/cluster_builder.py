@@ -17,8 +17,8 @@ class ClusterBuilder(object):
     # Builds ClusterNetworks from a NetworkCollection based on their structural identity
 
     def __init__(self, network_collection:NetworkCollection, is_report=True,
-                 max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT, is_sirn:bool=True,
-                 identity:str=cn.ID_WEAK):
+            max_num_assignment:int=cn.MAX_NUM_ASSIGNMENT, is_sirn:bool=True,
+            identity:str=cn.ID_WEAK):
         """
         Args:
             network_collection (NetworkCollection): Collection of networks to cluster
@@ -140,7 +140,7 @@ class ClusterBuilder(object):
                 processed_network.addProcessingTime(time.process_time() - start_time)
                 if is_selected:
                     processed_network.setIndeterminate(False)
-                    processed_network.setAssignmentCollection(result.assignment_pairs)
+                    processed_network.setAssignmentCollection(result.assignment_pairs)  # type: ignore
                 else:
                     # Not structurally identical to any ProcessedNetworkCollection with this hash.
                     # Create a new ProcessedNetworkCollection for this hash.
@@ -169,23 +169,9 @@ class ClusterBuilder(object):
         df = pd.DataFrame(dct)
         # Augment the dataframe
         df.attrs = {cn.STRUCTURAL_IDENTITY: self.identity,
-                       cn.NUM_HASH: self.num_hash,
-                       cn.MAX_HASH: self.max_hash}
+                cn.NUM_HASH: self.num_hash,
+                cn.MAX_HASH: self.max_hash}
         return df
-    
-    @classmethod
-    def deserializeProcessedNetworkCollections(cls, df:pd.DataFrame)->List[ProcessedNetworkCollection]:
-        """
-        Deserializes the clustering result.
-
-        Args:
-            df (pd.DataFrame): Serialized data
-
-        Returns:
-            ClusterBuilder: Deserialized data
-        """
-        return [ProcessedNetworkCollection.makeFromRepr(repr_str)
-                                         for repr_str in df.processed_network_repr.values]
     
     def makeNetworkFromProcessedNetwork(self, processed_network:ProcessedNetwork)->Network:
         """
@@ -197,5 +183,4 @@ class ClusterBuilder(object):
         Returns:
             Network: _description_
         """
-        network_name = ProcessedNetwork.convertToNetworkName(processed_network)
-        return self.network_collection.network_dct[network_name]  
+        return self.network_collection.network_dct[processed_network.network_name]  
