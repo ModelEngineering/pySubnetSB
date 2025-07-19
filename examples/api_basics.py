@@ -33,7 +33,7 @@
 
 
 # Uncomment the pip install if you have not previously installed pySubnetSB
-# If the install has an error related to dependency resolution, run this cell again.
+# If the install has an error related to dependency resolution, do "restart and runall"
 #!pip install -q pySubnetSB
 
 
@@ -118,6 +118,7 @@ def main():
     
     # In[8]:
     
+    
     result.mapping_pairs
     
     
@@ -163,10 +164,14 @@ def main():
     
     # This takes about 10 minutes to run on Colab. If you are in a local environment,
     #   set num_process=-1 so that parallel processing can be used. Parallel processing causes problems in Colab.
-    rr = te.loadSBMLModel(URL)
-    result = findReferenceInTarget(reference_model, ModelSpecification(rr, specification_type="roadrunner"), 
-            max_num_mapping_pair=1e14, is_subnet=True, num_process=-1,
-            identity=cn.ID_WEAK, is_report=IS_PLOT)
+    result = findReferenceInTarget(
+            reference_model,                                        # Reference model as an Antimony string
+            ModelSpecification(URL, specification_type="sbmlurl"),  # Target as a URL in BioModels
+            max_num_mapping_pair=1e14,                              # Maximum number of mapping pairs considered
+            is_subnet=True,                                         # Checking for subnet, not equality
+            num_process=1,                                          # No process parallelism
+            identity=cn.ID_WEAK,                                    # Look for weak identity
+            is_report=IS_PLOT)                                      # Provide status information
     
     
     # We can see all of the mappings of target species to reference speces and target reactions to reference reactions.
@@ -189,7 +194,7 @@ def main():
     
     # We illustrate below the use of the keyword parameter ``max_num_mapping_pair``, which controls the maximum number of mapping pairs that will be evaluated. If it is set too small, then ``result.is_truncated`` will be True, indicatilng that mapping pairs exist but were not evaluated.
     
-    # In[21]:
+    # In[15]:
     
     
     # Runs fast because is_truncated is True
@@ -199,7 +204,7 @@ def main():
             identity=cn.ID_WEAK, is_report=IS_PLOT)
     
     
-    # In[22]:
+    # In[16]:
     
     
     result.is_truncated
@@ -212,7 +217,7 @@ def main():
     # 
     # A serialization of biomodels is [here](http://raw.githubusercontent.com/ModelEngineering/pySubnetSB/main/data/biomodels_serialized.txt).
     
-    # In[15]:
+    # In[17]:
     
     
     reference_url = "http://raw.githubusercontent.com/ModelEngineering/pySubnetSB/main/examples/reference_serialized.txt"
@@ -229,7 +234,7 @@ def main():
     # * num_mapping_pair: number of mapping pairs
     # * is_truncated: True if the search was truncated because it exceeded the parameter max_num_mapping_pair
     
-    # In[16]:
+    # In[18]:
     
     
     result_df
@@ -240,14 +245,14 @@ def main():
     # You can serialize models to facilitate using ``pySubnetSB``.
     # This is illustrated in the following cells.
     
-    # In[17]:
+    # In[19]:
     
     
     # Clone pySubnetSB to get a directory of files to serialize
     get_ipython().system('git clone https://github.com/ModelEngineering/pySubnetSB.git')
     
     
-    # In[18]:
+    # In[20]:
     
     
     # Establish the paths for serialization. The results will be in the file serialization.txt
@@ -257,7 +262,7 @@ def main():
     makeSerializationFile(directory, serialization_path, is_report=IS_PLOT)
     
     
-    # In[19]:
+    # In[21]:
     
     
     # Display the first line of the serialization file. Each network is a separate line. Lines can be appended or deleted.
@@ -267,7 +272,7 @@ def main():
         print(lines[0])
     
     
-    # In[20]:
+    # In[22]:
     
     
     # Clean up the cloned repository
