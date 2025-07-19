@@ -20,7 +20,8 @@ class ConstraintOptionCollection(object):
         """
         self.__dict__.update(kwargs)
         self.option_names = list(kwargs.keys())
-        self.long_to_short_dct = {n: self.short_names[i] for i, n in enumerate(self.option_names)}
+        # short_names is defined in subclasses
+        self.long_to_short_dct = {n: self.short_names[i] for i, n in enumerate(self.option_names)} # type: ignore
         self.short_to_long_dct = {v: k for k, v in self.long_to_short_dct.items()}
         self.num_option = len(self.option_names)
 
@@ -42,7 +43,7 @@ class ConstraintOptionCollection(object):
     def __repr__(self)->str:
         return str(self.__class__) + ": " + ', '.join(self.getTrueNames())
     
-    def getTrueNames(self)->list[str]:
+    def getTrueNames(self)->List[str]:
         results:list = []
         for i, key in enumerate(self.option_names):
             if self.__dict__[key]:
@@ -122,7 +123,7 @@ class ConstraintOptionCollection(object):
         Iteratively returns an OptionCollection of the same type with all combinations of
         values for the boolean attributes.
         """
-        name_collections = util.getAllSubsets(self.short_names)
+        name_collections = util.getAllSubsets(self.short_names) # type: ignore
         for name_collection in name_collections:
             yield self.makeOptionFromShortNames(name_collection)
 

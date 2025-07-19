@@ -23,7 +23,7 @@ class StructuralAnalysisResult(object):
     # Auxiliary object returned by isStructurallyIdentical
 
     def __init__(self,
-            assignment_pairs:list[AssignmentPair],
+            assignment_pairs:List[AssignmentPair],
             is_truncated:Optional[bool]=False,
             num_species_candidate:int=-1,
             num_reaction_candidate:int=-1,
@@ -31,7 +31,7 @@ class StructuralAnalysisResult(object):
             )->None:
         """
         Args:
-            assignment_pairs (list[AssignmentPair]): List of assignment pairs.
+            assignment_pairs (List[AssignmentPair]): List of assignment pairs.
             is_trucnated (bool): True if the number of assignments exceeds the maximum number of assignments.
             num_species_candidate (int): Number of species candidates assignments
             num_reaction_candidate (int): Number of reaction candidates assignments.
