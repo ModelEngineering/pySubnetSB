@@ -27,9 +27,14 @@ pySubnetSB is installed using
 
 The package has been tested on linux (Ubuntu 22.04), Windows (Windows 10), and Mac OS (14.7.6). For each, tests were run for python 3.9, 3.10, 3.11, and 3.12.
 
-https://github.com/ModelEngineering/pySubnetSB/blob/main/examples/api_basics.ipynb is a Jupyter notebook that demonstrates pySubsetSB capabilities.
+https://github.com/ModelEngineering/pySubnetSB/blob/main/examples/api_basics.ipynb is a Jupyter notebook that demonstrates pySubsetSB capabilities. https://github.com/ModelEngineering/pySubnetSB/blob/main/examples/api_basics.py is a translation of this notebook into a Python program that can be downloaded and executed using
+
+    ipython api_basics.py
+
+(Note that you must use the ``jupyterlab`` command ``ipython`` because this is a tranlsated notebook.)
 
 # Version History
+* 1.0.7 7/20/2025  Finalized code and documentation
 * 1.0.6 7/19/2025  Workflows for Ubuntu, Windows, Macos and python 3.9,
                    3.10, 3.11, 3.12
 * 1.0.5 7/19/2025  Fix install issues with missing modules

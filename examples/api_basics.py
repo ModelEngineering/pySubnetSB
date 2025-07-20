@@ -57,7 +57,6 @@ print(pySubnetSB.__version__)
 
 
 IS_PLOT = True # Produce the plots. Do not remove.
-#IS_PLOT = False
 def main():
     
     

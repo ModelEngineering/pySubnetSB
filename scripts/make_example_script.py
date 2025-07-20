@@ -36,8 +36,6 @@ for string in strings:
     if not found_is_plot:
         continue
     if not in_function:
-        # Turn off plotting
-        write_strings.append("IS_PLOT = False")
         # Create the main funtion
         write_strings.append("def main():")
         in_function = True
