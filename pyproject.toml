@@ -5,7 +5,7 @@ description = "Python Subnet Discovery for Systems Biology"
 authors = [{ name = "Joseph Hellerstein", email = "joseph.hellerstein@gmail.com" }]
 license = { file = "LICENSE" }
 readme = "README.md"
-requires-python = ">=3.6"
+requires-python = ">=3.9"
 
 dependencies = [
 "numpy",
