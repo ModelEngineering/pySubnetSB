@@ -25,7 +25,7 @@ pySubnetSB is installed using
 
     pip install pySubnetSB
 
-and runs on python 3.9 and later.
+The package has been tested on linux (Ubuntu 22.04), Windows (Windows 10), and Mac OS. For each platform, tests were run for python 3.9, 3.10, 3.11, and 3.12.
 
 https://github.com/ModelEngineering/pySubnetSB/blob/main/examples/api_basics.ipynb is a Jupyter notebook that demonstrates pySubsetSB capabilities.
 
