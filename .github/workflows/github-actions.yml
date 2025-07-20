@@ -25,5 +25,5 @@ jobs:
         pip install pySubnetSB
     - name: Run notebook
       run: |
-        python scripts/make_example_script.py
+        #python scripts/make_example_script.py
         ipython examples/api_basics.py
