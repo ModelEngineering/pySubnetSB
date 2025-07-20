@@ -19,7 +19,7 @@ jobs:
         pip install pySubnetSB
     - name: Run script
       run: |
-        ipython examples/api_basics.py
+        ipython examples/api_basics_noplot.py
   #
   Run-310:
     runs-on: macos-latest
@@ -38,7 +38,7 @@ jobs:
         pip install pySubnetSB
     - name: Run script
       run: |
-        ipython examples/api_basics.py
+        ipython examples/api_basics_noplot.py
   #
   Run-311:
     runs-on: macos-latest
@@ -57,7 +57,7 @@ jobs:
         pip install pySubnetSB
     - name: Run script
       run: |
-        ipython examples/api_basics.py
+        ipython examples/api_basics_noplot.py
   #
   Run-312:
     runs-on: macos-latest
@@ -76,4 +76,4 @@ jobs:
         pip install pySubnetSB
     - name: Run script
       run: |
-        ipython examples/api_basics.py
+        ipython examples/api_basics_noplot.py

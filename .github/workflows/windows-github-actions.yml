@@ -18,7 +18,7 @@ jobs:
         pip install pySubnetSB
     - name: Run notebook
       run: |
-        ipython examples/api_basics.py
+        ipython examples/api_basics_noplot.py
   #
   Run-310:
     runs-on: windows-latest # Changed from ubuntu-latest to windows-latest
@@ -36,7 +36,7 @@ jobs:
         pip install pySubnetSB
     - name: Run notebook
       run: |
-        ipython examples/api_basics.py
+        ipython examples/api_basics_noplot.py
   #
   Run-311:
     runs-on: windows-latest # Changed from ubuntu-latest to windows-latest
@@ -54,7 +54,7 @@ jobs:
         pip install pySubnetSB
     - name: Run notebook
       run: |
-        ipython examples/api_basics.py
+        ipython examples/api_basics_noplot.py
   #
   Run-312:
     runs-on: windows-latest # Changed from ubuntu-latest to windows-latest
@@ -72,4 +72,4 @@ jobs:
         pip install pySubnetSB
     - name: Run notebook
       run: |
-        ipython examples/api_basics.py
+        ipython examples/api_basics_noplot.py
