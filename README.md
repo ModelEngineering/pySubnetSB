@@ -30,6 +30,8 @@ The package has been tested on linux (Ubuntu 22.04), Windows (Windows 10), and M
 https://github.com/ModelEngineering/pySubnetSB/blob/main/examples/api_basics.ipynb is a Jupyter notebook that demonstrates pySubsetSB capabilities.
 
 # Version History
+* 1.0.6 7/19/2025  Workflows for Ubuntu, Windows, Macos and python 3.9,
+                   3.10, 3.11, 3.12
 * 1.0.5 7/19/2025  Fix install issues with missing modules
 * 1.0.2 4/10/2025. ModelSpecification API accepts many kinds of model inputs, Antimony, SBML, roadrunner.
 * 1.0.1 4/09/2025. Improved generation of networks with subnets. Use "mapping_pair" in API. Bug fixes.
