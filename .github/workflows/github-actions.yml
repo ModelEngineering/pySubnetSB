@@ -1,7 +1,7 @@
 name: Continous integration
 on: [push]
 jobs:
-  Run-tests:
+  Run-unittests:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -20,6 +20,16 @@ jobs:
         cd src; nose2 --with-coverage pySubnetSB_tests
         coverage-badge -o coverage.svg
         cd ..
+  Run-package:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+          python-version: '3.9'
+      env:
+          AGENT_TOOLSDIRECTORY: /opt/hostedtoolcache
     - name: Install package
       run: |
         pip install pySubnetSB
