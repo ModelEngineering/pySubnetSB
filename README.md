@@ -158,6 +158,7 @@ You should see output similar to the following:
 
 
 # Version History
+* 1.0.8 7/21/2025  Improved example for using pySubnetSB and revised github actions workflows.
 * 1.0.7 7/20/2025  Finalized code and documentation
 * 1.0.6 7/19/2025  Workflows for Ubuntu, Windows, Macos and python 3.9,
                    3.10, 3.11, 3.12
