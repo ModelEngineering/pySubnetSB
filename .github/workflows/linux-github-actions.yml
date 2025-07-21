@@ -15,11 +15,10 @@ jobs:
     - name: Install
       run: |
         pip install --upgrade pip
-        pip install jupyterlab
         pip install pySubnetSB
     - name: Run script
       run: |
-        ipython examples/api_basics.py
+        ipython examples/api_basics_programmatic.py
   #
   Run-310:
     runs-on: ubuntu-latest
@@ -34,11 +33,10 @@ jobs:
     - name: Install
       run: |
         pip install --upgrade pip
-        pip install jupyterlab
         pip install pySubnetSB
     - name: Run script
       run: |
-        ipython examples/api_basics.py
+        ipython examples/api_basics_programmatic.py
   #
   Run-311:
     runs-on: ubuntu-latest
@@ -53,11 +51,10 @@ jobs:
     - name: Install
       run: |
         pip install --upgrade pip
-        pip install jupyterlab
         pip install pySubnetSB
     - name: Run script
       run: |
-        ipython examples/api_basics.py
+        ipython examples/api_basics_programmatic.py
   #
   Run-312:
     runs-on: ubuntu-latest
@@ -76,4 +73,4 @@ jobs:
         pip install pySubnetSB
     - name: Run script
       run: |
-        ipython examples/api_basics.py
+        ipython examples/api_basics_programmatic.py
