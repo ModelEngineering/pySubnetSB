@@ -36,8 +36,8 @@ def main(is_plot:bool=True):
     
     # Reference model is a simple CRN with two reactions and three species.
     reference_model = """
-    R1: S1 -> S2; k1*S1
-    R2: S2 -> S3; k2*S2
+    R1: S2 -> S3; k2*S2
+    R2: S1 -> S2; k1*S1
     
     S1 = 5
     S2 = 0
@@ -62,7 +62,7 @@ def main(is_plot:bool=True):
     # In the next cell, we do a one-shot search for a subnet in the target model
     #   that is structurally identical to the reference model.
     print("\nSearching for a subnet in the target model that is structurally identical to the reference model.")
-    result = findReferenceInTarget(reference_model, target_model, is_subnet=True, is_report=is_plot)
+    result = findReferenceInTarget(reference_model, target_model)
     print (f"\nMapping pairs: {result.mapping_pairs}")
     print(f"\nThe inferred network in the target is: \n{result.makeInducedNetwork()}")
 
