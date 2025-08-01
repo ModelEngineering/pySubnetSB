@@ -1,0 +1,484 @@
+\documentclass{article}
+
+% Language setting
+% Replace `english' with e.g. `spanish' to change the document language
+\usepackage[english]{babel}
+
+% Set page size and margins
+% Replace `letterpaper' with `a4paper' for UK/EU standard size
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+% Useful packages
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+
+\usepackage{listings}
+\usepackage{color}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\lstset{frame=tb,
+  language=Java,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3
+}
+
+% Macros
+\newcommand{\mat}[1]{${\bf #1}$} % version 1
+\newcommand{\net}[1]{$\mathcal{N}_#1$} % version 1
+\newcommand{\rnet}{$\mathcal{R}$} % version 1
+\newcommand{\tnet}{$\mathcal{T}$} % version 1
+\newcommand{\cmat}[1]{${\bf #1}^{\bf c}$} % version 1
+\newcommand{\ctwomat}[1]{${\bf #1}^{{\bf c}^2}$} % version 1
+\newcommand{\crow}[2]{${\bf #1}^{\bf c}_{#2 \star}$}  % compat mat row
+\newcommand{\ccol}[2]{${\bf #1}^{\bf c}_{\star #2$}} % compat mat col
+\newcommand{\mcol}[2]{${\bf #1}_{\star #2}$}  % mat row
+\newcommand{\mrow}[2]{${\bf #1}_{#2 \star}$}  % mat col
+\newcommand{\col}[1]{$_{\star #1}$}
+\newcommand{\Kappa}{\mathrm{K}}
+\newcommand{\fig}[1]{Fig.~\ref{#1}}
+
+\title{DSIRN: An Efficient Algorithm for {\bf D}etecting {\bf S}tructurally {\bf I}dentical Chemical {\bf R}eaction {\bf N}etworks}
+\author{You}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Your abstract.
+\end{abstract}
+
+\section{Introduction}
+\begin{enumerate}
+    \item Background
+    \begin{enumerate}
+        \item Isomorphism problem in Herbert's work
+        \item Subset problem
+    \end{enumerate}
+    \item Definition of structurally identical. 
+    \begin{enumerate}
+        \item Two kinds of structures in CRNs: mass transformation structure (MTS) and rate law structure (RLS). MTS is about which chemical species, when combined, produce what chemical species. RLS is about how {\em fast} this transformation takes place, not which chemical species are involved.
+        \item There are models that have a trivial MTS and the complexity is in RLS (just synthesis and degradation reactions).
+        
+        \item Focus on MTS because: (a) more accurate information on mass transformation; (b) FBA models only have MTS; (c) technically easier because ultimately relies analysis of stoichiometry matrices not analyzing algebraic expressions.
+
+        \item A {\bf stoichiometry matrix} describes the relationship between reactions and species in a CRN. The rows of the matrix are species; the columns are reactions; and  $m_{ij}$ indicates a number of molecules of species $i$ for reaction $j$. For the {\bf reactant stoichiometry matrix (RSM)}, $m_{ij}$ is the molecules of reactant, and for the {\bf product stoichiometry matrix (PSM)}, $m_{ij}$ is the number of product molecules. The {\bf standard stoichiometry matrix (SSM)} is PSM - RSM.
+
+        \item A {\bf network} refers to the MTS, and is denoted by a calligraphic font (e.g., $\mathcal{N}$). A network has a RSM, PSM, and SSM.
+        
+        \item Two CRNs have {\bf strong structural identity} if, after appropriate renaming of chemical species and reactions, the networks have the same RSM and PSM. Clearly, the renaming will also result in the networks having the same SSM.
+        
+        \item Two CRNs have {\bf weak structural identity} if, after appropriate renaming, they have the same SSM. The networks may reflect different chemistry, such as the presence of catalysts. However, it is straight-forward to construct rate laws so that they have the same time course behavior.
+        
+        \item A {\bf subnet} of a network is a subset of its reactions along with the reactant and product species in the subset reactions.
+
+        \item Given a reference network $\mathcal{R}$, it has {\bf subnet identity} with the target network $\mathcal{R}$ if $\mathcal{R}$ is structurally identical to a subnet of $\mathcal{T}$.
+        
+    \end{enumerate}
+    \item Why consider structural identity
+    \begin{itemize}
+        \item Sampling without replacement
+        \item Finding network structures with particular behaviors (e.g., oscillation, bistable), an important consideration in synthetic biology.
+        \item Inspecting the modularity of reaction networks by finding subsnets.
+    \end{itemize}
+
+    \item Naive approach to detecting structural identity
+    \begin{enumerate}
+        \item Want to see if the reference network ${\mathcal{R}}$ is structurally identical to the target network ${\mathcal{T}}$. Clearly, they must have the same number of reactions and species. If so, they are {\bf compatible networks}.
+        
+        \item \fig{fig:naive} displays pseudo code for a naive algorithm for detecting structurally identical CRNs. The first step is to check if the reference and target networks are compatible in that they have the same number of species and the same number of reactions. Such a mismatch is detected with little computational cost. The second step is to search all permutations of species and all permutations of reactions to see if any permutation results in target stoichiometry matrices that are identical to those of the reference network. This is extremely compute intensive because of the large number of possible permutations. Indeed, to compare two networks with 50 species and 50 reactions, the number of permutations  ($50!\times 50!$) is larger than the number of atoms in the universe ($\approx 10^{100}$).
+    \end{enumerate}
+    
+    \item Complexity of the problem. May not need to scale very much for sampling since large combinatorics makes duplicates very unlikely. But still need large scaling for network properties. Since detecting structural identity is so compute intensive, it seems hopeless to consider the detection of subnets.
+    
+    \item Related work
+    
+    \item  There is no way to avoid the fact that detecting structural identity has a large exponential runtime for the {\em worst case}.
+    Our insight is that we can achieve a massive reduction in the {\em average} runtime. This is done by generalizing the idea of {\em compatible networks}. \fig{fig:naive} considers networks to be compatible if they have the same number of species and the same number of reactions.
+    We can go further. Our ``secret sauce" consists of two parts. First, we find a compatibility set for each row in the reference stoichiometry matrix. This is a set of rows in the target's stoichiometry matrix that are compatible with a row in the reference. For example, if the reference row has stoichiometries of 1, a target row is incompatible if it contains a stoichiometry value of 2. Second, we only consider permutations that can be generated from the compatibility sets. It turns out that the reduction in runtime is so large that we can address the much more compute intensive problem of detecting subnet identity.
+\end{enumerate}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}
+\begin{lstlisting}[mathescape=true,escapechar=\%]
+def naiveIsStructurallyIdentical(%\rnet%: Network, %\tnet%: Network, is_strong: bool)->bool:
+    // %\rnet% is the reference network; %\tnet% is the target network; is_strong is a boolean for strong identity comparison
+    if %\rnet% and %\tnet% are incompatible in that they differ in the number of reactions or the number of species
+        return false
+    // Search the space of permutations of species and reactions of the targe network
+    for reaction_permutation in permutations of reactions of the target network
+        for species_permutation in permutations of species of the target network
+            if weak identity
+                if %\rnet%.standard_stoichiometry_matrx = permutation(%\tnet%.standard_stoichiometry_matrix)
+                    return true
+            else
+                if %\rnet%.reactant_stoichiometry_matrx = permutation(%\tnet%.reactant_stoichiometry_matrix) and %\rnet%.product_stoichiometry_matrx = permutation(%\tnet%.product_stoichiometry_matrix)
+                    return true
+    return false
+\end{lstlisting}
+\caption{Naive algorithm for detecting structurally identical networks. RSM: reactant stoichiometry matrix. PSM: product stoichiometry matrix. SSM: standard stoichiometry matrix. The algorithm is computationally intensive because of the search for permutations of the species and reactions of the target network that result in identical stoichiometry matrices.}\label{fig:naive}
+\end{figure}
+
+
+
+\section{Theory}
+
+Let $S$ be a set of $N$ objects $s_1, \cdots s_N$. Denote the set of all permutations of $S$ by $\sigma^S$, and we denote a permutation in this set by $\sigma$. Note that $\sigma$ is a function from the first $N$ integers to that same set.
+
+Define $\mathcal{P} = (P_1, \cdots, P_K)$ to be an ordered set of sets that partition $S$.
+We define the {\bf $\mathcal{P}$ constrained 
+permutations of $S$}, denoted by
+$\sigma^S_{\mathcal{P}} \subseteq \sigma^S$, 
+to be the permutations of $S$ constrained as follows.
+Consider $s_{i_1} \in P_{k_1}$ and $s_{i_2} \in P_{k_2}$ and
+$k_1 < k_2$. Let $\sigma$ be a permutation in $\sigma^S_{\mathcal{P}}$ so that $\sigma(i)$ is the position of $s_i$ in the permutation $\sigma$. Then, $s_{i_1}$ always appears before $s_{i_2}$; that is,  $\sigma(i_1) < \sigma(i_2)$. The number of permutations in  $\sigma^S_{\mathcal{P}}$ is denoted by  $|\sigma^S_{\mathcal{P}}|$.
+Note that $|\sigma^S_{\mathcal{P}}| = \prod_{P \in \mathcal{P}} |P|!$.
+
+%%%%%%%
+\subsection{Claim 1}
+Claim. $|\sigma^S_{\mathcal{P}}| \leq |\sigma^S|$ and equality holds if, and only if, $|\mathcal{P}| = 1$.
+
+
+%%%%%%%
+\subsection{Claim 2}
+Claim. Let $P_1, P_2 \in \mathcal{P}$ such that $|P_1| \geq |P_2| + 2$. 
+Let $\mathcal{P}^{\prime}$ be identical to 
+$\mathcal{P}$, except that $P^{\prime}_1 = P_1 -\{s\}$ and $P^{\prime}_2 = P_2 \bigcup \{s\}$ for $s \in P_1$.
+Then $|\sigma^S_{\mathcal{P}}| = \frac{|P_1|}{|P_2| + 1}|\sigma^S_{\mathcal{P^{\prime}}}|$ and so
+$|\sigma^S_{\mathcal{P}}| > |\sigma^S_{\mathcal{P^{\prime}}}|$.
+
+Proof. 
+\begin{eqnarray}
+|\sigma^S_{\mathcal{P}}| &=& \prod_{P \in \mathcal{P}} |P|! \\
+&=& |P_1|!|P_2|!\prod_{P \in \mathcal{P}-P_1-P_2} |P|! \\
+&>& (|P_1|-1)!(|P_2|+1)!\prod_{P \in \mathcal{P}-P_1-P_2} |P|! \\
+& = & 
+|\sigma^S_{\mathcal{P^{\prime}}}|
+\end{eqnarray}
+Step (3) follows from the fact that
+$m!n! > (m-1)!(n+1)!$ if $m \geq n-2$.
+
+%%%%%%%%%
+\subsection{Claim 3}
+Claim. Let $\mathcal{P}$ be a partition of $S$.
+Define $\mathcal{P}^{\prime} = \{ P_1 - \{ s \} , \cdots, \{s\} \}$, where $|P_1| \geq 2$. Then,
+$$
+\frac{|\sigma_{\mathcal{P}}^S|}
+{|\sigma_{\mathcal{P}^{\prime}}^S|} = |P_1|
+$$
+
+Proof.
+\begin{eqnarray}
+|\sigma^S_{\mathcal{P}}| & = & \prod_{P \in \mathcal{P}} |P|! \\
+& = & |P_1|! \prod_{P_1 \neq P \in \mathcal{P}} |P|! \\
+& = & |P_1| (|P_1 - \{s\}|)! \prod_{P_1 \neq P \in \mathcal{P}} |P|! \\
+& = & |P_1| \prod_{P \in \mathcal{P}^{\prime}} |P|! \\
+& = & |P_1| |\sigma^S_{\mathcal{P}^{\prime}}| \\
+\end{eqnarray}
+
+%%%%%%%%%%%%%
+\subsection{Approximating Speedup}
+
+We calculate a lower bound for the speedup provided by the DSIRN algorithm. The bound only considers the case where the rows (and columns) of the two matrices have the same partition encodings with the same number of rows (columns) in their respective partitions. We proceed by analyzing the number of permutations that must be searched since this dominates the computation time for larger $N$.
+
+Consider a partition $\mathcal{P}$) and the ratio of the {\em total} number of permutations of $S$ to the number of permutations constrained by $\mathcal{P}$. That is, 
+$$r_{\mathcal{P}}^S = \frac{|\sigma^S|}{|\sigma_{\mathcal{P}}^S|}.$$
+
+Our approach uses a couple of approximations that are most appropriate for larger $N = |S|$. First, we assume that the number of reactions and/or species is large enough so that a continuous approximation is appropriate. Second, we assume that the largest set in a partition of species and reactions is not too large, closer to 20\% of the total size.
+
+Let $0 < f << 1$ be such that $fN = max_{P \in \mathcal{P}} |P|$.
+An upper bound for $|\sigma_{\mathcal{P}}^S|$
+is obtained by assuming that $|P| = fN$ for all $P \in \mathcal{P}$. So, 
+\begin{eqnarray}
+    |\sigma_{\mathcal{P}}^S| & \leq &
+    \left( \left[ fN \right] ! \right) ^{\frac{1}{f}} \\
+\end{eqnarray}
+
+Next, we consider a continuous approximation to the factorial operator (as is done in Stirling's approximation). For large $log(N!) \approx \int_0^N log (u)~ du = N log N - N$. And so,
+\begin{eqnarray}
+    log (N!) & \approx & N log N - N\\
+    log \left[ (fN)! \right] & \approx & fN log (fN) - fN \\
+\end{eqnarray}
+
+Taking into account the number of partitions in $\mathcal{P}$ (which is approximately $\frac{1}{f}$),
+the ratio of the number of permutations in log units is:
+\begin{eqnarray}
+    log N! - \frac{1}{f}  log \left[ (fN)! \right]  
+    & \approx &
+    N log N - N -
+    \frac{1}{f} fN log (f N) + \frac{1}{f} fN \\
+    & \approx &
+    N log N - N -
+    N log f - N log N + N \\
+    & \approx &
+    N log \frac{1}{f} \\
+\end{eqnarray}
+And so we infer
+$$r_{\mathcal{P}}^S \leq {\frac{1}{f^N}}$$
+As $N \rightarrow 1$ and/or $f \rightarrow 1$, there is no speedup. Under these circumstance
+$\frac{1}{f^N} \rightarrow 1.$ Conversely, the speedup is extremely large as $N \rightarrow \infty$ (with $f < 1$) and/or $f \rightarrow 0$. Again, this is consistent with the above inequality since under these conditions $\frac{1}{f^N} \rightarrow \infty.$
+
+For the problem of finding permutably identical matrices, we have the number of rows, $N_R$ and $f_R$, the fraction of rows in the largest partition. Similarly, for columns, we have $N_C, f_C$. So, a lower bound for speedup is
+$$\frac{1}{f_R^{N_R}} \frac{1}{f_C^{N_C}}$$
+
+Notes
+\begin{itemize}
+    \item Consider the fact that there are only 5 reaction types: null-uni, uni-null, uni-uni, uni-bi, bi-uni.
+\end{itemize}
+
+%%%%%%%%
+\subsection{Encoding Reactions}
+\begin{itemize}
+    \item There are likely only 5 encoding of reactions. Let $N$ be the number of species. Then, we have the following encodings:
+    \begin{itemize}
+        \item null-uni: 1e6 + (N-1)*1e3
+        \item uni-null: (N-1)*1e3 + 1
+        \item bi-uni: 1e6 + (N-3)1e3 + 2
+        \item uni-bi: 2*1e6 + (N-3)*1e3 + 1
+        \item bi-bi: 2*1e6 + (N-4)*1e3 + 2
+    \end{itemize}
+    \item The foregoing suggests that $f \leq \frac{1}{5}$. The number of permutations of the partition with $\frac{N}{5}$ elements is
+    24 for N=20, $\approx 3*10^6$ for N=50, 
+     $\approx 2*10^{18}$ for N=100, and  $\approx 8*10^{47}$ for N=200.
+     \item We can create more partitions of reactions with fewer elements by a different order independent encoding. Instead of counting the number of reactant and product species, we count the number of reactions in which in which each reactant or product species appears.
+\end{itemize}
+
+%%%%%%%%
+\subsection{Bound on Unique Network Structures with Unitary Stoichiometry}
+Let $N,M$ be the number of chemical species and reactions.
+There are $2^{NM}$ possible stoichiometry matrices.
+w.l.o.g., suppose that $M \geq N$.
+Two rows in the stoichiometry matrix can be identical in
+$3^N$ ways (the possible values of the columns, which are species). There are $2^M - M - 1 \approx 2^M$ combinations of duplicated rows. So, the number of uniqe network structures is approximately
+\begin{eqnarray}
+    \frac{3^{NM}}{3^N(2^M - M - 1)}& \approx &
+    \frac{3^{(N-1)M}}{2^M} \\
+    & = & \left( \frac{3}{2} \right)^M 3^{N-1}
+\end{eqnarray}
+
+%%%%%%%%
+\subsection{Analysis}
+Here, we develop a simple model for the computational complexity of finding structurally identical reaction networks based on the number of permutations that must be considered.
+Let $N$ be the number of elements in a permutation (in our case, either species or reactions), $1 + P$ be the number of partitions, and $fN$ be the number of elements in the first partition. We subscript $N_r, P_r, f_r$ to indicate the partitions for reactions and similarly use  $N_s, P_s, f_s$ for species. The scenario we consider is that $fN$ elements are in the first partition and $(1-f)N$ are spread equally across the remaining $P$ partitions. Under these conditions and using a continuous approximation, $T$, the total number of permutations is
+\begin{eqnarray}
+    T & = & \left( fN \right) ! \left[ \frac{(1-f)N}{P}! \right]^P
+\end{eqnarray}
+where $\frac{1}{N} \leq f \leq 1, 0 \leq P \leq N$. We denote the total number of permutations for reactions by $T_r$ and for species $T_s$. So, the complexity of detecting structurally identical networks is $T_s T_r$.
+
+Since the expressions for $T_r, T_s$ are identical, we drop the subscripts in the sequel. We want to understand the effect of $f$ and $P$ on $T$. Using the approach taken in Stirling's approximation to the factorial, we have
+\begin{eqnarray}
+    log T & = & fN log (f N) - fN +
+    P \left[ \frac{(1-f)N}{P}log \left( \frac{(1-f)N}{P} \right) - 
+    \frac{(1-f)N}{P} \right] \nonumber \\
+     & = & fN log (f N) - fN +
+     (1-f)N  log ( (1-f)N  ) - (1-f)N  log P - (1-f)N \nonumber \\
+    \frac{dT}{dP} & = & - \frac{(1-f)N}{P} \leq  0
+\end{eqnarray}
+That is, increasing the number of partitions {\em decreases} $T$, the number of permutations to consider.
+
+What is the effect of $f$? To see this, view $T$ as a function of $f$ and $P$, denoted by $T(f, P)$. We want to know the conditions under which $T(1, P) \geq T(0, P)$.
+\begin{eqnarray}
+T(1) & \geq & T(0) \\
+N! & \geq & \left[ \frac{N}{P}! \right]^P \\
+N log N - N \geq P \left[ \frac{N}{P} log \left( \frac{N}{P} \right) - \frac{N}{P} \right] \\ 
+N log N - N >  N log \left( \frac{N}{P} \right) - N  \\
+0 \geq  - N log P  \\
+\end{eqnarray}
+Since $P \geq 1$, this is always true. Note that equality occurs when $P=1$ since $T(0, 1) = N!.$
+
+We consider the effect of $f$ in more detail by calculating $\frac{d T}{df}$.
+
+%%%%%%%%%%%%%%%%%
+\subsection{Search Strategy}
+Because of the massive combinatorics, we cannot use a generate and test strategy to explore the search space. Instead, we need a ``generative" approach that identifies large parts of the search space that do not need to be explored. To be more specific, let \net{R} be the reference network and \net{T} be the target. If they have the same number of species and reactions, then this is a problem of detecting structural identity. If \net{T} has more reactions and/or more species, then we are looking for a subnet of \net{T} that is structurally identical to \net{R}. A {\bf point} in this search space consists of two parts: an assignment of distinct reactions in \net{T} to those in \net{R}, and and assignment of distinct species in \net{T} to those in \net{R}. The total number of points in the search space is
+$$ {{N^{\mathcal{T}}_R} \choose {N^{\mathcal{R}}_R}} {N^{\mathcal{R}}_R}!
+ {{N^{\mathcal{T}}_S} \choose {N^{\mathcal{R}}_S}} {N^{\mathcal{R}}_S}!
+$$.
+%%%%%%%%%%%%%%%%%%%%
+\section{Compatibility Checks}
+\begin{enumerate}
+    \item Our focus is the computational intensive part of \fig{fig:naive}, the search of possible permutations. We refer to a permutation of the species (reactions) of the target network as an {\bf assignment} of the target species (reaction) to the reference network. This terminology allows us to generalize the problem to considering subnets of the target that are structurally identical to the reference.
+    \item An assignment has the following properties:
+    \begin{enumerate}
+        \item It refers to elements in the target.
+        \item Its length is the number of species (reactions) in the reference.
+        \item The assignment does not contain duplicates. That is, we do not assign the same target species (reaction) to two different reference species (reactions).
+    \end{enumerate}
+    \item The way we reduce computational complexity is by extending the concept of compatibility to assignments.
+    
+    \item An example of an incompatible assignment is assigning a target reaction with the reactant {\tt S1} to a reference reaction without the {\tt S1} reactant. Another example of an incompatible assignment is if the reference reaction has {\tt S1} but its stoichiometry differs from the stoiciometry of {\tt S1} in the target.
+    
+    \item Our strategy is twofold. First, we avoid generating incompatible assignments. Since this is not always possible, we have further checks on generated assignments to avoid evaluating those that are incompatible.
+    \item A compatibility check is an addition to the permutation look that the permutation is comparing compatible rows in the matrices. So, there are two considerations: (a) criteria for compatibility and (b) how this is used to exclude permutations.
+    \item We generalize this further by using a vector of {\bf criteria functions} to characterize values in an array. A criteria function $c$ is a boolean function of real numbers. We use 1 to denote true, and 0 to denote false. For example, $c(x)= ~1\text{ if }x=0;~ \text{otherwise},~ 0.$
+    \item {\bf Criteria count vector} for a row in a matrix.
+    \item Compatibility check using criteria count vectors.
+    \item Outcomes of the compatibility check
+    \begin{enumerate}
+        \item True positive, True negative.
+        \item False negative. Logic error. Doesn't happen.
+        \item False positive. Performance issue. Can reduce by having criteria functions that are mutually exclusive and exhaustive for non-negative real numbers.
+    \end{enumerate}
+
+\end{enumerate}
+
+%%%%%%%%%%%
+\section{DSIRN Algorithms}
+The basic algorithm evaluates a pair of stoichiometry
+matrices to determine if they a {\bf permutably identical}. That is, is there a permutation of the rows and columns of the first matrix so that it is identical to the second matrix.
+There are the following parts:
+\begin{enumerate}
+    \item Encode rows and columns
+    \item Form partitions of the two matrices based on these ecodings
+    \item Test each constrained permutations formed by the partitions to determine if the matrices are permutably identical.
+    \begin{enumerate}
+        \item Iterate across all constrained permutations using {\tt PartitionPermuter}
+        \item Compare the permuted matrices
+    \end{enumerate}
+\end{enumerate}
+
+%%%%%%%%%%%%%
+\subsection{Encode rows and columns}
+%%%%%%%%%%%%%
+\subsection{Construct partitions}
+%%%%%%%%%%%%%
+\subsection{Test constrained partitions}
+\subsubsection{{\tt PartitionPermuter}}
+This section describes the algorithm that constructs the set of permutations under the constraint of an ordered partition. We use the above notation. That is, we are given $S$, $\mathcal{P}$, and we want to construct $\sigma^S_{\mathcal{P}}$.
+
+
+Let $X$ be a set of objects. Let $\sigma \in \sigma^X$ be a permutation. Define $\nu(\sigma^X)$
+to be the next permutation in $\sigma^X$ for some arbitrary ordering of permutations.
+
+The key data structures in this algorithm are:
+\begin{itemize}
+    \item {\tt iterators}: 
+    $( \nu^{P_1}, \cdots, \nu^{P_K} )$. A list of functions that finds the next permutution of the elements of a set in the partition $\mathcal{P}$.
+    \item {\tt cpermutations}: $(\sigma_1, \cdots \sigma_K)$, where $\sigma_j \in \sigma^{P_j}$.
+\end{itemize}
+We also define the function {\tt nperm(cpermutation)} to be $(\nu^{P_1} (\sigma_1), \cdots, \nu^{P_K} (\sigma_K))$.
+\begin{lstlisting}
+Initialize iterators to None
+idx = 1  # index of the partition
+do forever
+    if iterators[idx] is None or exhausted
+        # Iteratively initialize the iterators until
+        # an initialized iterator is found
+        if idx is last
+            if iterators[last] exhausted
+                return Done
+        Initialize iterators[idx]
+        if idx < N
+            idx += 1
+     else
+        # Obtain the next permutation for each partition
+        cpermutations[idx] = nperm(cpermutations[idx])
+        if idx == 1
+            return cpermutations
+        else
+            idx -= 1
+\end{lstlisting}
+%%%%%%%%
+\subsubsection{Test if Two Marices are Permutably Identical}
+\begin{lstlisting}
+def isPermutablyIdentical(m1: Matrix, m2: Matrix)->bool:
+    # Construct the encodings
+    for idx in [1, 2]:
+        for dim in [ROW, COLUMN]:
+            partitions[idx, dim] = dicts sorted by encoding (key) whose values are indices in the dimension
+    # Compatibility check
+    if m1_sorted_partitions does not have the same number of elements as the same valued encoding in m2_sorted_partions:
+        return False
+    # Sort m2 rows and columns by their encodings
+    m2_row_iterator = iterator(partitions[2, ROW])
+    m2_col_iterator = iterator(partitions[2, COL])
+    m2_ref = [m2_row_iterator.next(), m2_col_iterator.next()]
+    # Search for identical matrix values
+    m1_row_iterator = iterator(partitions[1, ROW])
+    m1_col_iterator = iterator(partitions[1, COL])
+    for m1_row_permutation in m1_row_iterator:
+        for m1_col_permutation in m1_col_iterator:
+            if m1[m1_row_permutation, m1_col_permutation] == m2_ref:
+                return True
+    return False
+\end{lstlisting}
+
+%%%%%%%%
+\subsubsection{Classifying Permutably Identical Matrices}
+Given a collection of matrices, this algorithm groups together those that are permutably identical. These groups are called classes. A {\tt Matrix} is a two dimensional array.
+A {\tt ClassifiedMatrix} has the following in addition:
+\begin{itemize}
+    \item {\tt row\_encoding} is a vector of integers that provides an order independent characterization of each row (one per row)
+    \item {\tt col\_encoding} is a vector of integers that provides an order independent characterization of each column (one per column)
+    \item {\tt hash} is a single integer has of the {\tt row\_encoding} and {\tt col\_encoding}.
+\end{itemize}
+\begin{lstlisting}
+def ClassifyMatrices(matrices: set-Matrix)->set-set-Matrix:
+    # Construct the encodings
+    for matrix in matrices:
+        classified_matrix = ClassificedMatrix(matrix) to classified_matrices
+        add classified_matrix.hash to hases
+        add classified_matrix to classified_matrices
+    # Find permutably identical matrices
+    groups = []
+    for hash in hases
+        same_hashes = classified_matrices with hash
+        for matrix1 in same_hases:
+            if matrix1 is in group in groups:
+                cur_group = group
+            else:
+                cur_group = new group for matrix1
+                add cur_group to groups
+            for matrix2 in same_hases and is enumerated after matrix1:
+                if isPermutablyIdentical(matrix1, matrix2)
+                    add matrix2 to cur_group
+    return groups
+\end{lstlisting}
+
+\section{Detecting Network Subsets}
+\begin{enumerate}
+    \item Applications
+    \item Naive complexity
+    \item Key idea is that the OIE has a subset property that lends itself to a vectorized implementation.
+    \item Algorithm
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%
+\section{Discussion}
+\begin{enumerate}
+    \item Can detect when a comparison is to computationally complex by having a threshold on the number of elements in a partition. Analyze the distribution of comparisons for random matrices as: (a) permutably identical; (b) not permutably identical; (c) too complex to tell.
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%
+\section{Conclusions and Future Work}
+\begin{enumerate}
+    \item Future work
+    \begin{enumerate}
+        \item Find all instances of a substructure
+    \end{enumerate}
+\end{enumerate}
+
+\bibliographystyle{alpha}
+\bibliography{sample}
+
+\section{To Do}
+\begin{enumerate}
+    \item Try graph algorithm
+\end{enumerate}
+
+\end{document}

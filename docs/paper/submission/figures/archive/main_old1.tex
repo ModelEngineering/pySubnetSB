@@ -1,0 +1,714 @@
+\documentclass{article}
+
+% Language setting
+% Replace `english' with e.g. `spanish' to change the document language
+\usepackage[english]{babel}
+
+% Set page size and margins
+% Replace `letterpaper' with `a4paper' for UK/EU standard size
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+% Useful packages
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{framed}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\usepackage{subcaption}
+
+\usepackage{listings}
+\usepackage{color}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\lstset{frame=tb,
+  language=Java,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3
+}
+
+% Macros
+\newcommand{\mat}[1]{${\bf #1}$} % version 1
+\newcommand{\net}[1]{$\mathcal{N}_#1$} % version 1
+\newcommand{\rnet}{$\mathcal{R}$} % version 1
+\newcommand{\tnet}{$\mathcal{T}$} % version 1
+\newcommand{\cmat}[1]{${\bf #1}^{\bf c}$} % version 1
+\newcommand{\ctwomat}[1]{${\bf #1}^{{\bf c}^2}$} % version 1
+\newcommand{\crow}[2]{${\bf #1}^{\bf c}_{#2 \star}$}  % compat mat row
+\newcommand{\ccol}[2]{${\bf #1}^{\bf c}_{\star #2$}} % compat mat col
+\newcommand{\mcol}[2]{${\bf #1}_{\star #2}$}  % mat row
+\newcommand{\mrow}[2]{${\bf #1}_{#2 \star}$}  % mat col
+\newcommand{\col}[1]{$_{\star #1}$}
+\newcommand{\Kappa}{\mathrm{K}}
+\newcommand{\fig}[1]{Fig.~\ref{#1}}
+
+\title{pySubnetSB: A Python Package for Discovering Subnets in SBML Models}
+\author{You}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Your abstract.
+\end{abstract}
+
+\section{Introduction}
+
+%%%%%%%%FIGURE%%%%%%%%%%%%%%%%
+\begin{figure}
+\centering
+\begin{subfigure}{0.7\textwidth}
+\begin{framed}
+\begin{verbatim}
+J1: -> BCG
+J2:  -> Effector_cells
+J3: Effector_cells ->
+J4: -> Tumor_uninfected_cells
+J5: BCG + Tumor_uninfected_cells -> Tumor_infected_cells
+J6: Tumor_infected_cells ->
+J7: BCG ->
+\end{verbatim}
+\end{framed}
+    \caption{BioModels 1034}
+    \label{fig:biomodels1034}
+\end{subfigure}
+%%
+\begin{subfigure}{0.25\textwidth}
+\begin{framed}
+\begin{verbatim}
+v01: A + I -> D_IA
+v02: I + I -> D_II
+v03: I ->
+v04: A ->
+v05: D_IA ->
+v06: D_II ->
+v07: D_IA -> A
+v08: D_II -> I
+v09: R ->
+v10: -> I
+v11: -> A
+v12: -> R 
+\end{verbatim}
+\end{framed}
+ \caption{BioModels 351}
+\end{subfigure}
+%%
+\caption{Two models in BioModels. The running example uses 1034 as the reference network and 351 as the target network where we search for a subnet that is structurally identical to 1034.}
+\label{fig:models}
+\end{figure}
+%%%%%%%%FIGURE%%%%%%%%%%%%%%%%
+
+%%%%%%%%FIGURE%%%%%%%%%%%%%%%%
+\begin{figure}
+\centering
+\begin{subfigure}{0.7\textwidth}
+{\tiny
+\begin{tabular}{|l||c|c|c|c|c|c|c|}
+\hline
+{\bf species} & {\bf J1} & {\bf J2} & {\bf J3} & {\bf J4} & {\bf J5} & {\bf J6} & {\bf J7} \\
+\hline\hline
+BCG & 0 & 0 & 0 & 0 & 1 & 0 & 1\\
+Effector\_cells & 0 & 0 & 1 & 0 & 0 & 0 & 0\\
+Tumor\_uninfected\_cells & 0 & 0 & 0 & 0 & 1 & 0 & 0\\
+Tumor\_infected\_cells & 0 & 0 & 0 & 0 & 0 & 1 & 0\\
+\hline
+\end{tabular}
+}
+    \caption{Reaction Stoichiometry}
+    \label{fig:biomodels1034}
+\end{subfigure}
+%%
+\begin{subfigure}{0.7\textwidth}
+\vspace{10pt}
+{\tiny
+\begin{tabular}{|l||c|c|c|c|c|c|c|}
+\hline
+{\bf species} & {\bf J1} & {\bf J2} & {\bf J3} & {\bf J4} & {\bf J5} & {\bf J6} & {\bf J7} \\
+\hline\hline
+BCG & 1 & 0 & 0 & 0 & 0 & 0 & 0\\
+Effector\_cells & 0 & 1 & 0 & 0 & 0 & 0 & 0\\
+Tumor\_uninfected\_cells & 0 & 0 & 0 & 1 & 0 & 0 & 0\\
+Tumor\_infected\_cells & 0 & 0 & 0 & 0 & 1 & 0 & 0\\
+\hline
+\end{tabular}
+}
+ \caption{Product Stoichiometry}
+\end{subfigure}
+%%
+\begin{subfigure}{0.7\textwidth}
+\vspace{10pt}
+{\tiny
+\begin{tabular}{|l||c|c|c|c|c|c|c|}
+\hline
+{\bf species} & {\bf J1} & {\bf J2} & {\bf J3} & {\bf J4} & {\bf J5} & {\bf J6} & {\bf J7} \\
+\hline\hline
+BCG & 1 & 0 & 0 & 0 & 0 & 0 & -1\\
+Effector\_cells & 0 & 1 & -1 & 0 & 0 & 0 & 0\\
+Tumor\_uninfected\_cells & 0 & 0 & 0 & 1 & -1 & 0 & 0\\
+Tumor\_infected\_cells & 0 & 0 & 0 & 0 & 1 & -1 & 0\\
+\hline
+\end{tabular}
+}
+ \caption{Standard Stoichiometry}
+\end{subfigure}
+%%
+\caption{Stoichiometry matrices for BioModels 351.}
+\label{fig:models}
+\end{figure}
+%%%%%%%%FIGURE%%%%%%%%%%%%%%%%
+
+
+
+%%%%%%%%FIGURE%%%%%%%%%%%%%%%%
+\begin{figure}
+\centering
+\begin{subfigure}{0.25\textwidth}
+\begin{framed}
+\begin{verbatim}
+v10:  -> I
+v12:  -> R
+v09: R -> 
+v11:  -> A
+v01: A + I -> D_IA
+v05: D_IA -> 
+v03: I -> 
+\end{verbatim}
+\end{framed}
+\caption{induced network}
+\end{subfigure}
+\hfill
+%%
+\begin{subfigure}{0.4\textwidth}
+\begin{tabular}{|l|l|} 
+\hline
+1035 & 351 \\
+\hline\hline
+BCG & I \\  
+Effector\_cells & R \\
+Turmor\_uninfected\_cell & A \\
+Tumor\_infected\_cell & D\_IA \\
+\hline
+\end{tabular}
+\caption{species assignments}
+\end{subfigure}
+%%
+\begin{subfigure}{0.3\textwidth}
+\begin{tabular}{|c|c|} 
+\hline
+1035 & 351 \\
+\hline\hline
+J1 & v10 \\  
+J2 & v12 \\
+J3 & v09 \\
+J4 & v11 \\
+J5 & v01 \\
+J6 & v05 \\
+J7 & v03 \\
+\hline
+\end{tabular}
+\caption{reaction assignments}
+\end{subfigure}  
+\caption{Running example induced network and its assignment pairs. An assignment pair consists of a species assignment and a reaction assignment. This is sufficient to specify the sub-matrices of the reaction, product, and standard stoichiometry matrices that define the induced subnet.}
+\label{fig:figures}
+\end{figure}
+%%%%%%%%FIGURE%%%%%%%%%%%%%%%%
+
+\begin{enumerate}
+        \item What is subnet discovery and why do it?
+        \begin{enumerate}
+        \item FIGURE. Illustrate with networks 1035 and 351. Show induced networks.
+            \item Understand why network behaves as it does. Example - A hidden oscillator explains oscillations.
+            \item Assess statistical significance of a subnet with $n$ reactions and $n$ species. Generate a large number of $n,m$ networks and count the number that contain the subnet of interest.
+            \item Search for related pathways, those that have the same structure
+            \item Assist with annotations by finding how species annotated with the same structure.
+            \item Decompose network into functional subnets by identifying functional parts.
+            \item Tasks - single shot vs batch; identity vs. subset.
+        \end{enumerate}
+    \item Definition of structurally identical. 
+    \begin{enumerate}
+        \item Two kinds of structures in CRNs: mass transformation structure (MTS) and rate law structure (RLS). MTS is about which chemical species, when combined, produce what chemical species. RLS is about how {\em fast} this transformation takes place, not which chemical species are involved.
+        \item There are models that have a trivial MTS and the complexity is in RLS (just synthesis and degradation reactions).
+        
+        \item Focus on MTS because: (a) more accurate information on mass transformation; (b) FBA models only have MTS; (c) technically easier because ultimately relies analysis of stoichiometry matrices not analyzing algebraic expressions.
+
+        \item A {\bf stoichiometry matrix} describes the relationship between reactions and species in a CRN. The rows of the matrix are species; the columns are reactions; and  $m_{ij}$ indicates a number of molecules of species $i$ for reaction $j$. For the {\bf reactant stoichiometry matrix (RSM)}, $m_{ij}$ is the molecules of reactant, and for the {\bf product stoichiometry matrix (PSM)}, $m_{ij}$ is the number of product molecules. The {\bf standard stoichiometry matrix (SSM)} is PSM - RSM.
+
+        \item A {\bf network} refers to the MTS, and is denoted by a calligraphic font (e.g., $\mathcal{N}$). A network has a RSM, PSM, and SSM.
+        
+        \item Two CRNs have {\bf strong structural identity} if, after appropriate renaming of chemical species and reactions, the networks have the same RSM and PSM. Clearly, the renaming will also result in the networks having the same SSM.
+        
+        \item Two CRNs have {\bf weak structural identity} if, after appropriate renaming, they have the same SSM. The networks may reflect different chemistry, such as the presence of catalysts. However, it is straight-forward to construct rate laws so that they have the same time course behavior.
+        
+        \item A {\bf subnet} of a network is a subset of its reactions along with the reactant and product species in the subset reactions.
+
+        \item Given a reference network $\mathcal{R}$, it has {\bf subnet identity} with the target network $\mathcal{R}$ if $\mathcal{R}$ is structurally identical to a subnet of $\mathcal{T}$.
+        
+    \end{enumerate}
+
+    \item Example and challenges of structural identity.
+    \begin{enumerate}
+        \item Reference network 1034. Describe background
+        \item Target network 351. Give network. Describe background.
+        \item Reactant and product stoichiometry matrices. Standard stoichiometry matrix. Sufficient to compare permutations of stoichiometry matrices. Count possibilities.
+        \item Define assignments for reaction and species
+    \end{enumerate}
+
+    
+    \item Why consider structural identity
+    \begin{itemize}
+        \item Sampling without replacement. Do many comparisons.
+        \item Finding network structures with particular behaviors (e.g., oscillation, bistable), an important consideration in synthetic biology.Inspecting the modularity of reaction networks by finding subsnets. Again do many comparisons.
+    \end{itemize}
+
+    \item Naive approach to detecting structural identity
+    \begin{enumerate}
+        \item Want to see if the reference network ${\mathcal{R}}$ is structurally identical to the target network ${\mathcal{T}}$. Clearly, they must have the same number of reactions and species. If so, they are {\bf compatible networks}.
+
+        \item Subgraph problem is NP complete (Garey M, Johnson D: Computers and Intractability: A Guide to the Theory of NP-Completeness Freeman and Company; 1979.)
+    
+        
+        \item \fig{fig:naive} displays pseudo code for a naive algorithm for detecting structurally identical CRNs. The first step is to check if the reference and target networks are compatible in that they have the same number of species and the same number of reactions. Such a mismatch is detected with little computational cost. The second step is to search all permutations of species and all permutations of reactions to see if any permutation results in target stoichiometry matrices that are identical to those of the reference network. This is extremely compute intensive because of the large number of possible permutations. Indeed, to compare two networks with 50 species and 50 reactions, the number of permutations  ($50!\times 50!$) is larger than the number of atoms in the universe ($\approx 10^{100}$).
+    \end{enumerate}
+    
+    \item Related work
+    \begin{enumerate}
+        \item Graphical databases in biology.
+        \item Graph theory formalization of CRNs -- bipartite, directed, hypergraph. Bipartite since species are only connected with reactions (as reactants or products), directed to distinguish reactants and products (or at least sides of the chemical equation), and hypergraph since all reactants must be present and the reaction produces all products.
+        \item terminology: query graph, data graph; also, pattern graph, target graphs. Also, subgraph containment problem as term for containing hypergraphs.  (Zhang2003).
+        \item Yang2023 dicusses the dearth of algorithms that address hypergraphs, and provides a general framework for subgraph matching. However, does not consider the characteristics of CRNs.
+        \item Sun2020 Survey of algorithms for in-memory query. No hypergraphs.
+        \begin{enumerate}
+            \item Algorithmic approaches: exploration, state based, constraint programming
+            \item Techniques: ordering traversals, index filtering.
+        \end{enumerate}
+        \item Approximate algorithms for subgraphs (Agarwal, 2024)
+        \item Graph homomorphisms
+        \item Subgraph homomorphisms
+        \item Uri Alon analysis of eColi
+        \item CyFinder (https://github.com/tanvirraihan142). No longer supported. Doesn't find bipartite hypergraphs.
+        \item Sahu2018 Surveyed enterprises on graphical representations. Dealing with hypergraphs is listed as a challenge.
+        \item Approaches
+        \begin{enumerate}
+            \item uses order independent properties of graphs, such as degree of vertices
+            \item Does not address CRNs per se, just graphs in general
+            \item Does not consider the $n^2$ problem of many comparisons.
+            \item Existing homomorphism algorithms lack an ability to control their execution time.
+        \item Anatasia approach to graph isomorphism. Used nauty and a kind of hashing.
+        \item Challenges with handling bipartite graphs.
+        \item Analysis of reaction network is not exactly a graph problem since can have non-integral stoichiometries.
+        \item We use a constraint based approach that integrates knowledge of the structure of biological CRNs (e.g., types of reactions, bipartite graph, the latter indicates different constraints for different node types, something that existing techniques do not use).
+        \end{enumerate}
+        \item Special characteristics of CRN graphs
+        \begin{enumerate}
+            \item Bipartite. Can be addressed by supporting node coloring.
+            \item Hyperarcs. Need arcs with multiple tails and multiple tails(e.g., bi-bi reactions)
+            \item What existing algorithms can't do, the $A + B \rightarrow C + D$ example.
+        \end{enumerate}
+    \item The hypergraph algorithms do not seem to have a usable implementation. So we are re-implementing some of their techniques and evaluating them separately. We also take advantage of the specific characteristics of CRNs. For example, CRNs are bipartite grass. This means that the computational complexity of the subgraph problem is considerably reduced because we only match like nodes, species with species and reactions with reactions. You have a quantitative expression for this reduction in computational complexity. Further, there are some specific characteristics of reaction networks that are of interest. For example, Auto phosphorylation of chemical species. The characterization of the inputs to and outputs from reaction does are also of specific interest. Last, instead of just considering the number of entry and eggs at vertices fr    om a node, we also consider the next step connectivity in terms of the number of nodes connected in the induced by monopartite graph. This technique difference from those used in the general problem of finding subgraphs of hypergraphs.
+    \end{enumerate}
+
+    \item Contributions
+    Numerous algorithms exist to find sub-graph homomorphisms. However, they do not consider hypergraphs, an essential consideration for finding subnets in CRNs. Further, CRNs are directed bipartite graphs with arcs only between reactions and species. Incoming species arcs may have multiple sources (reactants) and outgoing arcs with multiple destinations (products). We use a matrix representation of the CRN graph with arcs from species to reactions represented by the reactant matrix, and arcs from reaction to species represented by the product matrix. Our contributions are:
+    \begin{enumerate}
+        \item An extensible constraint based approach that uses constraints that are specific to CRNs. Readily extend constraints related to species and reactions.
+        \item An technique for hashing CRNs to greatly reduce the computation time for finding structurally identical networks.
+        \item Evaluations using CRN benchmarks.
+        \item We create an open source Python package for detecting CRN subnets in SBML models that incorporate these constraints.
+         \item Applications
+         \begin{enumerate}
+             \item Cluster structurally identical oscillators and characterizing them.
+             \item Finding potential oscillators in existing mechanistic models in curated BioModels.
+         \end{enumerate}
+    \end{enumerate}
+    
+\end{enumerate}
+
+
+%%%%%%%%%%%%%%%%%%%%%
+\section{Methods}
+This section describes how we use existing results and techniques to frame the problems study. The section concludes by describing gaps in existing art to obtain methods for finding subnets of interest in models in BioModels.
+
+
+
+%%%%%%%%%%%
+\subsection{Constraint-Based Subnet Discovery}
+
+%%%%%%%%%%%%%%%%%FIGURE%%%%%%%%%%%%%%%%%%%
+\begin{figure}[hbtp]
+    \caption{Generic algorithm for finding subnets.}
+    \label{code.1}
+    \begin{lstlisting}[language=Mathematica,frame=single]
+def findSubnets(reference:Network, target:net, identity:Enum, max_num_assignments:int)
+    # Construct assignments
+    reaction_assignment = makeAssignments(reference, target, reaction_constraints)
+    species_assignment = makeAssignments(reference, target, species_constraints)
+    # Check if too many assignments
+    if len(reaction_assignment)*len(species_assignments) > max_num_assignments:
+        return empty_set
+    # Find assignments that satisfy subnet identity
+    results = emptyset
+    for reaction_assignment in reaction_assignments
+        for species_assignment in species_assignments
+            if identity = weak
+                if reference_standard = target_standard(species_assignment, 
+                      reaction_assignment)
+                   results.append(species_assignment, reaction_assignment)
+            else /* identity = strong */
+                if reference_reactant = target_reactant(species_assignment, 
+                      reaction_assignment)
+                    if reference_product = target_product(species_assignment, reaction_assignment)
+                        results.append(species_assignment, reaction_assignment)
+    return results
+    \end{lstlisting}
+\end{figure}
+%%%%%%%%%%%%%%%%%FIGURE%%%%%%%%%%%%%%%%%%%
+
+\begin{enumerate}
+    \item Goal is to match reactions in target to those in reference and species in target to those in reference.
+    
+    \item Reference related work that uses constraint based approach. This reduces the number of assignments.
+
+    \item Detailed example to introduce terms and illustrate process
+    \begin{enumerate}
+        \item Can reduce the number of assignments using constraints.
+        \item Reaction constraint: reaction type
+        \item Species constraint: count of reaction types in which reactant
+        \item Illustrate reduction of number assignments for species. Indicate large number of assignments for reactions
+    \end{enumerate}
+    
+    \item Suffices to consider stoichiometry matrices. Define reactant and product stoichiometry matrices. Standard stoichiometry is the difference. Criteria for weak and strong identity in terms of stoichiometry matrices
+    
+    \item Control over algorithm execution time. There will always be more computational work than computing resources.
+
+    \item Elements of running example
+    \begin{enumerate}
+        \item Simple networks
+        \item Benefits from reaction and species constraints. Reaction constraints: types; Species constraint: count as reactant. Categorical and enumerated.
+        \item Stoichiometry matrices
+        \item How get constraints from stoichiometries
+        \item How obtain assignments
+        \item How evaluate assignments
+        
+    \end{enumerate}
+\end{enumerate}
+
+%%%%%%%%%%%
+\subsection{Benchmarks}
+\begin{enumerate}
+    \item Need an objective way to evaluate algorithm quality, both performance and effectiveness that is representative of CRNs used in mechanistic models in systems biology. This applies to hashing and subnet discovery.
+    \item Approach
+\end{enumerate}
+
+%%%%%%%%%%%
+\subsection{What's Missing in Current State of the Art}
+\begin{enumerate}
+    \item Effective hashing of networks for structural identity
+    \item Subnet discover that scales to the size of BioModels
+    \item Demonstration of value of subnet discovery
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Results}
+
+
+%%%%%%%%%%%
+\subsection{Scalable Detection of Network Identity}
+\begin{enumerate}
+    \item Motivation. Suffices to consider reactant and product stoichiometry matrices. Siple example.
+    \item Hash requirements. No false negative. That is, two structurally identical networks {\em always} have the same hash. Minimize false positives because of efficiency.
+    \item Hash for permutably identical matrices.
+    \item PLOT? Evaluation of effectiveness
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%
+\subsection{Efficient Subnet Discovery}
+This section addresses algorithmic issues. We subsequently describe an open source python package that implements these algorithms.
+
+%%%%%%%%%%%%%%%%%
+\subsubsection{Constraints}
+
+
+%%%%%%%%FIGURE%%%%%%%%%%%%%%%%
+\begin{figure}
+\centering
+%%
+\begin{subfigure}{0.4\textwidth}
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+ID & type & \#u-n & \#b-u & \#u-u \\
+\hline\hline
+J1 & n-u & 1 & 1 & 0 \\
+J2 & n-u & 1 & 0 & 0 \\
+J3 & u-n & 0 & 0 & 0 \\
+J4 & n-u & 0 & 1 & 0 \\
+J5 & b-u & 1 & 0 & 0 \\
+J6 & u-n & 0 & 0 & 0 \\
+J7 & u-n & 0 & 0 & 0 \\
+\hline
+\end{tabular}
+\caption{1034 reaction constraints}
+\end{subfigure}
+\hfill
+%%
+\begin{subfigure}{0.5\textwidth}
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+ID & type & \#u-n & \#b-u & \#u-u \\
+\hline\hline
+v01 & b-u & 1 & 0 & 1 \\
+v02 & b-u & 1 & 0 & 1 \\
+v03 & u-n & 0 & 0 & 0 \\
+v04 & u-n & 0 & 0 & 0 \\
+v05 & u-n & 0 & 0 & 0 \\
+v06 & u-n & 0 & 0 & 0 \\
+v07 & u-u & 1 & 1 & 0 \\
+v08 & u-u & 1 & 1 & 0 \\
+v09 & u-n & 0 & 0 & 0 \\
+v10 & n-u & 1 & 1 & 0 \\
+v11 & n-u & 1 & 1 & 0 \\
+v12 & n-u & 1 & 0 & 0 \\
+\hline
+\end{tabular}
+\caption{351 reaction constraints}
+\end{subfigure}
+\hfill
+%%
+\begin{subfigure}{0.4\textwidth}
+\vspace{20pt}
+\begin{tabular}{|c|l|}
+\hline
+1034 ID & compatible 351 IDs \\
+\hline\hline
+J1 & v10, v11\\
+J2 & v10, v11, v12 \\
+J3 & v03, v04, v05, v06, v07, v08, v09 \\
+J4 & v10, v11\\
+J5 &  v01, v02 \\
+J6 & v03, v04, v05, v06, v07, v08, v09 \\
+J7 & v03, v04, v05, v06, v07, v08, v09 \\
+\hline
+\end{tabular}
+\caption{1034 reaction compatibility collection}
+\end{subfigure}
+\hfill
+%%
+\begin{subfigure}{0.5\textwidth}
+\vspace{20pt}
+\begin{tabular}{|c|c|c|c|}
+\hline
+1034 ID & 1 & 2 & 3 \\
+\hline\hline
+J1 & v10 & v10 & v10 \\
+J2 & v12 & v12 & v12 \\
+J3 & v03 & v03 & v09 \\
+J4 & v11 & v11 & v11 \\
+J5 & v01 & v01 & v01 \\
+J6 & v04 & v06 & v05 \\
+J7 & v06 & v04 & v03 \\
+\hline
+\end{tabular}
+\caption{three assignments of 351 reactions from (c)}
+\end{subfigure}
+\hfill
+%%
+\caption{Calculation of reaction assignments from constraint matrices.
+`type" is a categorical constraint for the type of reaction: uni-null (u-n),
+bi-uni (b-u), and uni-uni (u-u). Column headers with a \# are numerical constraints
+that count the number of successor reactions of the specified type. A reaction in 351 is compatible with a 1034 reaction if they have the same type and the 351 numerical constraint is no larger than the corresponding 1034 constraint. A reaction assignment is a collection of pairings of a 351 reaction with a compatible 1034 reaction such that no two 351 reactions are assigned to the same 1034 reaction.}
+\label{fig:figures}
+\end{figure}
+%%%%%%%%FIGURE%%%%%%%%%%%%%%%%
+
+This section is about how constraints are structured for modularity and to be applicable to both the network identity and subnet detection problems.
+\begin{enumerate}
+    \item Description of constraints
+
+\begin{enumerate}
+    \item FIGURE illustrating constraints and their calculation.
+    \item Define categorical and enumerated constraints.
+\end{enumerate}
+
+\item Constraint details
+\begin{enumerate}
+    \item FIGURE table of species constraints with indication of categorical/enumerated
+    \begin{enumerate}
+            \item Number of reactions in which it is a reactant. 
+            \item Number of reactions in which it is a product.
+            \item Number of predecessors in the species monopartite graph.
+            \item Number of successors in the species monopartite graph
+            \item Number of occurrences of the species as a reactant in each reaction hyperarc.
+    \end{enumerate}
+    \item FIGURE table of reaction constraints with indication of categorical/enumerated
+\end{enumerate}
+
+\item Effectiveness of constraints.
+\begin{enumerate}
+
+\item PLOT. Bar plot of Effectiveness of species and reaction constraints. Varability indicates randomness of networks that some constraints work better in some networks.
+
+ \item PLOT. Heatmap of number of assignments for combinations of sizes of reference and target, with and w/o embedding
+
+\end{enumerate}
+
+\end{enumerate}
+    
+
+\subsubsection{Parallelism}
+
+%%%%%
+\begin{figure}[!tpb]%figure1
+    
+
+    \centering
+    \includegraphics[width=5cm]{figures/in_memory_iteration.png}
+    \caption{Vectorized evaluation of assignment pairs (APs). An assignment pair corresponds to a sub-matrix of a target network stoichiometry matrix (e.g., Model 351 reactant matrix) that has the same shape as the corresponding stoichiometry matrix of the reference network. So, $N$ assignment pairs can be evaluated by comparing the $N$ sub-matrices of the target stoichiometry matrix with the reference stoichiometry matrix. This can be done with one vector operation if sufficient memory is available.
+    }
+    \label{fig:vectorization}
+\end{figure}
+%%%%%
+
+A primary way in which we achieve a reduction in computation time
+is by using a vectorized algorithm that uses parallelism by performing multiple identical operations in parallel. Recent advances in graphical processing units (GPUs) provide hardware assistance for such parallelism.
+A core issue in our approach is addressing the trade-off between space consumed by data and the time consumed by procedural code. Using too much computer memory puts pressing on the hardware caching system (both physical and virtual memory) that can greatly slow execution times. Thus, we must be judicious in our choice of constraints and their computer implementation to minimize overall memory consumption.
+
+\begin{enumerate}
+    \item Efficient calculation of constraints.
+    \begin{enumerate}
+        \item FIGURE showing iteration in memory
+        \item speedups
+    \end{enumerate}
+    \item Efficient parallelism in python. Speedups.
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%
+\subsection{Statistical Significance of Subnet Discovery}
+This section discusses how to evaluate the statistical significance of an induced network.
+\begin{enumerate}
+    \item Statistical significance of a uni-uni reaction using the BioModels benchmark.
+    \item Approach 1. Evaluating the statistical significance of a reference
+    network.
+    \begin{enumerate}
+        \item Approach
+        \item Heatmap for strong identity
+    \end{enumerate}
+    \item Approach 2. Monte Carlo for reference in target of same shape. Compare with BioModels results.
+    \item Approach 1 provides a simple criteria for significance testing.
+    \item PLOT. Heatmap of significance of smaller models in BioModels
+\end{enumerate}
+
+
+
+%%%%%%%%%%%
+\subsection{Python Package}
+
+The package an Application Programming Interface (API) for: finding subnet or identity between a single reference model and a single target model; finding subnet or identity between two directories of models; and a way to serialize models to improve performance.
+
+\subsubsection{Analysis of Model Pairs}
+\begin{itemize}
+    \item \texttt{findForModels(reference, target, other\_args)}
+    \item
+    The reference and target may be an antimony string, an XML string for an SBML model, or a path to an antimony or SBML model.
+\end{itemize}
+
+\subsubsection{Analysis of Model Directories}
+\begin{itemize}
+    \item \texttt{findForModelDirectories(reference\_directory, target\_directory, other\_args)}
+    \item
+    The reference and target may be a directory path containing Antimony and/or SBML models or it may be a serialization file, as described below.
+\end{itemize}
+
+\subsubsection{Serializing Model Files}
+\begin{itemize}
+    \item \texttt{serialize(directory)}, where \texttt{directory} is a path to a directory containing Antimony and/or SBML files.
+    \item A serialization file is a plain text, JSON representation of a \texttt{Network} (the internal representation of a CRN model). Each line represents a different model. As such, serialization files can be concatenated and/or lines can be deleted.
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Commonly Reused Models}
+Here, we use our tool to find models in BioModels that are subnets of other models. Examples are:
+\begin{itemize}
+    \item Model 27, which describes MAPK phosphorylation, is a submodel of model 146, which is a more detailed model of MAPK.
+    \item Query for multiple interlocked phosphorylation cycles.
+    \item Some reference models are frequently embedded by others.
+    
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%
+
+\subsection{Subnet Discovery in BioModels}
+This section describe some interesting results from doing subnet discovery in BioModels.
+Supplemental material includes CSV files of the full results for those interested
+in further analysis.
+
+\begin{enumerate}
+    \item BioModels with significance level 1 vs 0.0001. Which models are eliminated.
+    \item weak vs. strong identity
+    \item Examples of recurring patterns. Model 27, SIR.
+    \item Inferences from scatter plot.
+     \item Examples are:
+\begin{itemize}
+    \item Some target models frequent embed reference models, indicating strong reuse of BioModels.
+    \item Are all subnets significant? 
+\end{itemize}
+
+\item FIGURE Table summarizing discovery: number of comparisons, number of subnets discovered, number of significant discoveries, number of reference, number of targets.
+
+\item PLOT. Heatmap of references per target and target per references by size.
+\end{enumerate}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%
+\section{Discussion}
+\begin{enumerate}
+    \item There are two considerations in dealing with the computational complexity of finding sub-networks. The first is to constrain the set of possible assignments of target to reference species and target to reference reactions. We use ...
+    The second consideration is scaling comparisons of the reference to assignments of the target. We use two techniques. The first is vectorization, a memory-intensive approach where iteration is achieved by in-memory representations of assignments of the target. The second is mutliprocoessing by exploiting multiple cores to perform vectorization in parallel. Our experience is that in-memory parallelism provides scaling to $10^6$ comparisons in seconds. Multiprocessing provides scaling by a factor of $n$, where $n$ is the ratio of assignments to processors that exceeds $10^5$ so that there is nominal overhead for multiprocessing relative to matrix comparisons.
+    
+    \item Can detect when a comparison is to computationally complex by having a threshold on the number of elements in a partition. Analyze the distribution of comparisons for random matrices as: (a) permutably identical; (b) not permutably identical; (c) too complex to tell.
+
+    \item Can do repeated searches for structural identity with a small limit on the maximum number of assignments to find subgraphs with high probability but lower computational cost. Since permutations are deleted randomly, then the probability of finding a subgraph in $n$ tries is $P_n = 1 - (1 - p)^n$, where $p$ is the probability of finding the subgraph in a single trail. That is, if the limit on the number of permutations results a probability $p$ of finding a subgraph, then use $n = \frac{log (1 - P_n)}{log(1 - p)}$.
+
+    \item Parallelism strategy for bulk finding.
+    \begin{enumerate}
+        \item A task is a pair of reference and target networks. Divide the tasks equally among the processors with a modest maximum number of assignments (e.g., $10^8$). Terminate the task on truncation.
+        \item For those tasks that truncate, run them as a single task with parallel comparisons.
+    \end{enumerate}
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%
+\section{Conclusions and Future Work}
+\begin{enumerate}
+    \item Future work
+    \begin{enumerate}
+        \item Find all instances of a substructure
+        \item Combine queries involving rate laws. Example of multilevel phsophorylation.
+        \item Improve performance with GPUs.
+    \end{enumerate}
+\end{enumerate}
+
+\section{Reviewers}
+\begin{itemize}
+    \item Anatasia
+    \item Rahuman
+    \item Uri Alon
+    \item Matthias
+\end{itemize}
+
+\bibliographystyle{alpha}
+\bibliography{sample}
+
+\end{document}

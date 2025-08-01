@@ -32,7 +32,7 @@ The reference and target models are:
         k2 = 1ef
         """
         
-        target_model = """
+    target_model = """
         T1: A -> B; k1*A
         T2: B -> C; k2*B
         T3: B + C -> ; k3*B*C
@@ -52,7 +52,7 @@ The API call is
 
     Mapping pairs: [species: [1 2 0], reaction: [1 0]]
 
-The first element of the species list is 1. This means that species 0 in the reference (``S2``) is mapped to species 1 in the target (``B``). (Species and targets are indexed by the sequence in which they are encountered in the model.) The reaction list indicates that reaction ``R1`` is mapped to reaction ``T2``.
+A mapping pair is a list of two lists. The first list is the species mapping. The i-th position in this list is for the i-th reference species. (Species and reactions are indexed by the sequence in which they are encountered in the model.) The first position in this list (Python index 0) contains a 1. This means that ``S2``, the first reference species (index 0), is mapped to target species ``B`` (target species indexed as 1).  The reaction list indicates that reaction ``R1`` (index 0 in the reference) is mapped to reaction ``T2`` (index 1 in the target).
 
 ``result.makeInferredNetwork()`` constructs the inferred network in the target based on the mappings. In this example, the inferred network is
 
@@ -83,13 +83,15 @@ The target model is BioModels 695.
             num_process=mp.cpu_count(),
             identity=cn.ID_WEAK)
 
-As before, the first two arguments of the API call are the reference and target models. Since the target is a URL, ``ModelSpecification`` is used to convert the URL to a model string. ``max_num_mapping_pair`` is used to manage computational demands by limiting the number mapping pairs that are considered. ``num_process`` specifies the number of processes (cores) that are used by ``pySubnetSB``. By default, all cores are used. Last, ``identity`` specifies the kind of subnet to discover. A subnet of the target is weakly identical to the reference if they have the same stoichiometry matrix. A target subnet is strongly identical (default) if it is just a renaming of the species and reactions in the reference network.
+As before, the first two arguments of the API call are the reference and target models. Since the target is a URL, ``ModelSpecification`` is used to convert the URL to a model string. ``max_num_mapping_pair`` is used to manage computational demands by limiting the number mapping pairs that are considered. ``num_process`` specifies the number of processes (cores) that are used by ``pySubnetSB``. By default, all cores are used. Last, ``identity`` specifies the kind of subnet to discover.
 
-Running this command takes about 10 minutes on a two core machine. You will see a status bar as the command executes that indicates the number of mapping pairs processed.
+The ``identity`` argument requires more explanation. A subnet of the target is weakly identical (``cn.ID_WEAK``) to the reference if they have the same stoichiometry matrix. A target subnet is strongly identical (default) if it is just a renaming of the species and reactions in the reference network.
+
+Running the foregoing code takes about 10 minutes on a two core machine. You will see a status bar as the command executes that indicates the number of mapping pairs processed.
 
     mapping pairs: 100%|███████████████████████████████████████████████████████████████████████████████████| 483649090/483649090 [00:29<00:00, 16350750.64it/s]
 
-You can display the inferred network form mapping pair 1 using ``result.makeInducedNetwork(1)``. There is some stochasticity to the order of the results. When we ran this study, inferred network 1 was:
+As before ``result.mapping_pairs`` is a list of mapping pairs. You can display the inferred network form mapping pair 1 using ``result.makeInducedNetwork(1)``. There is some stochasticity to the order of the results. When we ran this study, inferred network 1 was:
 
     R_31: xFinal_2 -> xFinal_1
     R_10:  -> xFinal_8
@@ -99,10 +101,17 @@ You can display the inferred network form mapping pair 1 using ``result.makeIndu
     R_32: xFinal_1 + xFinal_8 + xFinal_2 -> 2.0 xFinal_1 + xFinal_8 + xFinal_2
     R_12: xFinal_8 -> 
 
+This requires some elaboration. Note that although ``pySubnetSB`` matches ``R_10`` in the target with ``J2`` in the reference, the reactions look quite different. These reactions are:
+
+    R_10:  -> xFinal_8
+    J2: S0 -> S4 + S0
+
+These reactions are a weakly identical because the match is based on the *stoichiometry matrices*. Recall that the stoichiometry matrix contains the difference between species in the products and those in the reactant. As such, ``S0`` in the reactants is subtracted from ``S0`` in the product and so ``J2`` is equvalent to ``-> S4``, which does look lik ``R_10``.
+
 ## Multiple References and Targets
 ``pySubnetSB`` supports checking for multiple reference networks in multiple target networks.
 This can be done by having a directory of reference models and a directory of target models.
-``pySubnetSB`` can serialize the structural characteristics of a model into a one line string (``makeSerializationFile``). So, you can specify a serialization file instead of a directory if that's more convenient.
+``pySubnetSB`` can serialize the structural characteristics of a model into a one line string. (See the discussion of the API call ``makeSerializationFile`` in the Jupyter notebook referenced in the Availability section.) This capability allows you to specify a serialization file instead of a directory, which is often more convenient.
 
     reference_url = "http://raw.githubusercontent.com/ModelEngineering/pySubnetSB/main/examples/reference_serialized.txt"
     target_url = "http://raw.githubusercontent.com/ModelEngineering/pySubnetSB/main/examples/target_serialized.txt"
@@ -131,15 +140,11 @@ pySubnetSB is installed using
 
     pip install pySubnetSB
 
-The package has been tested on linux (Ubuntu 22.04), Windows (Windows 10), and Mac OS (14.7.6). For each, tests were run for python 3.9, 3.10, 3.11, and 3.12.
+The package has been tested on linux (Ubuntu 22.04), Windows (Windows 10), and Mac OS (14.7.6). For each, tests were run for Python 3.9, 3.10, 3.11, and 3.12.
 
-https://github.com/ModelEngineering/pySubnetSB/blob/main/examples/api_basics.ipynb is a Jupyter notebook that demonstrates pySubsetSB capabilities. https://github.com/ModelEngineering/pySubnetSB/blob/main/examples/api_basics_programmatic.py is a translation of this notebook into a Python program that can be downloaded and executed using
+https://github.com/ModelEngineering/pySubnetSB/blob/main/examples/api_basics.ipynb is a Jupyter notebook that demonstrates pySubsetSB capabilities. https://github.com/ModelEngineering/pySubnetSB/blob/main/examples/api_basics_programmatic.py contains much of the code in the notebook. You can test your install of ``pySubnetSB`` by downloading this script and executing it using
 
     python api_basics_programmatic.py
-
-This Python script is contains the codes listed above and so will produce similar output. The last line of the output should indicate that the example completed successfully.
-
-
 
 
 # Version History

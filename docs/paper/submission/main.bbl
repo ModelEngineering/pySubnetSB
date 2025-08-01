@@ -1,0 +1,149 @@
+\begin{thebibliography}{}
+
+\bibitem[Alon(2007)Alon]{Alon2007}
+Alon, U. (2007).
+\newblock Network motifs: theory and experimental approaches.
+\newblock {\em Nature reviews. Genetics\/}, {\bf 8}(6), 450--61.
+
+\bibitem[Conte {\em et~al.}(2004)Conte, Foggia, Sansone, and
+  Vento]{conte_thirty_2004}
+Conte, D.  {\em et~al.} (2004).
+\newblock {THIRTY} {YEARS} {OF} {GRAPH} {MATCHING} {IN} {PATTERN}
+  {RECOGNITION}.
+\newblock {\em International Journal of Pattern Recognition and Artificial
+  Intelligence\/}, {\bf 18}(3), 265--298.
+
+\bibitem[Cordella {\em et~al.}(2004)Cordella, Foggia, Sansone, and
+  Vento]{cordella_subgraph_2004}
+Cordella, L.  {\em et~al.} (2004).
+\newblock A (sub)graph isomorphism algorithm for matching large graphs.
+\newblock {\em {IEEE} Transactions on Pattern Analysis and Machine
+  Intelligence\/}, {\bf 26}(10), 1367--1372.
+
+\bibitem[Hartmanis(1982)Hartmanis]{doi:10.1137/1024022}
+Hartmanis, J. (1982).
+\newblock Computers and intractability: A guide to the theory of
+  np-completeness (michael r. garey and david s. johnson).
+\newblock {\em SIAM Review\/}, {\bf 24}(1), 90--91.
+
+\bibitem[Hartwell {\em et~al.}(1999)Hartwell, Hopfield, Leibler, and
+  Murray]{hartwell_molecular_1999}
+Hartwell, L.~H.  {\em et~al.} (1999).
+\newblock From molecular to modular cell biology.
+\newblock {\em Nature\/}, {\bf 402}(6761), 47--52.
+
+\bibitem[Hucka {\em et~al.}(2003)Hucka, Finney, Sauro, Bolouri, Doyle, Kitano,
+  Arkin, Bornstein, Bray, Cornish-Bowden, Cuellar, Dronov, Gilles, Ginkel, Gor,
+  Goryanin, Hedley, Hodgman, Hofmeyr, Hunter, Juty, Kasberger, Kremling,
+  Kummer, Le~Novère, Loew, Lucio, Mendes, Minch, Mjolsness, Nakayama, Nelson,
+  Nielsen, Sakurada, Schaff, Shapiro, Shimizu, Spence, Stelling, Takahashi,
+  Tomita, Wagner, and Wang]{hucka_systems_2003}
+Hucka, M.  {\em et~al.} (2003).
+\newblock The systems biology markup language ({SBML}): A medium for
+  representation and exchange of biochemical network models.
+\newblock {\em Bioinformatics\/}, {\bf 19}(4), 524--531.
+\newblock {ISBN}: 1367-4803 (Print){\textbackslash}r1367-4803 (Linking).
+
+\bibitem[Lambusch {\em et~al.}(2018)Lambusch, Waltemath, Wolkenhauer, Sandkuhl,
+  Rosenke, and Henkel]{lambusch_identifying_2018}
+Lambusch, F.  {\em et~al.} (2018).
+\newblock Identifying frequent patterns in biochemical reaction networks: a
+  workflow.
+\newblock {\em Database\/}, {\bf 2018}.
+
+\bibitem[Li {\em et~al.}(2010)Li, Donizelli, Rodriguez, Dharuri, Endler,
+  Chelliah, Li, He, Henry, Stefan, Snoep, Hucka, Le~Novère, and
+  Laibe]{li_biomodels_2010}
+Li, C.  {\em et~al.} (2010).
+\newblock {BioModels} database: An enhanced, curated and annotated resource for
+  published quantitative kinetic models.
+\newblock {\em {BMC} Systems Biology\/}, {\bf 4}.
+
+\bibitem[Lindgren(1993)Lindgren]{lindgren_1993}
+Lindgren, B. (1993).
+\newblock {\em Statistical Theory\/}.
+\newblock Taylor and Francis Group.
+
+\bibitem[{McCreesh} {\em et~al.}(2020){McCreesh}, Prosser, and
+  Trimble]{gadducci_glasgow_2020}
+{McCreesh}, C.  {\em et~al.} (2020).
+\newblock The glasgow subgraph solver: Using constraint programming to tackle
+  hard subgraph isomorphism problem variants.
+\newblock In F.~Gadducci and T.~Kehrer, editors, {\em Graph Transformation\/},
+  volume 12150, pages 316--324. Springer International Publishing.
+\newblock Series Title: Lecture Notes in Computer Science.
+
+\bibitem[{McGinnis} and Madden(2004){McGinnis} and Madden]{mcginnis_blast_2004}
+{McGinnis}, S. and Madden, T.~L. (2004).
+\newblock {BLAST}: at the core of a powerful and diverse set of sequence
+  analysis tools.
+\newblock {\em Nucleic Acids Research\/}, {\bf 32}, W20--W25.
+
+\bibitem[Milano {\em et~al.}(2022)Milano, Agapito, and
+  Cannataro]{milano_challenges_2022}
+Milano, M.  {\em et~al.} (2022).
+\newblock Challenges and limitations of biological network analysis.
+\newblock {\em {BioTech}\/}, {\bf 11}(3), 24.
+
+\bibitem[Osadchy and Kolodny(2011)Osadchy and Kolodny]{osadchy_maps_2011}
+Osadchy, M. and Kolodny, R. (2011).
+\newblock Maps of protein structure space reveal a fundamental relationship
+  between protein structure and function.
+\newblock {\em Proceedings of the National Academy of Sciences\/}, {\bf
+  108}(30), 12301--12306.
+
+\bibitem[Paul {\em et~al.}(2021)Paul, Sanap, Shenoy, Kalyane, Kalia, and
+  Tekade]{paul_artificial_2021}
+Paul, D.  {\em et~al.} (2021).
+\newblock Artificial intelligence in drug discovery and development.
+\newblock {\em Drug Discovery Today\/}, {\bf 26}(1), 80--93.
+
+\bibitem[Sauro(2014)Sauro]{sauro_systems_2014}
+Sauro, H. (2014).
+\newblock {\em Systems biology: Introduction to Pathway Modeling\/}.
+\newblock Amazon.
+
+\bibitem[Sharan and Ideker(2006)Sharan and Ideker]{sharan_modeling_2006}
+Sharan, R. and Ideker, T. (2006).
+\newblock Modeling cellular machinery through biological network comparison.
+\newblock {\em Nature Biotechnology\/}, {\bf 24}(4), 427--433.
+
+\bibitem[Shellman {\em et~al.}(2013)Shellman, Burant, and
+  Schnell]{shellman_network_2013}
+Shellman, E.~R.  {\em et~al.} (2013).
+\newblock Network motifs provide signatures that characterize metabolism.
+\newblock {\em Molecular {BioSystems}\/}, {\bf 9}(3), 352.
+
+\bibitem[Smith {\em et~al.}(2009)Smith, Bergmann, Chandran, and
+  Sauro]{smith_antimony_2009}
+Smith, L.~P.  {\em et~al.} (2009).
+\newblock Antimony: a modular model definition language.
+\newblock {\em Bioinformatics\/}, {\bf 25}(18), 2452--2454.
+
+\bibitem[Tatka {\em et~al.}(2023)Tatka, Luk, Elston, Hellerstein, and
+  Sauro]{tatka_cesium_2023}
+Tatka, L.~T.  {\em et~al.} (2023).
+\newblock Cesium: A public database of evolved oscillatory reaction networks.
+\newblock {\em Biosystems\/}, {\bf 224}, 104836.
+
+\bibitem[Xu(2023)Xu]{xu_sbmlkinetics_2023}
+Xu, J. (2023).
+\newblock {SBMLKinetics}: a tool for annotation-independent classification of
+  reaction kinetics for {SBML} models.
+\newblock {\em {BMC} Bioinformatics\/}, {\bf 24}(1), 248.
+
+\bibitem[Yang {\em et~al.}(2024)Yang, Zhang, Lin, Zhang, and
+  Li]{yang_hgmatch_2023}
+Yang, Z.  {\em et~al.} (2024).
+\newblock {HGMatch}: A match-by-hyperedge approach for subgraph matching on
+  hypergraphs.
+
+\bibitem[Zhang {\em et~al.}(2021)Zhang, Bu, Ester, Li, Yao, Yu, and
+  Wang]{zhang_h2mn_2021}
+Zhang, Z.  {\em et~al.} (2021).
+\newblock H2mn: Graph similarity learning with hierarchical hypergraph matching
+  networks.
+\newblock In {\em Proceedings of the 27th {ACM} {SIGKDD} Conference on
+  Knowledge Discovery \& Data Mining\/}, pages 2274--2284. {ACM}.
+
+\end{thebibliography}

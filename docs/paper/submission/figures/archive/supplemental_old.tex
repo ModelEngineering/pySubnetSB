@@ -1,0 +1,392 @@
+\documentclass{article}
+
+% Language setting
+% Replace `english' with e.g. `spanish' to change the document language
+\usepackage[english]{babel}
+
+% Set page size and margins
+% Replace `letterpaper' with `a4paper' for UK/EU standard size
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+% Useful packages
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+
+\usepackage{listings}
+\usepackage{color}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\lstset{frame=tb,
+  language=Java,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3
+}
+
+% Macros
+\newcommand{\mat}[1]{${\bf #1}$} % version 1
+\newcommand{\net}[1]{$\mathcal{#1}$} % version 1
+\newcommand{\cmat}[1]{${\bf #1}^{\bf c}$} % version 1
+\newcommand{\ctwomat}[1]{${\bf #1}^{{\bf c}^2}$} % version 1
+\newcommand{\crow}[2]{${\bf #1}^{\bf c}_{#2 \star}$}  % compat mat row
+\newcommand{\ccol}[2]{${\bf #1}^{\bf c}_{\star #2$}} % compat mat col
+\newcommand{\mcol}[2]{${\bf #1}_{\star #2}$}  % mat row
+\newcommand{\mrow}[2]{${\bf #1}_{#2 \star}$}  % mat col
+\newcommand{\col}[1]{$_{\star #1}$}
+\newcommand{\Kappa}{\mathrm{K}}
+\newcommand{\fig}[1]{Fig.~\ref{#1}}
+
+
+\title{DSIRN: An Efficient Algorithm for {\bf D}etecting {\bf S}tructurally {\bf I}dentical Chemical {\bf R}eaction {\bf N}etworks: Supplemental Material}
+\author{You}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Your abstract.
+\end{abstract}
+
+\section{Notation and Terminology}
+\begin{itemize}
+
+     \item Our analysis involves a {\bf reference} network (or stoichiometry matrix) that is being compared with a {\bf target} network (or stoichiometry matrix). Two types of analysis are considered. The reference is structurally identical with the target; or, the reference is structurally identical to a subset of the target.
+
+    \item Let ${\bf v} = <v_i, \cdots, v_n>$ be a vector. 
+    Then, $x \in {\bf v} \equiv x \in \{ v_i, \cdots, v_n \}$
+    and $| {\bf v} | = n$.
+    
+    \item Let {\bf M} be a matrix. The elements of \mat{M} are $m_{ij}$, and we use the notation \mat{M}$= \left[ m_{ij} \right]$.
+        Its {\bf shape} is $n_r({\bf M}) \times n_c ({\bf M})$, where
+        $n_r$ is the number of row vectors and $n_c$ is the number of column vectors.
+        \mrow{M}{i} is the $i$-th {\bf row vector} of the matrix, and 
+        $M_{\star,j}$ is the $j$-th {\bf column vector} of the matrix.
+        A {\bf selection vector} ${\bf v}$ for the rows (columns) is a vector of distinct integers in $[1, n_r]$ ($[1, n_c]$).
+        ${\bf M_{{\bf v} \star}} = \{ {\bf M}_{i,\star}, ~ i\in {\bf v} \}$.
+        A {\bf permutation of matrix} for {\bf M} is
+        ${\bf M_{{\bf v}_r, {\bf v}_c}}$ where
+        ${\bf v}_r$ is a permutation of the integers in
+        $[1, n_r]$, and ${\bf v}_c$ is a permutation of the integers in $[1, n_c]$.
+        
+    \item A matrix ${\bf N}$ is a {\bf stoichiometry matrix} if its rows index species and its
+    columns index reactions.
+
+    \item The {\bf network} \net{N} has a reactant stoichiometry matrix and product stoichiometry matrix. The standard stoichiometry matrix is derived as the product stoichiometry minus the reactant stoichiometry.
+    
+    \item A {\bf criteria vector} ${\bf c}$ is a vector of boolean valued functions on real numbers
+    such that for all real $x$,
+$\sum_{c \in {\bf c}} c(x) = 1$. $c$ applied to an array produces an boolean valued array of the same shape.
+
+    \item Given a matrix \mat{P} $= \left[ p_{ij} \right]$ and criteria vector {\bf c}, the {\bf criteria count matrix} \cmat{P} is
+    $\{ p^{\bf c}_{ij} \}$ where $p^{\bf c}_{ij} = \sum_k c_j (p_{ik})$.
+    
+    \item
+    Let \cmat{P}, \cmat{Q} be criteria count matrices for the criteria vector \mat{c}. 
+    $P_{i, \star}$ is {\bf identity compatible } with $Q_{j, \star}$ iff $p_{i, k} = q_{j, k}$.
+    $P_{i, \star}$ is {\bf subset compatible} with $Q_{j, \star}$ iff $p_{i, k} \leq q_{j, k}$.
+
+    \item Let \cmat{P}, \cmat{Q} be criteria count matrices with the same criteria vector. The {\bf compatibility set} for \crow{P}{i} in \cmat{Q}
+    are those indices $j$ such that  \crow{P}{i} is compatible with \crow{Q}{j}.
+    
+    \item Let ${\bf N}$ be a stoichiometry matrix and ${\bf v}$ be a reaction (column) selection vector for ${\bf N}$.
+    The {\bf inferred species} are the species indexed by the
+    rows in ${\bf N_{\star {\bf v}}}$ that have a non-zero value.
+
+    \item \ctwomat{P} is the {\bf pair criteria count matrix} of \mat{P}. It is constructed by considering pairs of rows in \mat{P} and pairs of columns in \mat{c}. For row-pairs $<i,j> \in n_r \times n_r$ and columns indexed by $<k, l> \in n_c \times n_c$, the tuple $<<i,j>, <k,l>>$ has the value  $\sum_m \left( c_k ( p_{im}) \land c_l ( p_{j m} ) \right)$. The definitions of compatibility between paired criteria count matrices are the same as those for criteria count matrices.
+
+     \item An integer valued vector ${\bf u}$ is an {\bf assignment} of rows in \mat{Q} to rows in \mat{P} if: (a) $|{\bf u}| = n_r({\bf P})$, (b) $1 \leq u_i \leq n_r({\bf Q})$; and (c) $u_i \neq u_j$ if $i \neq j$. ${\bf u}$ is a {\bf compatible assignment} if $u_i$ is in the compatibility set for
+     ${\bf P}_{i \star}$.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%
+\section{Derivations}
+
+\subsection{Criteria Matrices}
+Let \cmat{P} be the criteria count matrix for \mat{P}, \mat{c}. Then
+\begin{enumerate}
+\item $n_r$(\cmat{P}) = $n_r$(\mat{P})
+\item $n_c$(\cmat{P}) = $|{\bf c}|$
+\item $\sum_k p^{\bf c}_{ik} = n_c$
+\end{enumerate}
+
+\subsection{Calculating Inferred Species}
+Let ${\bf N}$ be an $n_r \times n_c$ stoichiometry matrix and ${\bf u}$ be a reaction selection vector. We show how to calculate ${\bf w}$ a selection vector for the species of ${\bf N}$ that
+are inferred by ${\bf u}$.
+
+Let {\bf v} be a column vector of 1's of length $n_c$, and
+ ${\bf x} = {\bf N} {\bf v}.$
+Then, $i \in {\bf w}$ if $x_i > 0.$ 
+
+
+%%%%%%%%%%%%%%%%%%
+\section{Algorithms}
+
+\subsection{Data Structures}
+\begin{itemize}
+    \item A {\tt StoichiometryMatrix} is denoted by \mat{P}, \mat{Q}, \mat{N}.
+    
+    \item A {\tt Network}, denoted by $\mathcal{N}$, has three {\tt StoichiometryMatrix}
+    \begin{itemize}
+        \item $\mathcal{N}$.{\tt reactant\_stoichiometry} is calculated from the stoichiometries of reactants.
+        \item $\mathcal{N}$.{\tt product\_stoichiometry} is calculated from the stoichiometries of products.
+         \item $\mathcal{N}$.{\tt standard\_stoichiometry} = $\mathcal{N}$.{\tt product\_stoichiometry - $\mathcal{N}$.reactant\_stoichiometry}
+    \end{itemize}
+    
+    \item A {\tt CriteriaVector}, denoted by \mat{c}, is a vector of functions $c$. $c$ is a boolean valued function of real numbers. If applied to an array, $c$ produces a boolean valued array of the same shape as its input.
+    
+    \item A {\tt CriteriaCountMatrix} for the {\tt StoichiometryMatrix} \mat{N} and the criteria vector \mat{c} is denoted by \cmat{N}. Similarly, we use \cmat{P} for \mat{P}, and \cmat{Q} for \mat{Q}.
+    
+    \item The {\tt CompatibilitySetVector} for \cmat{P} in \cmat{Q} is a vector whose $i$-th is the compatibility set of \crow{P}{i} in \cmat{Q}.
+    
+    \item A {\tt CompatibilityPairingVector}
+    for {\tt CriteriaCountMatrix} \cmat{P} w.r.t. the {\tt CriteriaCountMarix} \cmat{Q} is a vector whose $i$-th component is a set of indices of \cmat{Q} that are compatible with
+    \crow{P}{i}.
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Program Logic}
+
+This section provides details of the the DSIRN algorithm that clarify how the concept of compatibility is used to achieve large reductions in computational complexity to detect structurally identical reaction networks and subnets. The narrative is intended for experienced programmers and consists of figures that describe programming logic in pseudo code, a mixture of python-like program control statements (e.g., {\tt for} loops and function {\tt def} statements) and natural language. The complete implementation of DSIRN in python is available in the open source github repository ??.
+
+%%%%%%%%%%%%%%%
+\subsubsection{Matrix Functions}
+The following are operation on matrices, either a {\tt StoichiometryMatrix} or a {\tt CriteriaCountMatrix}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}
+\begin{lstlisting}[mathescape=true,escapechar=\%]
+def makeSingleCriteriaCountMatrix(%\mat{M}%:StoichiometryMatrix, ${\bf c}$:CriteriaVector)->CriteriaCountMatrix:
+    ${\bf v}$ = ones($n_c$(%\mat{M}%))  // Column vector of ones
+    for $i$ in $1 \leq i \leq |{\bf c}|$
+        %\cmat{M}%$_{\star i}$ = $c_i ({\bf M}) {\bf v}$
+    return %\cmat{M}%
+\end{lstlisting}
+\caption{Construction of the criteria count matrix.}\label{alg:makeCriteriaCountMatrix}
+\end{figure}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}
+\begin{lstlisting}[mathescape=true,escapechar=\%]
+def makeMatrixCompatibilitySetVector(%\cmat{R}%:CriteriaCountMatrix, %\cmat{T}%:CriteriaCountMatrix, is_subset:bool)->CompatibilitySetVector:
+// Find the compatibile rows in %\mat{T}% for each row in %\mat{R}%.
+for $i$ in $1 \leq i \leq n_r$(%\cmat{R}%)
+    $v_i = \varnothing$
+    for j in $n_r$(%\cmat{T}%)
+        // Do the compatibility checks
+        if is_subset
+            if ${\bf R}^{\bf c}_{i, \star} <= {\bf T}^{\bf c}_{j, \star}$
+                $v_i = v_i \cup \{j \}$ 
+        else
+            if ${\bf P}^{\bf c}_{i, \star} = {\bf Q}^{\bf c}_{j, \star}$
+                $v_i = v_i \cup \{j \}$
+return %\mat{v}%
+\end{lstlisting}
+\caption{Construction of the {\tt CompatibilitySetVector}.}\label{alg:makeCompatibilitySetVector}
+\end{figure}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}
+\begin{lstlisting}[mathescape=true,escapechar=\%]
+def makePairwiseCriteriaCountMatrix(%\mat{M}%:StoichiometryMatrix, %\mat{c}%:CriteriaVector)->Matrix:
+for $i, j$ in $n_r$(%\mat{M}%)
+    for $k, l$ in $1 \leq k,l \leq |$%\mat{c}%$|$
+        $r_{<i,j>, <k,l>} = \sum_n \left( c_k ( m_{in}) \land c_l ( m_{j n} ) \right)$
+return %\ctwomat{M}% = $\left[ r_{<i,j>, <k,l>} \right]$             
+\end{lstlisting}
+\caption{Construction of the criteria count matrix.}\label{alg:makePairwiseCriteriaCountMatrix}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Networks}
+The functions described below relate to properties for networks. Note that {\tt makeNetwork} implicitly uses {\tt makeSingleCriteriaCountMatrix} and {\tt makePairCriteriaCountMatrix}. These functions are called multiple times.
+\begin{enumerate}
+    \item For different matrix orientations: once for the orientation of {\tt SPECIES} (where species are rows and reactions are columns) and once for the orientation of {\tt REACTION} (where reactions are rows and species are columns).
+    \item For different types of stoichiometry matrices. The standard stoichiometry matrix is used for weak structural identity. For strong structural identity, both the reactant and product stoichiometry matrices are used.
+    \item For the different matrix types, the logic considers the type of structural identity, the matrix orientation, and the reaction participant.
+\end{enumerate}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}
+\begin{lstlisting}[mathescape=true,escapechar=\%]
+def makeNetwork(%\mat{P}%:StoichiometryMatrix, %\mat{Q}%:StoichiometryMatrix, %\mat{c}%:CriteriaVector)->Network:
+    // Creates the matrices used by the DSIRN algorithm
+    // %\mat{P}%: reactant stoichiometry matrix
+    // %\mat{Q}%: product stoichiometry matrix
+    for matrix_type in [STOICHIOMETRY_MATRIX, SINGLE_CRITERIA_COUNT_MATRIX, PAIR_CRITERIA_COUNT_MATRIX]
+        // participant is the reaction participant
+        for participant in [REACTANT, PRODUCT]
+            // orientation specifies the how the stoichiometry matrix is transposed
+            for orientation in [SPECIES, REACTION]
+                // identity is type of structural identity
+                for identity in [WEAK, STRONG]
+                    Using CriteriaVector %\mat{c}%, make the matrix of matrix_type for the specified participant with the specified orientation for the specified identity
+    return %\net{N}%         
+\end{lstlisting}
+\caption{Construction of the representation of a reaction network.}\label{alg:makeNetwork}
+\end{figure}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Constructing Compatible Assignments}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}
+\begin{lstlisting}[mathescape=true,escapechar=\%]
+def makeNetworkCompatibilitySetVector(%\net{R}%:Network, %\net{T}%:Network, identity:enum, orientation:enum check_equality:bool)->CompatibilitySetVector:
+    if identity = WEAK
+        %\cmat{R}%, %\cmat{T}% = from %\net{R}%, %\net{T}%, matrix_type=SINGLE_CRITERIA_COUNT_MATRIX, identity=WEAK, orientation=orientation
+        compatibility_set_vector = makeMatrixCompatibilitySetVector(%\cmat{R}%, %\cmat{T}%, is_subset)
+    else  // strong identity
+        %\cmat{R}%, %\cmat{T}% = from %\net{R}%, %\net{T}%, participant=REACTANT, matrix_type=SINGLE_CRITERIA_COUNT_MATRIX, identity=STRONG, orientation=orientation
+        reactant_compatibility_set_vector = makeMatrixCompatibilitySetVector(%\cmat{R}%, %\cmat{T}%, is_subset)
+        %\cmat{R}%, %\cmat{T}% = from %\net{R}%, %\net{T}%, participant=PRODUCT, matrix_type=SINGLE_CRITERIA_COUNT_MATRIX, identity=STRONG, orientation=orientation
+        product_compatibility_set_vector = makeMatrixCompatibilitySetVector(%\cmat{R}%, %\cmat{T}%, is_subset)
+        // Must be compatible with both reactants and products
+        for $i \leq$ len(reactant_compatability_set_vector)
+            compatibility_set_vector$_i$ = reactant_compatibility_set_vector$_i$ $\cap$ product_compatibility_set_vector$_i$
+    return compatibility_set_vector
+\end{lstlisting}
+\caption{Construction of the sets of compatible assignments for species and reactions in a network.}\label{alg:makeNetworkCompatibilitySetVector}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}
+\begin{lstlisting}[mathescape=true,escapechar=\%]
+def makeCompatibleAssignments(%\net{R}%:Network, %\net{T}%:Network, identity:enum, orientation:enum, is_subset:bool)->AssignmentSet:
+    // Initial checks
+    if (not is_subset) and (%\net{R}%.number_species !=  %\net{T}%.number_species) or (%\net{R}%.number_reactions !=  %\net{T}%.number_reactions)
+        return $\varnothing$
+    if is_subset and (%\net{R}%.number_species >  %\net{T}%.number_species) or (%\net{R}%.number_reactions >  %\net{T}%.number_reactions)
+        return $\varnothing$
+    // Gets the compatible assignments of %\net{T}% to %\net{R}%
+    compatibility_set_vector = makeNetworkCompatibilitySetVector(%\net{R}%, %\net{T}%, identity=identity, orientation=orientation, check_equality=check_equality)
+    initial_assignment_set = $\Pi_i$ reaction_compatibility_set_vector$_i$
+    set_of_assignments = $\varnothing$
+    // Iterate on assignment of reactions
+    for assignment in initial_set_of_reaction_assignments
+        if any repeated index in assignment
+            continue
+        if not isPairwiseCompatible(%\net{R}%, %\net{T}%, assignment, orientation=orientation, participant=participant, identity=identity)
+            continue
+        assignment_set = assignment_set $\cup$ {assignment}
+    return assignment_set 
+\end{lstlisting}
+\caption{Construction of compatible assignments.}\label{alg:makeCompatibleAssignments}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}
+\begin{lstlisting}[mathescape=true,escapechar=\%]
+def isPairwiseCompatible(%\net{R}%:Network, %\net{T}%:network, assignment_vector:AssignmentVector, identity:enum, orientation:enum, participant:enum, is_subset:bool)->bool:
+    // Checks that the relationship between successive elements of %\mat{v}% in %\mat{T}% is consistent with relationship between successive elements in %\mat{R}%
+    %\ctwomat{R}%, %\ctwomat{T}% = from %\net{R}%, %\net{T}%, matrix_type=PAIR_CRITERIA_COUNT_MATRIX, identity=identity, orientation=orientation
+    for $i$ in $1 \leq i < |$assignment_vector$|$
+        $k, l$ = assignment_vector($i$), assignment_vector($i+1$)
+        if is_subset
+            if %\ctwomat{R}%$_{<i, i+1>, \star} \leq$ %\ctwomat{T}%$_{<k,l>, \star}$
+                continue
+            else
+                return false
+        else
+            if %\ctwomat{R}%$_{<i, i+1>, \star} =$ %\ctwomat{T}%$_{<k,l>, \star}$
+                continue
+            else
+                return false
+    return true
+\end{lstlisting}
+\caption{Checking pairwise compatibility .}\label{alg:isPairwiseCompatible}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Detecting Structurally Identical Networks and Subnets}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}
+\begin{lstlisting}[mathescape=true,escapechar=\%]
+def isStructurallyIdentical(%\net{R}%:Network, %\net{T}%:Network, %\mat{c}%:CriteriaVector, identity:enum, is_subset:bool)->bool:
+    // Get the compatible sequence of reactions in %\net{T}%
+    reaction_assignments = makeCompatibleAssignments(%\net{R}%, %\net{T}%, identity=identity, orientation=REACTION, is_subset=is_subset)
+    // Iterate on assignment of reactions
+    for reaction_assignment in reaction_assignments
+        // Construct a network that only has the selected reactions and referenced species
+        inferred_species = species for reactions indexed by reaction_assignment
+        %\net{T}%$^{\prime}$ = %\net{T}%  with reaction_assignment and inferred_species
+        species_assignments = makeCompatibleAssignments(%\net{R}%, %\net{T}$^{\prime}$%, identity=identity, orientation=SPECIES, is_subset=is_subset)
+        // Iterate on assignments of species
+        for species_assignment in species_assignments
+            if identity = WEAK
+                if %\net{R}%.standard_stoichiometry = %\net{T}%$^{\prime}$.standard_stoichiometry[species_assignment]
+                    return true
+            else  // strong identity
+                if %\net{R}%.reactant_stoichiometry = %\net{T}%$^{\prime}$.reactant_stoichiometry[species_assignmen] and %\net{R}%.product_stoichiometry = %\net{T}%$^{\prime}$.product_stoichiometry[species_assignment]
+                    return true
+    return false
+\end{lstlisting}
+\caption{Detecting structurally identical networks.}\label{alg:isStructurallyIdentical}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Vectorizing the Algorithm}
+
+\fig{alg:vectorizedIsStructurallyIdentical} displays a vectorized version of our algorithm for detecting structurally identical reaction networks and subnets. Vectorization is a computational technique that can dramatically reduce execution times at the expense of using considerably more memory. As such, there are certain steps in the algorithm that may be memory constrained, and so additional calculations are required to address these constraints. For example, lines 3 and 4 (as well as lines 7 and 8) refer to the construction of assignment of target reactions (species) and the instantiation of matrices that correspond to these assignments. One way to manage excessive memory demands is to eliminate some of the data structures. In our case, this means removing some of the assignments and/or candidate matrices. Of course, by so doing, we are not exploring part of the search space. It may be that even with eliminating data structures, the search finds assignments of reactions and species that are structurally identical, a result that can be reported with confidence. However, if data structures have been eliminated and we fail to detect structural identity, we can only say that it is uncertain as to whether the networks are structurally identical.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}
+\begin{lstlisting}[mathescape=true,escapechar=\%]
+def vectorizedIsStructurallyIdentical(%\net{R}%:Network, %\net{T}%:Network, %\mat{c}%:CriteriaVector)->assignments:
+    // Handle reactions
+    reaction_assignment = make compatible assignment for reactions
+    reactant_matrices, product_marices = transformations of the reactant and product matrices of %\net{T}% resulting from reaction_assignments
+    pruned_reactant_matrices, pruned_product_matrices = remove reactant_matrices and product_matrices that have rows with all 0s
+    // Handle species
+    species_assignment = make compatible assignment for species
+    reactant_matrices, product_marices = transformations of pruned_reactant_matrices and pruned_product_matrices resulting from species_assignments
+    species_pruned_reactant_matrices, species_pruned_product_matrices = remove reactant_matrices and product_matrices that have columns with all 0s
+    // Do comparisons
+    if weak identity
+        evaluation_matrices = species_pruned_reactant_matrices subtracted from the corresponding species_pruned_product_matrices
+    else
+        evaluation_matrices = species_pruned_reactant_marices, species_pruned_product_matrices
+    // Calculate the results
+    successful_assignments = assignments that result in reaction_matrix and product_matrix or their subtraction that are identical to the corresponding matrix in %\net{R}%
+    return successful_assignments        
+\end{lstlisting}
+\caption{Vectorization of the detection of structurally identical networks or subnets.}\label{alg:vectorizedIsStructurallyIdentical}
+\end{figure}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Notes}
+\begin{enumerate}
+    \item Explicitly use the term {\em assignment} in the discussion of matching species and reactions in \net{R} with those in \net{T}.
+    \item Handle pattern of identity plus checking RSM, PSM, SSM
+    \item Do network construction creating criteria matrices
+    \item Include a running example to make clear the data structures used.
+\end{enumerate}
+
+
+
+%\bibliographystyle{alpha}
+%\bibliography{sample}
+
+
+\end{document}
