@@ -924,9 +924,9 @@ class NetworkBase(object):
         )
 
     
-    def makeInducedNetwork(self, assignment_pair:AssignmentPair)->'NetworkBase':
+    def makeInferredNetwork(self, assignment_pair:AssignmentPair)->'NetworkBase':
         """
-        Makes an induced network based on an assignment pair.
+        Makes an inferred network based on an assignment pair.
 
         Args:
             assignment_pair (AssignmentPair): Assignment pair.

@@ -48,13 +48,13 @@ class StructuralAnalysisResult(object):
         return self.assignment_pairs
 
     @property
-    def induced_network(self)->'Network':
-        """Induced network from the first assignment pair."""
-        return self.makeInducedNetwork()
+    def inferred_network(self)->'Network':
+        """Inferred network from the first assignment pair."""
+        return self.makeInferredNetwork()
 
-    def makeInducedNetwork(self, assignment_pair_idx:int=0)->'Network':
+    def makeInferredNetwork(self, assignment_pair_idx:int=0)->'Network':
         """
-        Creates an induced network from the assignment pair.
+        Creates an inferred network from the assignment pair.
 
         Args:
             assignment_pair_idx (int): index of the assignment pair
@@ -68,7 +68,7 @@ class StructuralAnalysisResult(object):
             msg = f'Assignment pair index {assignment_pair_idx} is out of range.'
             msg += f' Max is {len(self.assignment_pairs)}'
             raise ValueError(msg)
-        return self.network.makeInducedNetwork(self.assignment_pairs[assignment_pair_idx])
+        return self.network.makeInferredNetwork(self.assignment_pairs[assignment_pair_idx])  # type: ignore
 
     def __bool__(self)->bool:
         return len(self.assignment_pairs) > 0

@@ -22,7 +22,7 @@ Below, we summarize the ``pySubnetSB`` API.
 Here we illustrate ``pySubnetSB`` for two small networks using default values in the API call.
 The reference and target models are:
 
-    rerence_model = """
+    reference_model = """
         R1: S2 -> S3; k2*S2
         R2: S1 -> S2; k1*S1
         
@@ -43,6 +43,11 @@ The reference and target models are:
         k2 = 1
         k3 = 0.2
         """
+
+To use ``pySubnetSB``, execute
+
+    !pip install pySubnetSB
+    from pySubnetSB.api import ModelSpecification findReferenceInTarget, findReferencesInTargets, makeSerializationFile
 
 The API call is
     
@@ -80,10 +85,10 @@ The target model is BioModels 695.
             reference_model,
             ModelSpecification(URL, specification_type="sbmlurl"),
             max_num_mapping_pair=1e14,
-            num_process=mp.cpu_count(),
-            identity=cn.ID_WEAK)
+            num_process=2,
+            identity="weak")
 
-As before, the first two arguments of the API call are the reference and target models. Since the target is a URL, ``ModelSpecification`` is used to convert the URL to a model string. ``max_num_mapping_pair`` is used to manage computational demands by limiting the number mapping pairs that are considered. ``num_process`` specifies the number of processes (cores) that are used by ``pySubnetSB``. By default, all cores are used. Last, ``identity`` specifies the kind of subnet to discover.
+As before, the first two arguments of the API call are the reference and target models. Since the target is a URL, ``ModelSpecification`` is used to convert the URL to a model string. ``max_num_mapping_pair`` is used to manage computational demands by limiting the number mapping pairs that are considered. ``num_process`` specifies the number of processes (cores) that are used by ``pySubnetSB``. By default, all cores are used. Last, ``identity`` specifies the kind of subnet to discover - "weak" or "strong" (default).
 
 The ``identity`` argument requires more explanation. A subnet of the target is weakly identical (``cn.ID_WEAK``) to the reference if they have the same stoichiometry matrix. A target subnet is strongly identical (default) if it is just a renaming of the species and reactions in the reference network.
 
@@ -91,7 +96,7 @@ Running the foregoing code takes about 10 minutes on a two core machine. You wil
 
     mapping pairs: 100%|███████████████████████████████████████████████████████████████████████████████████| 483649090/483649090 [00:29<00:00, 16350750.64it/s]
 
-As before ``result.mapping_pairs`` is a list of mapping pairs. You can display the inferred network form mapping pair 1 using ``result.makeInducedNetwork(1)``. There is some stochasticity to the order of the results. When we ran this study, inferred network 1 was:
+As before ``result.mapping_pairs`` is a list of mapping pairs. You can display the inferred network form mapping pair 1 using ``result.makeInferredNetwork(1)``. There is some stochasticity to the order of the results. When we ran this study, inferred network 1 was:
 
     R_31: xFinal_2 -> xFinal_1
     R_10:  -> xFinal_8
