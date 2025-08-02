@@ -64,7 +64,7 @@ def main(is_plot:bool=True):
     print("\nSearching for a subnet in the target model that is structurally identical to the reference model.")
     result = findReferenceInTarget(reference_model, target_model)
     print (f"\nMapping pairs: {result.mapping_pairs}")
-    print(f"\nThe inferred network in the target is: \n{result.makeInducedNetwork()}")
+    print(f"\nThe inferred network in the target is: \n{result.makeInferredNetwork()}")
 
     ########################## LONGER EXAMPLE ########################## 
     print("\n\n---------------------LONGER EXAMPLE-----------------------------------")
@@ -96,7 +96,7 @@ def main(is_plot:bool=True):
     
 
     print(f"\nThe number of mapping pairs is: {len(result.mapping_pairs)}")
-    print(f"\nThe first inferred network is: {result.makeInducedNetwork(1)}")
+    print(f"\nThe first inferred network is: {result.makeInferredNetwork(1)}")
 
     ##################### ANALYZING A DIRECTORY OF MODELS #####################
     # ``pySubnetSB`` can search for subsets in directories of models. Given a a directory of reference models

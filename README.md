@@ -29,7 +29,7 @@ The reference and target models are:
         S1 = 5
         S2 = 0
         k1 = 1
-        k2 = 1ef
+        k2 = 1
         """
         
     target_model = """
