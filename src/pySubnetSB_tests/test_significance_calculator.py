@@ -4,7 +4,7 @@ import pySubnetSB.constants as cn # type: ignore
 
 import numpy as np
 import pandas as pd # type: ignore
-import matplotlib.pyplot as plt
+from typing import cast
 import unittest
 
 
@@ -50,8 +50,8 @@ REFERENCE_NETWORK = Network.makeFromAntimonyStr(SIMPLE_MODEL)
 class TestSignificanceCalculator(unittest.TestCase):
 
     def setUp(self):
-        self.calculator = SignificanceCalculator(REFERENCE_NETWORK, NUM_TARGET_SPECIES,
-              NUM_TARGET_REACTION, identity=IDENTITY)
+        self.calculator = SignificanceCalculator(cast(Network, REFERENCE_NETWORK), NUM_TARGET_SPECIES,
+                NUM_TARGET_REACTION, identity=IDENTITY)
         
     def testConstructor(self):
         if IGNORE_TEST:
@@ -65,7 +65,7 @@ class TestSignificanceCalculator(unittest.TestCase):
         if IGNORE_TEST:
             return
         result = self.calculator.calculate(NUM_ITERATION, max_num_assignment=MAX_NUM_ASSIGNMENT,
-              is_report=IGNORE_TEST)
+                is_report=IGNORE_TEST)
         self.assertTrue(result.num_reference_species > 0)
         self.assertTrue(result.num_reference_reaction > 0)
         self.assertEqual(result.num_target_species, NUM_TARGET_SPECIES)
@@ -81,10 +81,10 @@ class TestSignificanceCalculator(unittest.TestCase):
         if IGNORE_TEST:
             return
         reference_network = Network.makeFromAntimonyStr(COMPLEX_MODEL)
-        calculator = SignificanceCalculator(reference_network, NUM_TARGET_SPECIES,
-              NUM_TARGET_REACTION, identity=IDENTITY)
+        calculator = SignificanceCalculator(cast(Network, reference_network), NUM_TARGET_SPECIES,
+                NUM_TARGET_REACTION, identity=IDENTITY)
         result = calculator.calculate(NUM_ITERATION, max_num_assignment=MAX_NUM_ASSIGNMENT,
-              is_report=False)
+                is_report=False)
         self.assertTrue(result.frac_induced < 0.1)
 
     def testPlotSignificance(self):
@@ -92,8 +92,8 @@ class TestSignificanceCalculator(unittest.TestCase):
         if IGNORE_TEST:
             return
         result = self.calculator.plotSignificance(
-              is_report=IGNORE_TEST,
-              num_iteration=5, is_plot=False)
+                is_report=IGNORE_TEST,
+                num_iteration=5, is_plot=False)
         for values in [result.frac_induces, result.frac_truncates]:
             self.assertTrue(len(result.target_sizes), len(values))
 
@@ -103,8 +103,8 @@ class TestSignificanceCalculator(unittest.TestCase):
         reference_network = REFERENCE_NETWORK
         reference_network = Network.makeFromAntimonyStr(COMPLEX_MODEL)
         result = self.calculator.calculateNetworkOccurrenceProbability(
-              reference_network, num_iteration=NUM_ITERATION, is_report=False,
-              max_num_assignment=MAX_NUM_ASSIGNMENT)
+                cast(Network, reference_network), num_iteration=NUM_ITERATION, is_report=False,
+                max_num_assignment=MAX_NUM_ASSIGNMENT)
         self.assertTrue(result[0] < 0.01)
 
     def testPlotProbabilityOfOccurrence(self):

@@ -59,7 +59,11 @@ The API call is
 
 A mapping pair is a list of two lists. The first list is the species mapping. The i-th position in this list is for the i-th reference species. (Species and reactions are indexed by the sequence in which they are encountered in the model.) The first position in this list (Python index 0) contains a 1. This means that ``S2``, the first reference species (index 0), is mapped to target species ``B`` (target species indexed as 1).  The reaction list indicates that reaction ``R1`` (index 0 in the reference) is mapped to reaction ``T2`` (index 1 in the target).
 
-``result.makeInferredNetwork()`` constructs the inferred network in the target based on the mappings. In this example, the inferred network is
+We can construct the inferred network using
+
+    result.makeInferredNetwork()
+
+In this example, the inferred network is
 
     T2: B -> C
     T1: A -> B
@@ -96,7 +100,11 @@ Running the foregoing code takes about 10 minutes on a two core machine. You wil
 
     mapping pairs: 100%|███████████████████████████████████████████████████████████████████████████████████| 483649090/483649090 [00:29<00:00, 16350750.64it/s]
 
-As before ``result.mapping_pairs`` is a list of mapping pairs. You can display the inferred network form mapping pair 1 using ``result.makeInferredNetwork(1)``. There is some stochasticity to the order of the results. When we ran this study, inferred network 1 was:
+As before ``result.mapping_pairs`` is a list of mapping pairs. You can display the inferred network form mapping pair 1 using ``result.makeInferredNetwork(1)``. There is some stochasticity to the order of the results.
+
+    result.InferredNetwork(1)
+
+produces:
 
     R_31: xFinal_2 -> xFinal_1
     R_10:  -> xFinal_8
@@ -123,6 +131,10 @@ This can be done by having a directory of reference models and a directory of ta
     result_df = findReferencesInTargets(reference_url, target_url)
 
 The output of this API is a dataframe with information about the comparisons. Below is the output produced from this analysis for 3 columns in the dataframe.
+
+    print(f'Summary of results:\n{result_df[["reference_name", "target_name", "num_mapping_pair"]]}')
+
+which produces:
 
     Summary of results: 
             reference_name      target_name num_mapping_pair

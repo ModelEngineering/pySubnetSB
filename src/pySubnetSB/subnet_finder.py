@@ -100,7 +100,7 @@ class SubnetFinder(object):
                 if is_report:
                     print(f"Found matching model: {reference_network.network_name} and {target_network.network_name}")
                 dct[cn.FINDER_REFERENCE_NETWORK].append(str(reference_network))
-                dct[cn.FINDER_INDUCED_NETWORK].append(str(result.induced_network))
+                dct[cn.FINDER_INDUCED_NETWORK].append(str(result.inferred_network))
                 dct[cn.FINDER_NUM_ASSIGNMENT_PAIR].append(len(result.assignment_pairs))
                 dct[cn.FINDER_NUM_MAPPING_PAIR].append(len(result.assignment_pairs))
                 # Create a more complete assignment pair

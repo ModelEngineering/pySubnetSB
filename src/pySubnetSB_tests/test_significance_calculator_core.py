@@ -5,6 +5,7 @@ import pySubnetSB.constants as cn # type: ignore
 import numpy as np
 import pandas as pd # type: ignore
 import matplotlib.pyplot as plt
+from typing import cast
 import unittest
 
 
@@ -51,7 +52,7 @@ class TestSignificanceCalculator(unittest.TestCase):
 
     def setUp(self):
         self.calculator = SignificanceCalculatorCore(NUM_TARGET_SPECIES,
-              NUM_TARGET_REACTION, num_target_network=NUM_TARGET_NETWORK)
+                NUM_TARGET_REACTION, num_target_network=NUM_TARGET_NETWORK)
         
     def testConstructor(self):
         if IGNORE_TEST:
@@ -65,7 +66,7 @@ class TestSignificanceCalculator(unittest.TestCase):
         if IGNORE_TEST:
             return
         for identity in cn.ID_LST:
-            result = self.calculator.calculateSubnet(REFERENCE_NETWORK, max_num_assignment=MAX_NUM_ASSIGNMENT,
+            result = self.calculator.calculateSubnet(cast(Network, REFERENCE_NETWORK), max_num_assignment=MAX_NUM_ASSIGNMENT,
                 is_report=IGNORE_TEST, identity=identity)
             self.assertTrue(result.num_reference_species > 0)
             self.assertTrue(result.num_reference_reaction > 0)
@@ -83,9 +84,9 @@ class TestSignificanceCalculator(unittest.TestCase):
             return
         reference_network = Network.makeFromAntimonyStr(COMPLEX_MODEL)
         calculator = SignificanceCalculatorCore(NUM_TARGET_SPECIES,
-              NUM_TARGET_REACTION, num_target_network=1000*NUM_TARGET_NETWORK)
-        result = calculator.calculateSubnet(reference_network, max_num_assignment=MAX_NUM_ASSIGNMENT,
-              is_report=IS_PLOT)
+                NUM_TARGET_REACTION, num_target_network=1000*NUM_TARGET_NETWORK)
+        result = calculator.calculateSubnet(cast(Network, reference_network), max_num_assignment=MAX_NUM_ASSIGNMENT,
+                is_report=IS_PLOT)
         self.assertTrue(result.frac_induced < 0.1)
     
     def testCalculateComplexEquality(self):
@@ -95,11 +96,11 @@ class TestSignificanceCalculator(unittest.TestCase):
             results = []
             for size in [2, 4]:
                 reference_network = Network.makeRandomNetworkByReactionType(num_reaction=size,
-                      num_species=size, is_exact=True)
+                        num_species=size, is_exact=True)
                 calculator = SignificanceCalculatorCore(size, size, num_target_network=1000)
-                result = calculator.calculateEqual(reference_network,
-                      max_num_assignment=MAX_NUM_ASSIGNMENT,
-                      is_report=IS_PLOT, identity=identity)
+                result = calculator.calculateEqual(cast(Network, reference_network),
+                        max_num_assignment=MAX_NUM_ASSIGNMENT,
+                        is_report=IS_PLOT, identity=identity)
                 results.append(result)
             self.assertTrue(results[0].frac_induced >= results[1].frac_induced)
         

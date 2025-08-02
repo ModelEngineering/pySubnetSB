@@ -7,6 +7,7 @@ import json
 import os
 import pandas as pd # type: ignore
 import numpy as np
+from typing import cast
 import unittest
 
 IGNORE_TEST = False
@@ -24,7 +25,7 @@ def makeDataframe(num_network:int)->pd.DataFrame:
     reference_networks = [Network.makeRandomNetworkByReactionType(3, is_prune_species=True) for _ in range(num_network)]
     target_networks = [Network.makeRandomNetworkByReactionType(3, is_prune_species=True) for _ in range(num_network)]
     dct = {cn.FINDER_REFERENCE_NETWORK: [str(n) for n in range(num_network)],
-           cn.FINDER_INDUCED_NETWORK: [str(n) for n in range(num_network, 2*num_network)]}
+            cn.FINDER_INDUCED_NETWORK: [str(n) for n in range(num_network, 2*num_network)]}
     df = pd.DataFrame(dct)
     df[cn.FINDER_REFERENCE_NAME] = [str(n) for n in reference_networks]
     df[cn.FINDER_TARGET_NAME] = [str(n) for n in target_networks]
@@ -38,8 +39,9 @@ class TestSubnetFinder(unittest.TestCase):
     def setUp(self):
         self.reference = Network.makeRandomNetworkByReactionType(SIZE, is_prune_species=True)
         self.target = self.reference.fill(num_fill_reaction=SIZE, num_fill_species=SIZE)
-        self.finder = SubnetFinder.makeFromCombinations(reference_networks=[self.reference], target_networks=[self.target],
-              identity=cn.ID_WEAK)
+        self.finder = SubnetFinder.makeFromCombinations(reference_networks=[cast(Network, self.reference)],
+                target_networks=[cast(Network, self.target)],
+                identity=cn.ID_WEAK)
         
     def testConstructor(self):
         if IGNORE_TEST:
@@ -61,14 +63,14 @@ class TestSubnetFinder(unittest.TestCase):
         fill_size = 3
         # Construct the models
         reference_models = [Network.makeRandomNetworkByReactionType(NETWORK_SIZE, is_prune_species=True)
-              for _ in range(NUM_REFERENCE_MODEL)]
+                for _ in range(NUM_REFERENCE_MODEL)]
         target_models = [r.fill(num_fill_reaction=fill_size, num_fill_species=fill_size) for r in reference_models]
         # Add extra target models
         target_models += [Network.makeRandomNetworkByReactionType(NETWORK_SIZE, is_prune_species=True)
-              for _ in range(NUM_EXTRA_TARGET_MODEL)]
+                for _ in range(NUM_EXTRA_TARGET_MODEL)]
         # Do the search
-        finder = SubnetFinder.makeFromCombinations(reference_networks=reference_models, target_networks=target_models,
-              identity=cn.ID_STRONG)
+        finder = SubnetFinder.makeFromCombinations(reference_networks=reference_models, target_networks=target_models,  # type: ignore
+                identity=cn.ID_STRONG)
         df = finder.find(is_report=IS_PLOT)
         prune_df = WorkerCheckpointManager.prune(df).pruned_df
         self.assertEqual(len(prune_df), NUM_REFERENCE_MODEL)

@@ -326,14 +326,14 @@ class TestNetwork(unittest.TestCase):
         network = cast(NetworkBase, NetworkBase.makeFromSBMLFile(PATH))
         self.assertGreater(network.num_species, 0)
 
-    def testMakeInducedNetwork(self):
+    def testMakeInferredNetwork(self):
         if IGNORE_TEST:
             return
         species_assignment = np.array(range(self.network.num_species))
         reaction_assignment = np.array(range(self.network.num_reaction))
         assignment_pair = AssignmentPair(species_assignment, reaction_assignment)
-        induced_network = self.network.makeInferredNetwork(assignment_pair)
-        self.assertTrue(self.network.isEquivalent(induced_network))
+        inferred_network = self.network.makeInferredNetwork(assignment_pair)
+        self.assertTrue(self.network.isEquivalent(inferred_network))
 
     def testMakeMatricesForIdentity(self):
         if IGNORE_TEST:
