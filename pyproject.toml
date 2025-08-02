@@ -1,6 +1,6 @@
 [project]
 name = "pySubnetSB"
-version = "1.0.8"
+version = "1.0.9"
 description = "Python Subnet Discovery for Systems Biology"
 authors = [{ name = "Joseph Hellerstein", email = "joseph.hellerstein@gmail.com" }]
 license = { file = "LICENSE" }

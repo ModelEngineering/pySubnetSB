@@ -165,6 +165,7 @@ https://github.com/ModelEngineering/pySubnetSB/blob/main/examples/api_basics.ipy
 
 
 # Version History
+* 1.0.9 8/2/2025  Changed "induced" to "inferred" in docs and code; fixed bugs in code in README
 * 1.0.8 7/21/2025  Improved example for using pySubnetSB and revised github actions workflows.
 * 1.0.7 7/20/2025  Finalized code and documentation
 * 1.0.6 7/19/2025  Workflows for Ubuntu, Windows, Macos and python 3.9,

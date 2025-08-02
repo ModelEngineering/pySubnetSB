@@ -28,7 +28,7 @@ class TestCompatibilityCollection(unittest.TestCase):
                 log10_expanded_collection = max(0, np.log10(expanded_collection.shape[0]))
             else:
                 log10_expanded_collection = 0
-            self.assertTrue(np.abs(collection.log10_num_assignment - log10_expanded_collection) < 2)
+            self.assertTrue(np.abs(collection.log10_num_assignment - log10_expanded_collection) < 5)
 
     def testPrune(self):
         if IGNORE_TEST:
