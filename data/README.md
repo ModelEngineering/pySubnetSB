@@ -14,11 +14,11 @@ Induced network data ("subnet") originate from ``scripts/find_biomodels_subnet.p
   * ``reference_name`` (ModelName)
   * ``target_name`` (ModelName)
   * ``reference_network`` (Network)
-  * ``induced_network``(Network) Subnet of target that corresponds to the reference network
+  * ``inferred_network``(Network) Subnet of target that corresponds to the reference network
   * ``assignment_pairs`` (list-AssignmentPair)
-  * ``significance_level`` (Probability) Approximate probability of the induced network for random target and reference networks of the same sizes
-  * ``is_truncated`` (Bool) True if the number of assignments satisfying constraints exceeds 10**11 in determining if there is an induced network
-* ``subnet_biomodels_strong.csv`` Subset of ``full_biomodels_strong.csv`` that have induced networks. Also have:
+  * ``significance_level`` (Probability) Approximate probability of the inferred network for random target and reference networks of the same sizes
+  * ``is_truncated`` (Bool) True if the number of assignments satisfying constraints exceeds 10**11 in determining if there is an inferred network
+* ``subnet_biomodels_strong.csv`` Subset of ``full_biomodels_strong.csv`` that have inferred networks. Also have:
   * ``truncated_strong`` truncated in the calculation of probability of occurrence with identity=strong
   * ``truncated_weak`` truncated in the calculation of probability of occurrence with identity=weak
   * ``probability_of_occurrence_strong`` probability of occurrence using strong identity
@@ -26,7 +26,7 @@ Induced network data ("subnet") originate from ``scripts/find_biomodels_subnet.p
   * ``estimated_POC_strong`` analytical estimate of POC
   * ``estimated_POC_weak`` analytical estimate of POC
 * ``full_biomodels_weak.csv`` (same as ``biomodels_subnet_strong.csv`` but for weak identity)
-* ``subnet_biomodels_weak.csv`` Subset of ``full_biomodels_weak.csv`` that have induced networks
+* ``subnet_biomodels_weak.csv`` Subset of ``full_biomodels_weak.csv`` that have inferred networks
 * ``biomodels_summary.csv``. Same columns as ``subnet_biomodels_strong.csv``
   * ``model_name`` (ModelName)
   * ``num_species`` (Count)

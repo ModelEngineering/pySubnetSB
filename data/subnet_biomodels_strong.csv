@@ -1,4 +1,4 @@
-reference_name,target_name,reference_network,induced_network,name_dct,num_assignment_pair,is_truncated,probability_of_occurrence_strong,truncated_strong,probability_of_occurrence_weak,trunceated_weak,estimated_poc_strong,estimated_poc_weak
+reference_name,target_name,reference_network,inferred_network,name_dct,num_assignment_pair,is_truncated,probability_of_occurrence_strong,truncated_strong,probability_of_occurrence_weak,trunceated_weak,estimated_poc_strong,estimated_poc_weak
 BIOMD0000000006,BIOMD0000000067,"BIOMD0000000006: 4 species, 3 reactions
   Reaction1: EmptySet -> z
   Reaction2: u -> EmptySet
